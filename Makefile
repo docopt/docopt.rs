@@ -2,11 +2,12 @@ RUSTC ?= rustc
 RUSTDOC ?= rustdoc
 BUILD_DIR ?= ./build
 RUST_PATH ?= $(BUILD_DIR)
-RUSTFLAGS ?= --opt-level=3
+# RUSTFLAGS ?= --opt-level=3 
+RUSTFLAGS ?= 
 RUSTTESTFLAGS ?= 
 LIB_NAME = docopt
 LIB ?= $(BUILD_DIR)/.libregex.timestamp
-LIB_FILES = src/lib.rs
+LIB_FILES = src/lib.rs src/parse.rs
 TEST_FILES = src/test.rs
 
 all: $(LIB)
