@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt;
+use regex;
 use regex::Regex;
 
 pub struct Docopt {
@@ -7,6 +9,22 @@ pub struct Docopt {
     descs: HashMap<String, AtomDesc>,
     short_to: HashMap<String, String>,
     last_desc_added: Option<String>,
+}
+
+impl fmt::Show for Docopt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
+        try!(writeln!(f, "====="))
+        try!(writeln!(f, "Program: {}", self.program))
+        try!(writeln!(f, "Option descriptions:"))
+        for (k, v) in self.descs.iter() {
+            try!(writeln!(f, "  '{}' => {}", k, v))
+        }
+        try!(writeln!(f, "Short abbreviations:"))
+        for (k, v) in self.short_to.iter() {
+            try!(writeln!(f, "  '{}' => '{}'", k, v))
+        }
+        writeln!(f, "=====")
+    }
 }
 
 type Alternates = Vec<Pattern>;
@@ -20,6 +38,7 @@ enum Expr {
     Atom(String), // key in Docopt.descs
 }
 
+#[deriving(Show)]
 struct AtomDesc {
     name: String,
     
@@ -29,9 +48,10 @@ struct AtomDesc {
     /// For flags with arguments, repetition means multiple distinct values
     /// can be specified (and are represented as a Vec).
     repeats: bool,
-    desc: AtomType,
+    atype: AtomType,
 }
 
+#[deriving(Show)]
 enum AtomType {
     Arg, // positional
     Command,
@@ -50,8 +70,6 @@ macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
 )
 
-static USAGE: Regex = regex!(r"(?is)usage:\s+(?P<prog>\S+)(?P<pats>.*?)\n\s*\n");
-
 impl Docopt {
     pub fn new(doc: &str) -> Result<Docopt, String> {
         let mut d = Docopt {
@@ -66,14 +84,15 @@ impl Docopt {
     }
 
     fn parse(&mut self, doc: &str) -> Result<(), String> {
-        let caps = match USAGE.captures(doc) {
+        let musage = regex!(r"(?is)usage:\s+(?P<prog>\S+)(?P<pats>.*?)\n\s*\n");
+        let caps = match musage.captures(doc) {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
         };
-        let prog = ::regex::quote(caps.name("prog"));
-        if prog.len() == 0 {
+        if caps.name("prog").is_empty() {
             err!("Could not find program name in doc string.")
         }
+        self.program = caps.name("prog").to_string();
 
         // Before we parse the usage patterns, we look for option descriptions.
         // We do this because the information in option descriptions can be
@@ -92,17 +111,18 @@ impl Docopt {
             try!(self.parse_desc(line));
         }
 
-        let pats = Regex::new(format!("(?s)(.*?)({}|$)", prog).as_slice()).unwrap();
+        let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog")));
+        let pats = Regex::new(mprog.as_slice()).unwrap();
         for _ in pats.captures_iter(caps.name("pats")) {
             // println!("${}$", pat.at(1).trim()); 
         }
         Ok(())
     }
 
-    fn parse_desc(&mut self, desc: &str) -> Result<(), String> {
-        let desc = desc.trim();
+    fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
+        let desc = full_desc.trim();
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
-            // TODO: Check for default value.
+            try!(self.parse_default(full_desc));
             return Ok(())
         }
         // Get rid of the description, which must be at least two spaces
@@ -110,62 +130,117 @@ impl Docopt {
         let desc = regex!("  .*$").replace(desc, "");
         // Normalize `-x, --xyz` to `-x --xyz`.
         let desc = regex!(r"([^-\s]), -").replace(desc.as_slice(), "$1 -");
+        let desc = desc.as_slice().trim();
 
-        let rflags = regex!(r"(?:(?P<long>--[^ \t=]+)|(?P<short>-[^ \t=]+))(?:(?: |=)(?P<arg>[^-]\S+))?");
+        let rflags = regex!("(?:(?P<long>--[^ \t=]+)|(?P<short>-[^ \t=]+))\
+                             (?:(?: |=)(?P<arg>[^-]\\S*))?");
         let (mut short, mut long) = ("".to_string(), "".to_string());
         let mut arg = Zero;
-        for flags in rflags.captures_iter(desc.as_slice()) {
+        let mut last_end = 0;
+        for flags in rflags.captures_iter(desc) {
+            last_end = flags.pos(0).unwrap().val1();
             let (s, l) = (flags.name("short"), flags.name("long"));
-            if s.len() > 0 { short = s.to_string() }
-            if l.len() > 0 { long = l.to_string() }
-            if arg == Zero && flags.name("arg").len() > 0 {
-                arg = One;
+            if !s.is_empty() {
+                if !short.is_empty() {
+                    err!("Only one short flag is allowed in an option \
+                          description, but found '{}' and '{}'.", short, s)
+                }
+                short = s.to_string()
+            }
+            if !l.is_empty() {
+                if !long.is_empty() {
+                    err!("Only one long flag is allowed in an option \
+                          description, but found '{}' and '{}'.", long, l)
+                }
+                long = l.to_string()
+            }
+            if flags.name("arg").len() > 0 {
+                try!(err_if_invalid_arg(flags.name("arg")));
+                arg = One; // may be changed to default later
             }
         }
-        self.add_desc(short, long, arg)
+        // Make sure that we consumed everything. If there are leftovers,
+        // then there is some malformed description. Alert the user.
+        assert!(last_end <= desc.len());
+        if last_end < desc.len() {
+            err!("Extraneous text '{}' in option description '{}'.",
+                 desc.slice_from(last_end), desc)
+        }
+        try!(self.add_desc(short, long, arg))
+        self.parse_default(full_desc)
     }
 
-    fn add_desc(&mut self, short: String, long: String, arg: ArgDesc) -> Result<(), String> {
+    fn parse_default(&mut self, desc: &str) -> Result<(), String> {
+        let rdefault = regex!(r"(?i)\[default:(?P<val>[^]]*)\]");
+        let defval =
+            match rdefault.captures(desc) {
+                None => return Ok(()),
+                Some(c) => c.name("val").trim(),
+            };
+        let last_desc_key =
+            match self.last_desc_added {
+                Some(ref key) => key.clone(),
+                None => err!("Found default value '{}' in '{}' before first \
+                              option description.", defval, desc),
+            };
+        let desc = self.lookup(&last_desc_key)
+                   .expect(format!("BUG: last opt desc key ('{}') is invalid.",
+                                   last_desc_key).as_slice());
+        desc.atype = Flag(Default(defval.to_string()));
+        Ok(())
+    }
+
+    fn add_desc(&mut self, short: String, long: String, arg: ArgDesc)
+               -> Result<(), String> {
         assert!(!short.is_empty() || !long.is_empty());
         if !short.is_empty() && short.len() != 2 {
             err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        if self.lookup(short.as_slice()).is_some() {
+        if self.lookup(&short).is_some() {
             err!("Short flag '{}' is defined more than once.", short);
         }
-        if self.lookup(long.as_slice()).is_some() {
+        if self.lookup(&long).is_some() {
             err!("Long flag '{}' is defined more than once.", long);
         }
-        let mut canonical = long.clone();
-        if long.is_empty() {
+        let mut canonical = long;
+        if canonical.is_empty() {
             canonical = short.clone();
         }
         if !short.is_empty() {
             self.short_to.insert(short, canonical.clone());
         }
+        self.last_desc_added = Some(canonical.clone());
         self.descs.insert(canonical.clone(), AtomDesc {
             name: canonical,
             repeats: false, // not known yet; discovered in usage patterns
-            desc: Flag(arg), // arg desc may change if default value is found
+            atype: Flag(arg), // arg desc may change if default value is found
         });
         Ok(())
     }
 
-    fn lookup<'a>(&'a mut self, flag: &str) -> Option<&'a AtomDesc> {
+    fn lookup<'a>(&'a mut self, flag: &String) -> Option<&'a mut AtomDesc> {
         let key =
-            if is_short(flag) {
-                match self.short_to.find_equiv(&flag) {
-                    Some(long) => long.as_slice(),
+            if is_short(flag.as_slice()) {
+                match self.short_to.find(flag) {
+                    Some(long) => long,
                     None => return None,
                 }
             } else {
                 flag
             };
-        self.descs.find_equiv(&key)
+        self.descs.find_mut(key)
+    }
+}
+
+fn err_if_invalid_arg(s: &str) -> Result<(), String> {
+    if !is_arg(s) {
+        err!("Argument '{}' is not of the form ARG or <arg>.", s)
+    } else {
+        Ok(())
     }
 }
 
 fn is_short(s: &str) -> bool { return regex!(r"^-[^-]+$").is_match(s) }
 fn is_long(s: &str) -> bool { return regex!(r"^--\S+$").is_match(s) }
-fn is_arg(s: &str) -> bool { return regex!(r"^\p{Lu}+|<[^>]+>$").is_match(s) }
+fn is_arg(s: &str) -> bool { return regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s) }
 fn is_cmd(s: &str) -> bool { return regex!(r"^(-|--|[^-]\S+)$").is_match(s) }
