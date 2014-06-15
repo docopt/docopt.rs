@@ -186,7 +186,7 @@ impl Docopt {
                 }
                 long = l.to_string()
             }
-            if flags.name("arg").len() > 0 {
+            if !flags.name("arg").is_empty() {
                 try!(err_if_invalid_arg(flags.name("arg")));
                 has_arg = true; // may be changed to default later
             }
