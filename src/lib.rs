@@ -4,7 +4,7 @@
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
-#![allow(dead_code)]
+#![allow(dead_code, unused_variable, unused_imports)]
 
 //! Docopt for Rust.
 
@@ -17,6 +17,7 @@ extern crate regex;
 pub use parse::Docopt;
 
 mod parse;
+mod synonym;
 #[cfg(test)]
 mod test;
 

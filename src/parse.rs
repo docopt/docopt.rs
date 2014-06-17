@@ -1,117 +1,39 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::rc::Rc;
 use std::str::{MaybeOwned, Owned, Slice};
 use regex;
 use regex::Regex;
 
-pub struct Docopt {
-    program: String,
-    usages: Vec<Pattern>,
-    descs: AtomOptions,
-    last_atom_added: Option<Atom>, // context for [default: ...]
-}
-
-type AtomOptions = HashMap<Atom, Rc<RefCell<Options>>>;
-
-#[deriving(Show)]
-enum Pattern {
-    Alternates(Vec<Pattern>),
-    Sequence(Vec<Pattern>),
-    Repeat(Box<Pattern>),
-    Optional(Box<Pattern>),
-    Options,
-    Atom(Atom),
-}
-
-#[deriving(PartialEq, Eq, Hash, Clone, Show)]
-enum Atom {
-    Short(char),
-    Long(String),
-    Command(String),
-    Positional(String),
-}
-
-#[deriving(Clone, Show)]
-struct Options {
-    /// Set to true if this atom is ever repeated in any context.
-    /// For positional arguments, non-argument flags and commands, repetition 
-    /// means that they become countable.
-    /// For flags with arguments, repetition means multiple distinct values
-    /// can be specified (and are represented as a Vec).
-    repeats: bool,
-
-    /// This specifies whether this atom has any arguments.
-    /// For commands and positional arguments, this is always Zero.
-    /// Flags can have zero or one argument, with an optionally default value.
-    arg: Argument,
-}
-
-#[deriving(Clone, Show, PartialEq)]
-enum Argument {
-    Zero,
-    One,
-    // Default implies One
-    Default(String),
-}
-
-impl Pattern {
-    fn flatten(self) -> Pattern {
-        match self {
-            Alternates(mut ps) => {
-                // assert!(!ps.is_empty()); 
-                if ps.len() == 1 {
-                    ps.pop().unwrap().flatten()
-                } else {
-                    Alternates(ps.move_iter().map(|p| p.flatten()).collect())
-                }
-            }
-            Sequence(mut ps) => {
-                // assert!(!ps.is_empty()); 
-                if ps.len() == 1 {
-                    ps.pop().unwrap().flatten()
-                } else {
-                    Sequence(ps.move_iter().map(|p| p.flatten()).collect())
-                }
-            }
-            Repeat(p) => Repeat(box p.flatten()),
-            Optional(p) => Optional(box p.flatten()),
-            Options => Options,
-            Atom(name) => Atom(name),
-        }
-    }
-}
-
-impl Options {
-    fn new_rc(rep: bool, arg: Argument) -> Rc<RefCell<Options>> {
-        Rc::new(RefCell::new(Options { repeats: rep, arg: arg }))
-    }
-}
-
-impl Argument {
-    fn has_arg(&self) -> bool {
-        match *self {
-            Zero => false,
-            One | Default(_) => true,
-        }
-    }
-}
+use synonym::SynonymMap;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
 )
+
+pub struct Docopt {
+    program: String,
+    usages: Vec<Pattern>,
+    descs: SynonymMap<Atom, Options>,
+    last_atom_added: Option<Atom>, // context for [default: ...]
+}
 
 impl Docopt {
     pub fn new(doc: &str) -> Result<Docopt, String> {
         let mut d = Docopt {
             program: "".to_string(),
             usages: vec!(),
-            descs: HashMap::new(),
+            descs: SynonymMap::new(),
             last_atom_added: None,
         };
         try!(d.parse(doc));
         Ok(d)
+    }
+
+    fn has_arg(&self, atom: &Atom) -> bool {
+        match self.descs.find(atom) {
+            None => false,
+            Some(opts) => opts.arg.has_arg(),
+        }
     }
 
     fn parse(&mut self, doc: &str) -> Result<(), String> {
@@ -145,7 +67,7 @@ impl Docopt {
         let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog")));
         let pats = Regex::new(mprog.as_slice()).unwrap();
         for pat in pats.captures_iter(caps.name("pats")) {
-            let pattern = try!(PatParser::new(self, pat.at(1)).pattern());
+            let pattern = try!(PatParser::new(self, pat.at(1)).parse());
             self.usages.push(pattern);
         }
         Ok(())
@@ -187,7 +109,10 @@ impl Docopt {
                 long = l.to_string()
             }
             if !flags.name("arg").is_empty() {
-                try!(err_if_invalid_arg(flags.name("arg")));
+                let arg = flags.name("arg");
+                if !Atom::is_arg(arg) {
+                    err!("Argument '{}' is not of the form ARG or <arg>.", arg)
+                }
                 has_arg = true; // may be changed to default later
             }
         }
@@ -218,11 +143,10 @@ impl Docopt {
                               option description.", defval, desc),
                 Some(ref atom) => atom,
             };
-        let mut opts =
-            self.descs.find(last_atom)
+        let opts =
+            self.descs.find_mut(last_atom)
             .expect(format!("BUG: last opt desc key ('{}') is invalid.",
-                            last_atom).as_slice())
-            .borrow_mut();
+                            last_atom).as_slice());
         match opts.arg {
             One => {}, // OK
             Zero =>
@@ -243,19 +167,52 @@ impl Docopt {
         if !short.is_empty() && short.char_len() != 2 {
             err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        let opts = Options::new_rc(false, if has_arg { One } else { Zero });
+        let opts = Options::new(false, if has_arg { One } else { Zero });
 
-        if !short.is_empty() {
-            self.descs.insert(as_short(short), opts.clone());
-            if long.is_empty() {
-                self.last_atom_added = Some(as_short(short));
-            }
-        }
-        if !long.is_empty() {
-            self.descs.insert(as_long(long), opts);
-            self.last_atom_added = Some(as_long(long))
+        if !short.is_empty() && !long.is_empty() {
+            let (short, long) = (Atom::new(short), Atom::new(long));
+            self.descs.insert(long.clone(), opts);
+            self.descs.insert_synonym(short, long.clone());
+            self.last_atom_added = Some(long);
+        } else if !short.is_empty() {
+            let short = Atom::new(short);
+            self.descs.insert(short.clone(), opts);
+            self.last_atom_added = Some(short);
+        } else if !long.is_empty() {
+            let long = Atom::new(long);
+            self.descs.insert(long.clone(), opts);
+            self.last_atom_added = Some(long);
         }
         Ok(())
+    }
+}
+
+impl fmt::Show for Docopt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
+        fn sorted<T: Ord>(mut xs: Vec<T>) -> Vec<T> {
+            xs.sort(); xs
+        }
+
+        try!(writeln!(f, "====="))
+        try!(writeln!(f, "Program: {}", self.program))
+
+        try!(writeln!(f, "Option descriptions:"))
+        let keys = sorted(self.descs.keys().collect());
+        for &k in keys.iter() {
+            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)))
+        }
+
+        try!(writeln!(f, "Synonyms:"))
+        let keys: Vec<(&Atom, &Atom)> = sorted(self.descs.synonyms().collect());
+        for &(from, to) in keys.iter() {
+            try!(writeln!(f, "  {} => {}", from, to))
+        }
+
+        try!(writeln!(f, "Usages:"))
+        for pat in self.usages.iter() {
+            try!(writeln!(f, "  {}", pat))
+        }
+        writeln!(f, "=====")
     }
 }
 
@@ -280,25 +237,45 @@ impl<'a> PatParser<'a> {
         }
     }
 
+    fn parse(&mut self) -> Result<Pattern, String> {
+        let mut seen = HashSet::new();
+        self.pattern()
+            .map(|mut p| {
+                p = p.flatten();
+                p.tag_repeats(|atom, repeats| {
+                    let opt = self.dopt.descs.get_mut(atom);
+                    opt.repeats = opt.repeats || repeats || seen.contains(atom);
+                    seen.insert(atom.clone());
+                });
+                p
+            })
+    }
+
     fn pattern(&mut self) -> Result<Pattern, String> {
         let mut alts = vec!();
         while !self.is_eof() {
             match self.cur() {
-                "]" | ")" => { self.next(); break },
+                "]" | ")" => {
+                    if self.previs("|") {
+                        err!("Unexpected '|'. Not in form 'a | b | c'.")
+                    }
+                    self.next();
+                    break;
+                },
                 _ => alts.push(try!(self.alternate())),
             }
         }
-        Ok(Alternates(alts).flatten())
+        Ok(Alternates(alts))
     }
 
     fn alternate(&mut self) -> Result<Pattern, String> {
         let mut seq = vec!();
         while !self.is_eof() {
             match self.cur() {
-                // "..." => { 
-                    // err!("'...' must appear directly after a group, argument, \ 
-                          // flag or command.") 
-                // } 
+                "..." => {
+                    err!("'...' must appear directly after a group, argument, \
+                          flag or command.")
+                }
                 "-" | "--" => {
                     // As per specification, `-` and `--` by themselves are
                     // just commands that should be interpreted conventionally.
@@ -313,10 +290,10 @@ impl<'a> PatParser<'a> {
                     return Ok(Sequence(seq))
                 }
                 "]" | ")" => {
-                    // if alt.pats.is_empty() { 
-                        // err!("Unexpected '{}'. Empty groups are not allowed.", 
-                             // self.cur()) 
-                    // } 
+                    if seq.is_empty() {
+                        err!("Unexpected '{}'. Empty groups are not allowed.",
+                             self.cur())
+                    }
                     return Ok(Sequence(seq))
                 }
                 "[" => {
@@ -334,20 +311,16 @@ impl<'a> PatParser<'a> {
                     seq.push(try!(self.group(|p| Sequence(vec!(p)), ")")));
                 }
                 _ => {
-                    if is_short(self.cur()) {
-                        println!("Short: {}", self.cur());
-                        self.next();
-                    } else if is_long(self.cur()) {
+                    if Atom::is_short(self.cur()) {
+                        seq.push(try!(self.flag_short()));
+                    } else if Atom::is_long(self.cur()) {
                         seq.push(try!(self.flag_long()));
-                        // println!("Long: {}", self.cur()); 
-                        // let rep = try!(self.flag_long()); 
-                        // alt.pats.push(rep); 
-                    } else if is_arg(self.cur()) {
+                    } else if Atom::is_arg(self.cur()) {
                         // These are always positional.
                         // Arguments for -s and --short are picked up
                         // when parsing flags.
                         seq.push(try!(self.positional()));
-                    } else if is_cmd(self.cur()) {
+                    } else if Atom::is_cmd(self.cur()) {
                         seq.push(try!(self.command()));
                     } else {
                         err!("Unknown token type '{}'.", self.cur())
@@ -358,70 +331,97 @@ impl<'a> PatParser<'a> {
         Ok(Sequence(seq))
     }
 
+    fn flag_short(&mut self) -> Result<Pattern, String> {
+        let mut seq = vec!();
+        let stacked: String = self.cur().slice_from(1).to_string();
+        for (i, c) in stacked.as_slice().chars().enumerate() {
+            let atom = Short(c);
+            seq.push(Atom(atom.clone()));
+
+            // The only way for a short option to have an argument is if
+            // it's specified in an option description.
+            if !self.dopt.has_arg(&atom) {
+                self.add_atom_ifnotexists(Zero, &atom);
+            } else {
+                // At this point, the flag MUST have an argument. Therefore,
+                // we interpret the "rest" of the characters as the argument.
+                // If the "rest" is empty, then we peek to find and make sure
+                // there is an argument.
+                let rest = stacked.as_slice().slice_from(i+1);
+                if rest.is_empty() {
+                    try!(self.next_flag_arg(&atom));
+                } else {
+                    try!(self.errif_invalid_flag_arg(&atom, rest));
+                }
+                // We either error'd or consumed the rest of the short stack as
+                // an argument.
+                break
+            }
+        }
+        self.next();
+        Ok(self.maybe_repeat(Sequence(seq)))
+    }
+
     fn flag_long(&mut self) -> Result<Pattern, String> {
         let (atom, arg) = try!(parse_long_equal(self.cur()));
         if self.dopt.descs.contains_key(&atom) {
             // Options already exist for this atom, so we must check to make
             // sure things are consistent.
-            let opts = self.dopt.descs.get(&atom).borrow().clone();
-            if arg.has_arg() && !opts.arg.has_arg() {
+            let has_arg = self.dopt.has_arg(&atom);
+            if arg.has_arg() && !has_arg {
                 // Found `=` in usage, but previous usage of this flag
                 // didn't specify an argument.
                 err!("Flag '{}' does not take any arguments.", atom)
-            } else if !arg.has_arg() && opts.arg.has_arg() {
+            } else if !arg.has_arg() && has_arg {
                 // Didn't find any `=` in usage for this flag, but previous
                 // usage of this flag specifies an argument.
                 // So look for `--flag ARG`
-                try!(self.next_noeof(format!(
-                     "Expected argument for flag '{}' but found EOF.",
-                     atom).as_slice()));
-                if !is_arg(self.cur()) {
-                    err!("Expected argument for flag '{}', but found \
-                          malformed argument '{}'.", atom, self.cur())
-                }
+                try!(self.next_flag_arg(&atom));
                 // We don't care about the value of `arg` since options
                 // already exist. (In which case, the argument value can never
                 // change.)
             }
         }
+        self.add_atom_ifnotexists(arg, &atom);
         self.next();
-        let pat = self.maybe_repeat(Atom(atom.clone()));
-        self.update_options(arg, &pat);
-        Ok(pat)
+        Ok(self.maybe_repeat(Atom(atom.clone())))
+    }
+
+    fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
+        try!(self.next_noeof(format!(
+             "Expected argument for flag '{}' but found EOF.",
+             atom).as_slice()));
+        self.errif_invalid_flag_arg(atom, self.cur())
+    }
+
+    fn errif_invalid_flag_arg(&self, atom: &Atom, arg: &str)
+                             -> Result<(), String> {
+        if !Atom::is_arg(arg) {
+            err!("Expected argument for flag '{}', but found \
+                  malformed argument '{}'.", atom, arg)
+        }
+        Ok(())
     }
 
     fn command(&mut self) -> Result<Pattern, String> {
-        let atom = Atom(as_cmd(self.cur()));
+        let atom = Atom::new(self.cur());
+        self.add_atom_ifnotexists(Zero, &atom);
         self.next();
-        let pat = self.maybe_repeat(atom);
-        self.update_options(Zero, &pat);
-        Ok(pat)
+        Ok(self.maybe_repeat(Atom(atom)))
     }
 
     fn positional(&mut self) -> Result<Pattern, String> {
-        let atom = Atom(as_arg(self.cur()));
+        let atom = Atom::new(self.cur());
+        self.add_atom_ifnotexists(Zero, &atom);
         self.next();
-        let pat = self.maybe_repeat(atom);
-        self.update_options(Zero, &pat);
-        Ok(pat)
+        Ok(self.maybe_repeat(Atom(atom)))
     }
 
-    fn update_options(&mut self, arg: Argument, atom_or_repeat: &Pattern) {
-        let (atom, rep) =
-            match atom_or_repeat {
-                &Atom(ref atom) => (atom, false),
-                &Repeat(box Atom(ref atom)) => (atom, true),
-                _ => fail!("BUG: unexpected pattern: {}", atom_or_repeat),
-            };
-        let seen = self.seen.contains(atom);
+    fn add_atom_ifnotexists(&mut self, arg: Argument, atom: &Atom) {
         if !self.dopt.descs.contains_key(atom) {
-            let opts = Options::new_rc(rep, arg);
+            let opts = Options::new(false, arg);
             self.dopt.descs.insert(atom.clone(), opts);
-        } else {
-            let mut opts = self.dopt.descs.get(atom).borrow_mut();
-            opts.repeats = opts.repeats || rep || seen;
         }
-        self.seen.insert(atom.clone());
     }
 
     fn group(&mut self, mk: |Pattern| -> Pattern, end: &str)
@@ -492,12 +492,160 @@ impl<'a> PatParser<'a> {
     }
 }
 
-fn err_if_invalid_arg(s: &str) -> Result<(), String> {
-    if !is_arg(s) {
-        err!("Argument '{}' is not of the form ARG or <arg>.", s)
-    } else {
-        Ok(())
+#[deriving(Show)]
+enum Pattern {
+    Alternates(Vec<Pattern>),
+    Sequence(Vec<Pattern>),
+    Repeat(Box<Pattern>),
+    Optional(Box<Pattern>),
+    Options,
+    Atom(Atom),
+}
+
+#[deriving(PartialEq, Eq, Ord, Hash, Clone, Show)]
+enum Atom {
+    Short(char),
+    Long(String),
+    Command(String),
+    Positional(String),
+}
+
+#[deriving(Clone, Show)]
+struct Options {
+    /// Set to true if this atom is ever repeated in any context.
+    /// For positional arguments, non-argument flags and commands, repetition 
+    /// means that they become countable.
+    /// For flags with arguments, repetition means multiple distinct values
+    /// can be specified (and are represented as a Vec).
+    repeats: bool,
+
+    /// This specifies whether this atom has any arguments.
+    /// For commands and positional arguments, this is always Zero.
+    /// Flags can have zero or one argument, with an optionally default value.
+    arg: Argument,
+}
+
+#[deriving(Clone, Show, PartialEq)]
+enum Argument {
+    Zero,
+    One,
+    // Default implies One
+    Default(String),
+}
+
+impl Pattern {
+    fn flatten(self) -> Pattern {
+        match self {
+            Alternates(mut ps) => {
+                // assert!(!ps.is_empty()); 
+                if ps.len() == 1 {
+                    ps.pop().unwrap().flatten()
+                } else {
+                    Alternates(ps.move_iter().map(|p| p.flatten()).collect())
+                }
+            }
+            Sequence(mut ps) => {
+                // assert!(!ps.is_empty()); 
+                if ps.len() == 1 {
+                    ps.pop().unwrap().flatten()
+                } else {
+                    Sequence(ps.move_iter().map(|p| p.flatten()).collect())
+                }
+            }
+            Repeat(p) => Repeat(box p.flatten()),
+            Optional(p) => Optional(box p.flatten()),
+            Options => Options,
+            Atom(name) => Atom(name),
+        }
     }
+
+    fn tag_repeats(&self, mut tag: |&Atom, bool|) {
+        fn dotag(p: &Pattern, tag: &mut |&Atom, bool|, rep: bool) {
+            match p {
+                &Alternates(ref ps) => for p in ps.iter() { dotag(p, tag, rep) },
+                &Sequence(ref ps) => for p in ps.iter() { dotag(p, tag, rep) },
+                &Repeat(box ref p) => dotag(p, tag, true),
+                &Optional(box ref p) => dotag(p, tag, rep),
+                &Options => dotag(p, tag, rep),
+                &Atom(ref atom) => (*tag)(atom, rep),
+            }
+        }
+        dotag(self, &mut tag, false);
+    }
+}
+
+impl Atom {
+    fn new(s: &str) -> Atom {
+        if Atom::is_short(s) {
+            Short(s.as_slice().char_at(1))
+        } else if Atom::is_long(s) {
+            Long(s.as_slice().slice_from(2).to_string())
+        } else if Atom::is_arg(s) {
+            if s.starts_with("<") && s.ends_with(">") {
+                Positional(s.slice(1, s.len()-1).to_string())
+            } else {
+                Positional(s.to_string())
+            }
+        } else if Atom::is_cmd(s) {
+            Command(s.to_string())
+        } else {
+            fail!("Unknown atom string: '{}'", s)
+        }
+    }
+
+    fn is_short(s: &str) -> bool { return regex!(r"^-[^-]+$").is_match(s) }
+    fn is_long(s: &str) -> bool { return regex!(r"^--\S+$").is_match(s) }
+    fn is_arg(s: &str) -> bool {
+        return regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s)
+    }
+    fn is_cmd(s: &str) -> bool {
+        return regex!(r"^(-|--|[^-]\S*)$").is_match(s)
+    }
+
+    // Assigns an integer to each variant of Atom. (For easier sorting.)
+    fn type_as_uint(&self) -> uint {
+        match self {
+            &Short(_) => 0,
+            &Long(_) => 1,
+            &Command(_) => 2,
+            &Positional(_) => 3,
+        }
+    }
+}
+
+impl PartialOrd for Atom {
+    fn lt(&self, other: &Atom) -> bool {
+        match (self, other) {
+            (&Short(c1), &Short(c2)) => c1 < c2,
+            (&Long(ref s1), &Long(ref s2)) => s1 < s2,
+            (&Command(ref s1), &Command(ref s2)) => s1 < s2,
+            (&Positional(ref s1), &Positional(ref s2)) => s1 < s2,
+            (a1, a2) => a1.type_as_uint() < a2.type_as_uint(),
+        }
+    }
+}
+
+impl Options {
+    fn new(rep: bool, arg: Argument) -> Options {
+        Options { repeats: rep, arg: arg }
+    }
+}
+
+impl Argument {
+    fn has_arg(&self) -> bool {
+        match *self {
+            Zero => false,
+            One | Default(_) => true,
+        }
+    }
+}
+
+struct Argv {
+    /// Flags includes short and long atoms. They are unordered but counted.
+    /// A flag optionally has an argument.
+    flags: HashMap<Atom, (uint, Option<String>)>,
+    /// Args includes commands and positional arguments. They are ordered.
+    args: Vec<Atom>,
 }
 
 // Tries to parse a long flag of the form '--flag[=arg]' and returns a tuple
@@ -506,52 +654,14 @@ fn err_if_invalid_arg(s: &str) -> Result<(), String> {
 fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
     let rarg = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
     match rarg.captures(flag) {
-        None => Ok((as_long(flag), Zero)),
+        None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
             let arg = cap.name("arg").to_string();
-            if !is_arg(arg.as_slice()) {
+            if !Atom::is_arg(arg.as_slice()) {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
-            Ok((as_long(cap.name("name")), One))
+            Ok((Atom::new(cap.name("name")), One))
         }
-    }
-}
-
-fn as_short(s: &str) -> Atom {
-    Short(s.as_slice().char_at(1))
-}
-fn as_long(s: &str) -> Atom {
-    Long(s.as_slice().slice_from(2).to_string())
-}
-fn as_arg(s: &str) -> Atom {
-    if s.starts_with("<") && s.ends_with(">") {
-        Positional(s.slice(1, s.len()-1).to_string())
-    } else {
-        Positional(s.to_string())
-    }
-}
-fn as_cmd(s: &str) -> Atom {
-    Command(s.to_string())
-}
-
-fn is_short(s: &str) -> bool { return regex!(r"^-[^-]+$").is_match(s) }
-fn is_long(s: &str) -> bool { return regex!(r"^--\S+$").is_match(s) }
-fn is_arg(s: &str) -> bool { return regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s) }
-fn is_cmd(s: &str) -> bool { return regex!(r"^(-|--|[^-]\S*)$").is_match(s) }
-
-impl fmt::Show for Docopt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
-        try!(writeln!(f, "====="))
-        try!(writeln!(f, "Program: {}", self.program))
-        try!(writeln!(f, "Option descriptions:"))
-        for (k, v) in self.descs.iter() {
-            try!(writeln!(f, "  '{}' => {}", k, v.borrow()))
-        }
-        try!(writeln!(f, "Usages:"))
-        for pat in self.usages.iter() {
-            try!(writeln!(f, "  {}", pat))
-        }
-        writeln!(f, "=====")
     }
 }
