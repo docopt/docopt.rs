@@ -640,20 +640,112 @@ impl Argument {
     }
 }
 
-struct Argv {
-    /// Flags includes short and long atoms. They are unordered but counted.
-    /// A flag optionally has an argument.
-    flags: HashMap<Atom, (uint, Option<String>)>,
-    /// Args includes commands and positional arguments. They are ordered.
-    args: Vec<Atom>,
+struct Argv<'a> {
+    /// A representation of an argv string as an ordered list of tokens.
+    /// Tokens that are flags may have an argument.
+    tokens: Vec<ArgvToken>,
+
+    // State for parser.
+    dopt: &'a Docopt,
+    argv: Vec<String>,
+    curi: uint,
+}
+
+#[deriving(Show)]
+struct ArgvToken {
+    atom: Atom,
+    arg: Option<String>,
+}
+
+impl Docopt {
+    pub fn parse_argv<'a>(&'a self, argv: &str) -> Result<Argv<'a>, String> {
+        Argv::new(self, argv)
+    }
+}
+
+impl<'a> Argv<'a> {
+    fn new(dopt: &'a Docopt, argv: &str) -> Result<Argv<'a>, String> {
+        let mut a = Argv {
+            tokens: vec!(),
+            dopt: dopt,
+            argv: argv.words().map(|s| s.to_string()).collect(),
+            curi: 0,
+        };
+        try!(a.parse());
+        Ok(a)
+    }
+
+    fn parse(&mut self) -> Result<(), String> {
+        while self.curi < self.argv.len() {
+            if Atom::is_short(self.cur()) {
+            } else if Atom::is_long(self.cur()) {
+                let (atom, mut arg) = parse_long_equal_argv(self.cur());
+                if !self.dopt.descs.contains_key(&atom) {
+                    err!("Unknown flag: '{}'", &atom)
+                }
+                if arg.is_some() && !self.dopt.has_arg(&atom) {
+                    err!("Flag '{}' cannot have an argument, but found '{}'.",
+                         &atom, &arg)
+                } else if arg.is_none() && self.dopt.has_arg(&atom) {
+                    try!(self.next_noeof(
+                        format!("argument for flag '{}'.", &atom).as_slice()));
+                    arg = Some(self.cur().to_string());
+                }
+                self.tokens.push(ArgvToken { atom: atom, arg: arg });
+            } else {
+                let tok = self.as_command_or_arg(self.cur());
+                self.tokens.push(tok);
+            }
+            self.next()
+        }
+        Ok(())
+    }
+
+    fn count(&self, atom: &Atom) -> uint {
+        self.tokens.iter().filter(|t| &t.atom == atom).count()
+    }
+
+    fn as_command_or_arg(&self, s: &str) -> ArgvToken {
+        let cmd = Command(s.to_string());
+        let atom =
+            if self.dopt.descs.contains_key(&cmd) {
+                cmd
+            } else {
+                Positional(s.to_string())
+            };
+        ArgvToken { atom: atom, arg: None }
+    }
+
+    fn cur<'a>(&'a self) -> &'a str { self.at(0) }
+    fn at<'a>(&'a self, i: int) -> &'a str {
+        self.argv.get((self.curi as int + i) as uint).as_slice()
+    }
+    fn next(&mut self) {
+        if self.curi < self.argv.len() {
+            self.curi += 1
+        }
+    }
+    fn next_noeof(&mut self, expected: &str) -> Result<(), String> {
+        self.next();
+        if self.curi == self.argv.len() {
+            err!("Expected {} but reached end of arguments.", expected)
+        }
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Show for Argv<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
+        writeln!(f, "{}", self.tokens)
+    }
 }
 
 // Tries to parse a long flag of the form '--flag[=arg]' and returns a tuple
 // with the flag atom and whether there is an argument or not.
 // If '=arg' exists and 'arg' isn't a valid argument, an error is returned.
 fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
-    let rarg = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
-    match rarg.captures(flag) {
+    static LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
+    match LONG_EQUAL.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
             let arg = cap.name("arg").to_string();
@@ -663,5 +755,14 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
             }
             Ok((Atom::new(cap.name("name")), One))
         }
+    }
+}
+
+fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
+    static LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
+    match LONG_EQUAL.captures(flag) {
+        None => (Atom::new(flag), None),
+        Some(cap) =>
+            (Atom::new(cap.name("name")), Some(cap.name("arg").to_string())),
     }
 }

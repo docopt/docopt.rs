@@ -4,7 +4,7 @@
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
-#![allow(dead_code, unused_variable, unused_imports)]
+#![allow(dead_code, unused_variable, unused_imports, visible_private_types)]
 
 //! Docopt for Rust.
 
