@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::default::Default;
 use std::fmt;
 use std::str::{MaybeOwned, Owned, Slice};
 use regex;
@@ -167,7 +168,8 @@ impl Docopt {
         if !short.is_empty() && short.char_len() != 2 {
             err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        let opts = Options::new(false, if has_arg { One } else { Zero });
+        let mut opts = Options::new(false, if has_arg { One } else { Zero });
+        opts.is_desc = true;
 
         if !short.is_empty() && !long.is_empty() {
             let (short, long) = (Atom::new(short), Atom::new(long));
@@ -289,7 +291,14 @@ impl<'a> PatParser<'a> {
                     try!(self.next_noeof("pattern"));
                     return Ok(Sequence(seq))
                 }
-                "]" | ")" => {
+                "]" => {
+                    if seq.is_empty() {
+                        err!("Unexpected '{}'. Empty groups are not allowed.",
+                             self.cur())
+                    }
+                    return Ok(Optional(seq))
+                }
+                ")" => {
                     if seq.is_empty() {
                         err!("Unexpected '{}'. Empty groups are not allowed.",
                              self.cur())
@@ -305,10 +314,10 @@ impl<'a> PatParser<'a> {
                         self.next();
                         continue
                     }
-                    seq.push(try!(self.group(|p| Optional(box p), "]")));
+                    seq.push(try!(self.group(|p| p, "]")));
                 }
                 "(" => {
-                    seq.push(try!(self.group(|p| Sequence(vec!(p)), ")")));
+                    seq.push(try!(self.group(|p| p, ")")));
                 }
                 _ => {
                     if Atom::is_short(self.cur()) {
@@ -496,8 +505,8 @@ impl<'a> PatParser<'a> {
 enum Pattern {
     Alternates(Vec<Pattern>),
     Sequence(Vec<Pattern>),
+    Optional(Vec<Pattern>),
     Repeat(Box<Pattern>),
-    Optional(Box<Pattern>),
     Options,
     Atom(Atom),
 }
@@ -523,6 +532,9 @@ struct Options {
     /// For commands and positional arguments, this is always Zero.
     /// Flags can have zero or one argument, with an optionally default value.
     arg: Argument,
+
+    /// Whether it shows up in the "options description" second.
+    is_desc: bool,
 }
 
 #[deriving(Clone, Show, PartialEq)]
@@ -535,25 +547,24 @@ enum Argument {
 
 impl Pattern {
     fn flatten(self) -> Pattern {
+        fn flat_map(mk: |Vec<Pattern>| -> Pattern,
+                    ps: Vec<Pattern>) -> Pattern {
+            mk(ps.move_iter().map(|p| p.flatten()).collect())
+        }
+        fn flatps(mk: |Vec<Pattern>| -> Pattern,
+                  mut ps: Vec<Pattern>) -> Pattern {
+            assert!(!ps.is_empty());
+            if ps.len() == 1 {
+                ps.pop().unwrap().flatten()
+            } else {
+                flat_map(mk, ps)
+            }
+        }
         match self {
-            Alternates(mut ps) => {
-                // assert!(!ps.is_empty()); 
-                if ps.len() == 1 {
-                    ps.pop().unwrap().flatten()
-                } else {
-                    Alternates(ps.move_iter().map(|p| p.flatten()).collect())
-                }
-            }
-            Sequence(mut ps) => {
-                // assert!(!ps.is_empty()); 
-                if ps.len() == 1 {
-                    ps.pop().unwrap().flatten()
-                } else {
-                    Sequence(ps.move_iter().map(|p| p.flatten()).collect())
-                }
-            }
+            Alternates(ps) => flatps(Alternates, ps),
+            Sequence(ps) => flatps(Sequence, ps),
+            Optional(ps) => flat_map(Optional, ps),
             Repeat(p) => Repeat(box p.flatten()),
-            Optional(p) => Optional(box p.flatten()),
             Options => Options,
             Atom(name) => Atom(name),
         }
@@ -564,8 +575,8 @@ impl Pattern {
             match p {
                 &Alternates(ref ps) => for p in ps.iter() { dotag(p, tag, rep) },
                 &Sequence(ref ps) => for p in ps.iter() { dotag(p, tag, rep) },
+                &Optional(ref ps) => for p in ps.iter() { dotag(p, tag, rep) },
                 &Repeat(box ref p) => dotag(p, tag, true),
-                &Optional(box ref p) => dotag(p, tag, rep),
                 &Options => dotag(p, tag, rep),
                 &Atom(ref atom) => (*tag)(atom, rep),
             }
@@ -627,7 +638,7 @@ impl PartialOrd for Atom {
 
 impl Options {
     fn new(rep: bool, arg: Argument) -> Options {
-        Options { repeats: rep, arg: arg }
+        Options { repeats: rep, arg: arg, is_desc: false, }
     }
 }
 
@@ -658,17 +669,23 @@ struct ArgvToken {
 }
 
 impl Docopt {
-    pub fn parse_argv<'a>(&'a self, argv: &str) -> Result<Argv<'a>, String> {
+    pub fn parse_argv<'a>(&'a self, argv: Vec<String>)
+                         -> Result<Argv<'a>, String> {
         Argv::new(self, argv)
+    }
+
+    pub fn parse_argv_string<'a>(&'a self, argv: &str)
+                                -> Result<Argv<'a>, String> {
+        Argv::new(self, argv.words().map(|s| s.to_string()).collect())
     }
 }
 
 impl<'a> Argv<'a> {
-    fn new(dopt: &'a Docopt, argv: &str) -> Result<Argv<'a>, String> {
+    fn new(dopt: &'a Docopt, argv: Vec<String>) -> Result<Argv<'a>, String> {
         let mut a = Argv {
             tokens: vec!(),
             dopt: dopt,
-            argv: argv.words().map(|s| s.to_string()).collect(),
+            argv: argv,
             curi: 0,
         };
         try!(a.parse());
@@ -678,6 +695,30 @@ impl<'a> Argv<'a> {
     fn parse(&mut self) -> Result<(), String> {
         while self.curi < self.argv.len() {
             if Atom::is_short(self.cur()) {
+                let stacked: String = self.cur().slice_from(1).to_string();
+                for (i, c) in stacked.as_slice().chars().enumerate() {
+                    let mut tok = ArgvToken {
+                        atom: Short(c),
+                        arg: None,
+                    };
+                    if !self.dopt.has_arg(&tok.atom) {
+                        self.tokens.push(tok);
+                    } else {
+                        let rest = stacked.as_slice().slice_from(i+1);
+                        tok.arg = Some(
+                            if rest.is_empty() {
+                                let arg = try!(self.next_arg(&tok.atom));
+                                arg.to_string()
+                            } else {
+                                rest.to_string()
+                            }
+                        );
+                        self.tokens.push(tok);
+                        // We've either produced an error or gobbled up the
+                        // rest of these stacked short flags, so stop.
+                        break
+                    }
+                }
             } else if Atom::is_long(self.cur()) {
                 let (atom, mut arg) = parse_long_equal_argv(self.cur());
                 if !self.dopt.descs.contains_key(&atom) {
@@ -725,6 +766,11 @@ impl<'a> Argv<'a> {
             self.curi += 1
         }
     }
+    fn next_arg<'a>(&'a mut self, atom: &Atom) -> Result<&'a str, String> {
+        let expected = format!("argument for flag '{}'", atom);
+        try!(self.next_noeof(expected.as_slice()));
+        Ok(self.cur())
+    }
     fn next_noeof(&mut self, expected: &str) -> Result<(), String> {
         self.next();
         if self.curi == self.argv.len() {
@@ -737,6 +783,134 @@ impl<'a> Argv<'a> {
 impl<'a> fmt::Show for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
         writeln!(f, "{}", self.tokens)
+    }
+}
+
+#[deriving(Clone, Show)]
+struct MatchPattern {
+    args: Vec<MatchArg>,
+    flags: HashMap<Atom, FlagCount>,
+}
+
+#[deriving(Clone, Show)]
+enum FlagCount {
+    Min(uint),
+    Exact(uint),
+}
+
+#[deriving(Clone, Show)]
+enum MatchArg {
+    MatchAtom(Atom),
+    MatchRepeat(Vec<MatchArg>),
+}
+
+impl Default for MatchPattern {
+    fn default() -> MatchPattern {
+        MatchPattern { args: vec!(), flags: HashMap::new() }
+    }
+}
+
+impl MatchPattern {
+    fn empty() -> MatchPattern { Default::default() }
+
+    fn new(pat: &Pattern) -> Vec<MatchPattern> {
+        MatchPattern::empty().expand(pat)
+    }
+
+    fn expand(&self, pat: &Pattern) -> Vec<MatchPattern> {
+        match pat {
+            &Alternates(ref ps) => {
+                let mut alts = vec!();
+                for p in ps.iter() {
+                    alts.push_all_move(self.expand(p))
+                }
+                alts
+            }
+            &Sequence(ref ps) => {
+                let (mut seqs, mut next) = (vec!(), vec!());
+                let mut iter = ps.iter();
+                seqs.push_all_move(self.expand(iter.next().unwrap()));
+                for p in iter {
+                    for mpat in seqs.move_iter() {
+                        next.push_all_move(mpat.expand(p));
+                    }
+                    seqs = vec!();
+                    seqs.push_all_move(next);
+                    next = vec!();
+                }
+                seqs
+            }
+            // The key here is to turn [-s --short a b] into
+            // [-s --short] [-s --short a] [-s --short b] [-s --short a b].
+            // Accrue the flags, then generate all possibilities with respect
+            // to patterns that aren't flags.
+            &Optional(_) => vec!(),
+            &Repeat(box ref p) => {
+                let mut mpats = vec!();
+                for mut mpat in self.expand(pat).move_iter() {
+                    mpat.args = vec!(MatchRepeat(mpat.args));
+                    mpat.exact_to_min();
+                    mpats.push(MatchPattern::merge(self.clone(), mpat));
+                }
+                mpats
+            }
+            // We need to access the option descriptions in order to add the
+            // right flags to the context. Ug. Another parameter?
+            &Options => {
+                vec!()
+            }
+            // Should be as simple as adding whatever atom it is to the
+            // context---whether it's an argument or a flag.
+            &Atom(_) => {
+                vec!()
+            }
+        }
+    }
+
+    fn exact_to_min(&mut self) {
+        for (_, count) in self.flags.mut_iter() {
+            *count = count.to_min()
+        }
+    }
+
+    fn merge(mut first: MatchPattern, second: MatchPattern) -> MatchPattern {
+        first.into(second);
+        first
+    }
+
+    fn into(&mut self, mpat: MatchPattern) {
+        self.args.push_all_move(mpat.args);
+        for (atom, count) in mpat.flags.move_iter() {
+            self.flags.insert_or_update_with(
+                atom, count, |_, c| *c = *c + count);
+        }
+    }
+}
+
+impl FlagCount {
+    fn is_exact(&self) -> bool {
+        match *self {
+            Exact(_) => true,
+            _ => false,
+        }
+    }
+
+    fn to_min(self) -> FlagCount {
+        match self {
+            Exact(n) => Min(n),
+            _ => self,
+        }
+    }
+}
+
+impl Add<FlagCount, FlagCount> for FlagCount {
+    fn add(&self, rhs: &FlagCount) -> FlagCount {
+        match (*self, *rhs) {
+            (Exact(a), Exact(b)) => Exact(a + b),
+            (Min(a), Exact(b)) | (Exact(a), Min(b)) | (Min(a), Min(b)) => {
+                Min(a + b)
+            }
+        }
     }
 }
 
