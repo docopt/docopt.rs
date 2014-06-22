@@ -3,6 +3,7 @@ use std::collections::hashmap::{Entries, Keys};
 use std::hash::Hash;
 use std::mem;
 
+#[deriving(Clone)]
 pub struct SynonymMap<K, V> {
     vals: HashMap<K, V>,
     syns: HashMap<K, K>,
@@ -25,6 +26,10 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.vals.keys()
     }
 
+    pub fn iter<'a>(&'a self) -> Entries<'a, K, V> {
+        self.vals.iter()
+    }
+
     pub fn synonyms<'a>(&'a self) -> Entries<'a, K, K> {
         self.syns.iter()
     }
@@ -39,6 +44,9 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
 }
 
 impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
+    pub fn resolve(&self, k: &K) -> K {
+        self.with_key(k, |k| k.clone())
+    }
     pub fn get<'a>(&'a self, k: &K) -> &'a V {
         self.find(k).unwrap()
     }
