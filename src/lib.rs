@@ -996,12 +996,22 @@ impl<'a, 'b> Matcher<'a, 'b> {
             &Optional(ref ps) => {
                 let mut base = init.clone();
                 let mut noflags = vec!();
-                let mut added_flags = false;
                 for p in ps.iter() {
                     match p {
                         &Atom(ref a @ Short(_)) | &Atom(ref a @Long(_)) => {
-                            added_flags = true;
-                            base.use_optional_flag(a);
+                            let argv_count =
+                                match self.argv.counts.find(a) {
+                                    None => 0,
+                                    Some(c) => *c,
+                                };
+                            let max_count =
+                                match base.max_counts.find(a) {
+                                    None => 0,
+                                    Some(c) => *c,
+                                };
+                            if argv_count > max_count {
+                                base.use_optional_flag(a);
+                            }
                         }
                         other => {
                             noflags.push(other);
@@ -1009,7 +1019,6 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     }
                 }
                 let mut states = vec!();
-                if added_flags { states.push(base.clone()); }
                 self.all_option_states(&base, &mut states, noflags.as_slice());
                 states
             }
@@ -1018,15 +1027,11 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 loop {
                     let mut nextss = vec!();
                     for s in grouped_states.last().unwrap().iter() {
-                        let nexts =
+                        nextss.push_all_move(
                             self.states(p, s)
                                 .move_iter()
                                 .filter(|snext| snext != s)
-                                .collect::<Vec<MState>>();
-                        println!("PREV: {}", s);
-                        println!("NEXTS: {}", nexts);
-                        println!("----------------");
-                        nextss.push_all_move(nexts);
+                                .collect());
                     }
                     if nextss.is_empty() {
                         break
