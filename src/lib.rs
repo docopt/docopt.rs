@@ -198,16 +198,16 @@ impl Docopt {
             .expect(format!("BUG: last opt desc key ('{}') is invalid.",
                             last_atom).as_slice());
         match opts.arg {
-            One => {}, // OK
+            One(None) => {}, // OK
             Zero =>
                 err!("Cannot assign default value '{}' to flag '{}' \
                       that has no arguments.", defval, last_atom),
-            Default(ref curval) =>
+            One(Some(ref curval)) =>
                 err!("Flag '{}' already has a default value \
                       of '{}' (second default value: '{}').",
                      last_atom, curval, defval),
         }
-        opts.arg = Default(defval.to_string());
+        opts.arg = One(Some(defval.to_string()));
         Ok(())
     }
 
@@ -217,7 +217,7 @@ impl Docopt {
         if !short.is_empty() && short.char_len() != 2 {
             err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        let mut opts = Options::new(false, if has_arg { One } else { Zero });
+        let mut opts = Options::new(false, if has_arg { One(None) } else { Zero });
         opts.is_desc = true;
 
         if !short.is_empty() && !long.is_empty() {
@@ -271,32 +271,37 @@ struct PatParser<'a> {
     dopt: &'a mut Docopt,
     tokens: Vec<String>, // used while parsing a single usage pattern
     curi: uint, // ^^ index into pattern chars
+    expecting: Vec<char>, // stack of expected ']' or ')'
 }
 
 impl<'a> PatParser<'a> {
     fn new(dopt: &'a mut Docopt, pat: &str) -> PatParser<'a> {
         // Normalize `[xyz]` -> `[ xyz ]` so that grouping operators are
         // tokenized easily. Don't worry about introducing extra spaces.
+        // Do the same for `...`, `(xyz)` and `|`.
         let rpat = regex!(r"\.\.\.|\[|\]|\(|\)|\|");
         let pat = rpat.replace_all(pat.trim(), " $0 ");
         PatParser {
             dopt: dopt,
             tokens: pat.as_slice().words().map(|s| s.to_string()).collect(),
             curi: 0,
+            expecting: vec!(),
         }
     }
 
     fn parse(&mut self) -> Result<Pattern, String> {
         let mut seen = HashSet::new();
-        self.pattern()
-            .map(|p| {
-                p.tag_repeats(|atom, repeats| {
-                    let opt = self.dopt.descs.get_mut(atom);
-                    opt.repeats = opt.repeats || repeats || seen.contains(atom);
-                    seen.insert(atom.clone());
-                });
-                p
-            })
+        let p = try!(self.pattern());
+        match self.expecting.pop() {
+            None => {},
+            Some(c) => err!("Unclosed group. Expected '{}'.", c),
+        }
+        p.tag_repeats(|atom, repeats| {
+            let opt = self.dopt.descs.get_mut(atom);
+            opt.repeats = opt.repeats || repeats || seen.contains(atom);
+            seen.insert(atom.clone());
+        });
+        Ok(p)
     }
 
     fn pattern(&mut self) -> Result<Pattern, String> {
@@ -327,6 +332,16 @@ impl<'a> PatParser<'a> {
                         err!("Unexpected '{}'. Empty groups are not allowed.",
                              self.cur())
                     }
+                    match self.expecting.pop() {
+                        None => err!("Unexpected '{}'. No open bracket found.",
+                                     self.cur()),
+                        Some(c) => {
+                            if c != self.cur().char_at(0) {
+                                err!("Expected '{}' but got '{}'.",
+                                     c, self.cur())
+                            }
+                        }
+                    }
                     let mk = if self.cur() == "]" { Optional } else { Sequence };
                     self.next();
                     return
@@ -348,10 +363,12 @@ impl<'a> PatParser<'a> {
                         seq.push(self.maybe_repeat(opts));
                         continue
                     }
-                    seq.push(try!(self.group(|p| p, "]")));
+                    self.expecting.push(']');
+                    seq.push(try!(self.group()));
                 }
                 "(" => {
-                    seq.push(try!(self.group(|p| p, ")")));
+                    self.expecting.push(')');
+                    seq.push(try!(self.group()));
                 }
                 _ => {
                     if Atom::is_short(self.cur()) {
@@ -481,14 +498,11 @@ impl<'a> PatParser<'a> {
         }
     }
 
-    fn group(&mut self, mk: |Pattern| -> Pattern, end: &str)
+    fn group(&mut self)
             -> Result<Pattern, String> {
         try!(self.next_noeof("pattern"));
         let pat = try!(self.pattern());
-        if !self.atis(-1, end) {
-            err!("Expected '{}' but got '{}'.", end, self.at(-1))
-        }
-        Ok(self.maybe_repeat(mk(pat)))
+        Ok(self.maybe_repeat(pat))
     }
 
     fn maybe_repeat(&mut self, pat: Pattern) -> Pattern {
@@ -567,9 +581,7 @@ struct Options {
 #[deriving(Clone, Show, PartialEq)]
 enum Argument {
     Zero,
-    One,
-    // Default implies One
-    Default(String),
+    One(Option<String>), // optional default value
 }
 
 impl Pattern {
@@ -648,7 +660,7 @@ impl Argument {
     fn has_arg(&self) -> bool {
         match *self {
             Zero => false,
-            One | Default(_) => true,
+            One(_) => true,
         }
     }
 }
@@ -886,16 +898,6 @@ impl MState {
 }
 
 impl<'a, 'b> Matcher<'a, 'b> {
-    fn token_from(&'a self, state: &MState) -> Option<&'a ArgvToken> {
-        self.argv.positional.as_slice().get(state.argvi)
-    }
-
-    fn add_value(&self, state: &mut MState,
-                  atom_spec: &Atom, atom: &Atom, arg: &Option<String>) {
-        let opts = self.argv.dopt.descs.get(atom_spec);
-        state.add_value(opts, atom_spec, atom, arg);
-    }
-
     fn matches(argv: &'a Argv, pat: &Pattern) -> Option<HashMap<Atom, Value>> {
         let m = Matcher { argv: argv };
         let init = MState {
@@ -918,6 +920,16 @@ impl<'a, 'b> Matcher<'a, 'b> {
             })
     }
 
+    fn token_from(&'a self, state: &MState) -> Option<&'a ArgvToken> {
+        self.argv.positional.as_slice().get(state.argvi)
+    }
+
+    fn add_value(&self, state: &mut MState,
+                  atom_spec: &Atom, atom: &Atom, arg: &Option<String>) {
+        let opts = self.argv.dopt.descs.get(atom_spec);
+        state.add_value(opts, atom_spec, atom, arg);
+    }
+
     fn add_flag_values(&self, state: &mut MState) {
         for tok in self.argv.flags.iter() {
             self.add_value(state, &tok.atom, &tok.atom, &tok.arg);
@@ -934,12 +946,12 @@ impl<'a, 'b> Matcher<'a, 'b> {
             match (opts.repeats, &opts.arg) {
                 (false, &Zero) => { vs.insert(atom, Switch(false)); }
                 (true, &Zero) => { vs.insert(atom, Counted(0)); }
-                (false, &One) => { vs.insert(atom, Plain(None)); }
-                (true, &One) => { vs.insert(atom, List(vec!())); }
-                (false, &Default(ref v)) => {
+                (false, &One(None)) => { vs.insert(atom, Plain(None)); }
+                (true, &One(None)) => { vs.insert(atom, List(vec!())); }
+                (false, &One(Some(ref v))) => {
                     vs.insert(atom, Plain(Some(v.clone())));
                 }
-                (true, &Default(ref v)) => {
+                (true, &One(Some(ref v))) => {
                     let words =
                         v.as_slice().words().map(|s| s.to_string()).collect();
                     vs.insert(atom, List(words));
@@ -953,21 +965,12 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn state_has_valid_flags(&self, state: &MState) -> bool {
-        for flag in self.argv.counts.keys() {
-            if !state.max_counts.contains_key(flag) {
-                return false
-            }
-        }
-        true
+        self.argv.counts.keys().all(|flag| state.max_counts.contains_key(flag))
     }
 
     fn state_valid_num_flags(&self, state: &MState) -> bool {
-        for (flag, count) in state.counts.iter() {
-            if count > state.max_counts.get(flag) {
-                return false
-            }
-        }
-        true
+        self.argv.counts.iter().all(
+            |(flag, count)| count <= state.max_counts.get(flag))
     }
 
     fn states(&self, pat: &Pattern, init: &MState) -> Vec<MState> {
@@ -999,16 +1002,8 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 for p in ps.iter() {
                     match p {
                         &Atom(ref a @ Short(_)) | &Atom(ref a @Long(_)) => {
-                            let argv_count =
-                                match self.argv.counts.find(a) {
-                                    None => 0,
-                                    Some(c) => *c,
-                                };
-                            let max_count =
-                                match base.max_counts.find(a) {
-                                    None => 0,
-                                    Some(c) => *c,
-                                };
+                            let argv_count = self.argv.counts.find_copy(a).unwrap_or(0);
+                            let max_count = base.max_counts.find_copy(a).unwrap_or(0);
                             if argv_count > max_count {
                                 base.use_optional_flag(a);
                             }
@@ -1095,7 +1090,7 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
-            Ok((Atom::new(cap.name("name")), One))
+            Ok((Atom::new(cap.name("name")), One(None)))
         }
     }
 }
