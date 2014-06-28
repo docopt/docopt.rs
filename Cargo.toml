@@ -1,0 +1,9 @@
+[package]
+name = "docopt"
+version = "0.1.0"
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[[lib]]
+name = "docopt"
+path = "src/lib.rs"
+
