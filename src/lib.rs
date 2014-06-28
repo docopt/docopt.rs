@@ -1109,7 +1109,6 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
     }
 }
 
-mod parse;
 mod synonym;
 #[cfg(test)]
 mod test;
