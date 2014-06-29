@@ -44,7 +44,8 @@ docopt!(StructName, "docopt usage string",
 The types would need to satisfy some `FromDocoptValue` trait. If a type isn't 
 specified for an option, then it will fallback to the natural type as indicated 
 by Docopt (e.g., boolean -> `bool`, count -> `uint`, string -> `String` and
-list of strings -> `Vec<String>`).
+list of strings -> `Vec<String>`). Alternatively, we could just rely on the
+type to satisfy `Decodable`. The latter is probably a better approach.
 
 The macro solves our single point of truth problem *and* it makes it convenient 
 to read command line options because you don't need to manually convert values 
