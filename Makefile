@@ -38,10 +38,10 @@ build/tests: $(LIB) $(TEST_FILES)
 	$(RUSTC) $(RUSTTESTFLAGS) $(RUST_PATH) --test src/lib.rs -o ./build/tests
 
 scratch: build/scratch
-	RUST_TEST_TASKS=1 RUST_LOG=$(LIB_NAME) ./build/scratch
+	RUST_TEST_TASKS=1 RUST_LOG=$(LIB_NAME) ./build/scratch $(ARGS)
 
 build/scratch: $(LIB) scratch.rs
-	$(RUSTC) -L $(BUILD) $(RUSTTESTFLAGS) scratch.rs -o ./build/scratch
+	$(RUSTC) $(RUST_PATH) $(RUSTTESTFLAGS) scratch.rs -o ./build/scratch
 
 ex_%: build/%
 	./build/$* $(ARGS)
