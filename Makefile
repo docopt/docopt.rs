@@ -18,7 +18,7 @@ install:
 	cargo-lite install
 
 $(LIB): $(LIB_FILES)
-	@mkdir -p $(BUILD)
+	@mkdir -p $(BUILD) $(TARGET)
 	$(RUSTC) $(RUSTFLAGS) ./src/lib.rs --out-dir=$(TARGET)
 	@touch $(LIB)
 
