@@ -21,6 +21,15 @@ use std::fmt;
 use parse::Parser;
 use synonym::SynonymMap;
 
+macro_rules! werr(
+    ($($arg:tt)*) => (
+        match io::stderr().write_str(format!($($arg)*).as_slice()) {
+            Ok(_) => (),
+            Err(err) => fail!("{}", err),
+        }
+    )
+)
+
 pub type Error = String;
 
 #[deriving(Show)]
@@ -29,32 +38,11 @@ pub struct Docopt {
     conf: Config,
 }
 
-#[deriving(Show)]
+#[deriving(Clone, Show)]
 pub struct Config {
     pub options_first: bool,
     pub help: bool,
     pub version: Option<String>,
-}
-
-pub fn docopt(doc: &str) -> ValueMap {
-    use std::io;
-    use std::os;
-
-    let conf = Config { options_first: false, help: true, version: None };
-    let dopt =
-        match Docopt::new(doc, conf) {
-            Ok(dopt) => dopt,
-            Err(err) => fail!("{}", err),
-        };
-    let os_argv = os::args();
-    let argv: Vec<&str> = os_argv.iter().skip(1).map(|s|s.as_slice()).collect();
-    dopt.argv(argv.as_slice()).unwrap_or_else(|err| {
-        if !err.is_empty() {
-            let _ = writeln!(io::stderr(), "{}\n", err);
-        }
-        let _ = writeln!(io::stderr(), "{}", dopt.p.usage.as_slice().trim());
-        unsafe { libc::exit(1 as libc::c_int); }
-    })
 }
 
 impl Docopt {
@@ -167,6 +155,58 @@ impl fmt::Show for ValueMap {
         }
         Ok(())
     }
+}
+
+pub fn docopt(doc: &str) -> ValueMap {
+    docopt_conf(doc, Config { options_first: false, help: true, version: None })
+}
+
+pub fn docopt_conf(doc: &str, conf: Config) -> ValueMap {
+    match Docopt::new(doc, conf) {
+        Ok(dopt) => convenient_parse_argv(&dopt),
+        Err(err) => fail!("{}", err),
+    }
+}
+
+fn convenient_parse_argv(dopt: &Docopt) -> ValueMap {
+    use std::io;
+    use std::os;
+
+    let os_argv = os::args();
+    let argv: Vec<&str> = os_argv.iter().skip(1).map(|s|s.as_slice()).collect();
+    if dopt.conf.help && argv_has_help(argv.as_slice()) {
+        werr!("{}\n", dopt.p.full_doc.as_slice().trim());
+        exit(1);
+    }
+    match dopt.conf.version {
+        Some(ref v) if argv_has_version(argv.as_slice()) => {
+            werr!("{}\n", v);
+            exit(0);
+        }
+        _ => {},
+    }
+    dopt.argv(argv.as_slice()).unwrap_or_else(|err| {
+        if !err.is_empty() {
+            werr!("{}\n", err);
+        }
+        werr!("{}\n", dopt.p.usage.as_slice().trim());
+        exit(1);
+    })
+}
+
+fn argv_has_help(argv: &[&str]) -> bool {
+    argv.contains(&"-h") || argv.contains(&"--help")
+}
+
+fn argv_has_version(argv: &[&str]) -> bool {
+    argv.contains(&"--version")
+}
+
+// I've been warned that this is wildly unsafe.
+// Unless there's a reasonable alternative, I'm inclined to say that this is
+// the price you pay for convenience.
+fn exit(code: uint) -> ! {
+    unsafe { libc::exit(code as libc::c_int) }
 }
 
 mod parse;
