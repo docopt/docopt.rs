@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hashmap::{Entries, Keys};
+use std::fmt::Show;
 use std::hash::Hash;
 use std::mem;
 
@@ -97,5 +98,22 @@ impl<K: Eq + Hash + Clone, V> MutableMap<K, V> for SynonymMap<K, V> {
         } else {
             self.vals.pop(k)
         }
+    }
+}
+
+impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
+    fn from_iter<T: Iterator<(K, V)>>(mut iter: T) -> SynonymMap<K, V> {
+        let mut map = SynonymMap::new();
+        for (k, v) in iter {
+            map.insert(k, v);
+        }
+        map
+    }
+}
+
+impl<K: Eq + Hash + Show, V: Show> Show for SynonymMap<K, V> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        try!(self.vals.fmt(f));
+        write!(f, " (synomyns: {})", self.syns.to_str())
     }
 }

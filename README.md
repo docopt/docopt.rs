@@ -4,5 +4,13 @@ Docopt for Rust with automatic type based decoding (i.e., data validation).
 
 Licensed under the [UNLICENSE](http://unlicense.org).
 
-Currently a work in progress.
+Check out
+[examples/no_macro.rs](https://github.com/BurntSushi/docopt.rs/blob/master/examples/no_macro.rs)
+for a glimpse at Docopt in action. (As the name of the example suggests, there
+is no macro support yet.)
+
+### TODO
+
+* Testing.
+* Macro.
 
