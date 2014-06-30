@@ -1042,7 +1042,10 @@ impl<'a, 'b> Matcher<'a, 'b> {
             &Sequence(ref ps) => {
                 let (mut states, mut next) = (vec!(), vec!());
                 let mut iter = ps.iter();
-                states.push_all_move(self.states(iter.next().unwrap(), init));
+                match iter.next() {
+                    None => return vec!(init.clone()),
+                    Some(p) => states.push_all_move(self.states(p, init)),
+                }
                 for p in iter {
                     for s in states.move_iter() {
                         next.push_all_move(self.states(p, &s));
