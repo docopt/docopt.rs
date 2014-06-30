@@ -13,6 +13,9 @@
 
 extern crate debug;
 extern crate libc;
+#[cfg(test)]
+#[phase(plugin, link)]
+extern crate log;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 
@@ -135,6 +138,10 @@ impl<'k> Map<&'k str, Value> for ValueMap {
 
 impl fmt::Show for ValueMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_empty() {
+            return write!(f, "{{EMPTY}}");
+        }
+
         // This is a little crazy, but we want to group synonyms with
         // their keys and sort them for predictable output.
         let reverse: HashMap<&String, &String> =
@@ -213,4 +220,6 @@ mod parse;
 mod synonym;
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod testcases;
 
