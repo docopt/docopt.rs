@@ -676,13 +676,13 @@ impl Atom {
 }
 
 impl PartialOrd for Atom {
-    fn lt(&self, other: &Atom) -> bool {
+    fn partial_cmp(&self, other: &Atom) -> Option<Ordering> {
         match (self, other) {
-            (&Short(c1), &Short(c2)) => c1 < c2,
-            (&Long(ref s1), &Long(ref s2)) => s1 < s2,
-            (&Command(ref s1), &Command(ref s2)) => s1 < s2,
-            (&Positional(ref s1), &Positional(ref s2)) => s1 < s2,
-            (a1, a2) => a1.type_as_uint() < a2.type_as_uint(),
+            (&Short(c1), &Short(c2)) => c1.partial_cmp(&c2),
+            (&Long(ref s1), &Long(ref s2)) => s1.partial_cmp(s2),
+            (&Command(ref s1), &Command(ref s2)) => s1.partial_cmp(s2),
+            (&Positional(ref s1), &Positional(ref s2)) => s1.partial_cmp(s2),
+            (a1, a2) => a1.type_as_uint().partial_cmp(&a2.type_as_uint()),
         }
     }
 }
