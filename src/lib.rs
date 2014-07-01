@@ -220,6 +220,4 @@ mod parse;
 mod synonym;
 #[cfg(test)]
 mod test;
-#[cfg(test)]
-mod testcases;
 

@@ -9,7 +9,7 @@ RUSTTESTFLAGS ?=
 LIB_NAME = docopt
 LIB ?= $(BUILD)/.libregex.timestamp
 LIB_FILES = src/lib.rs src/parse.rs src/synonym.rs
-TEST_FILES = src/test.rs src/testcases.rs
+TEST_FILES = $(wildcard src/test/*.rs)
 ARGS ?= 
 
 all: $(LIB)
