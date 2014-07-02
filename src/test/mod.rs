@@ -28,11 +28,19 @@ fn same_args(expected: &HashMap<String, Value>, got: &ValueMap) {
     // debug!("GOT: {}", got); 
     // debug!("EXPECTED: {}", expected); 
     // debug!("---------------"); 
-    for (k, v) in expected.iter() {
-        assert!(v == got.map.get(k), "EXPECTED KEY: {}", k);
+    for (k, ve) in expected.iter() {
+        match got.map.find(k) {
+            None => fail!("EXPECTED has '{}' but GOT does not.", k),
+            Some(vg) => assert!(ve == vg,
+                                "{}: EXPECTED = '{}' != '{}' = GOT", ve, vg, k),
+        }
     }
-    for (k, v) in got.map.iter() {
-        assert!(v == expected.get(k), "GOT KEY: {}", k);
+    for (k, vg) in got.map.iter() {
+        match got.map.find(k) {
+            None => fail!("GOT has '{}' but EXPECTED does not.", k),
+            Some(ve) => assert!(vg == ve,
+                                "{}: GOT = '{}' != '{}' = EXPECTED", vg, ve, k),
+        }
     }
 }
 

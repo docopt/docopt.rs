@@ -18,9 +18,8 @@ with open(args.testcases) as f:
     alltests = f.read()
 
 alltests = re.sub('^r"""', '', alltests)
-alltests = re.sub('^\s*#.*$', '', alltests, re.MULTILINE)
+alltests = re.sub('^\s*#.*$', '', alltests, flags=re.MULTILINE)
 
-i = 0
 tests = []  # [{usage, args, expect}]   (expect is None ==> user-error)
 for m in retests.finditer(alltests):
     usage, invokes = m.group(1).strip(), m.group(2).strip()
@@ -29,13 +28,12 @@ for m in retests.finditer(alltests):
 
     for mi in reinvokes.finditer(invokes):
         invoke, expect = mi.group(1).strip(), mi.group(2).strip()
+        err = expect.startswith('"user-error"')
         tests.append({
             'usage': usage,
             'args': invoke.split()[1:],
-            'expect': None if expect == '"user-error"' else json.loads(expect),
+            'expect': None if err else json.loads(expect),
         })
-    i += 1
-    if i > 5: break
 
 
 def show_test(i, t):
@@ -48,27 +46,29 @@ def show_test(i, t):
         if v is None:
             return 'Plain(None)'
         elif isinstance(v, basestring):
-            return 'Plain("%s")' % v
+            return 'Plain(Some("%s".to_string()))' % v
         elif isinstance(v, bool):
             return 'Switch(%s)' % ('true' if v else 'false')
         elif isinstance(v, int):
             return 'Counted(%d)' % v
         elif isinstance(v, list):
-            return 'List(vec!("%s"))' % ('", "'.join(v))
+            elms = ', '.join(['"%s".to_string()' % el for el in v])
+            return 'List(vec!(%s))' % elms
         else:
             raise ValueError('Unrecognized value: "%s" (type: %s)'
                              % (v, type(v)))
 
+    args = ', '.join(['"%s"' % arg for arg in t['args']])
     if t['expect'] is None:
-        return 'test_user_error!(test_%d, "%s", &["%s"])' \
-                % (i, t['usage'], '", "'.join(t['args']))
+        return 'test_user_error!(test_%d_testcases, "%s", &[%s])' \
+                % (i, t['usage'], args)
     else:
         expect = show_expect(t['expect'])
-        return 'test_expect!(test_%d, "%s", &["%s"], vec!(%s))' \
-                % (i, t['usage'], '", "'.join(t['args']), expect)
+        return 'test_expect!(test_%d_testcases, "%s", &[%s], vec!(%s))' \
+                % (i, t['usage'], args, expect)
 
-print("""
-use {{Value, Switch, Counted, Plain, List}};
+print(
+"""use {{Value, Switch, Counted, Plain, List}};
 use test::{{get_args, map_from_alist, same_args}};
 
 {tests}

@@ -31,10 +31,13 @@ docs: $(LIB_FILES)
 	in-dir doc fix-perms
 	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
 
-test: build/tests
-	RUST_TEST_TASKS=1 RUST_LOG=$(LIB_NAME) ./build/tests
+src/test/testcases.rs: src/test/testcases.docopt scripts/mk-testcases
+	./scripts/mk-testcases ./src/test/testcases.docopt > ./src/test/testcases.rs
 
-build/tests: $(LIB) $(TEST_FILES)
+test: build/tests
+	RUST_TEST_TASKS=1 RUST_LOG=$(LIB_NAME) ./build/tests $(ARGS)
+
+build/tests: $(TEST_FILES) $(LIB)
 	$(RUSTC) $(RUSTTESTFLAGS) $(RUST_PATH) --test src/lib.rs -o ./build/tests
 
 scratch: build/scratch
