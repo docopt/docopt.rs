@@ -127,6 +127,10 @@ impl Parser {
         // From the docopt page, "every" line starting with a `-` or a `--`
         // is considered an option description. Instead, we restrict the lines
         // to any line *not* in the usage pattern section.
+        //
+        // *sigh* Apparently the above is not true. The official test suite
+        // includes `Options: -a ...`, which means some lines not beginning
+        // with `-` can actually have options.
         let (pstart, pend) = caps.pos(0).unwrap();
         let (before, after) = (doc.slice_to(pstart), doc.slice_from(pend));
         // We process every line here (instead of restricting to lines starting
@@ -146,7 +150,12 @@ impl Parser {
     }
 
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
-        let desc = full_desc.trim();
+        debug!("DESC: {}", full_desc);
+        let desc = regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
+        let desc = desc.as_slice();
+        debug!("DESC: {}", desc);
+        debug!("---------------------");
+
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
             try!(self.parse_default(full_desc));
             return Ok(())
@@ -903,10 +912,14 @@ impl MState {
                 self.fill_value(spec.clone(), opts.repeats, arg.clone());
             }
             &Positional(ref v) => {
+                debug!("Filling. Spec: '{}', got: '{}', arg: '{}'",
+                       spec, atom, arg);
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, Some(v.clone()));
             }
             &Command(_) => {
+                debug!("Command. Filling. Spec: '{}', got: '{}', arg: '{}'",
+                       spec, atom, arg);
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, None);
             }
@@ -1001,8 +1014,18 @@ impl<'a, 'b> Matcher<'a, 'b> {
             }
             let atom = a.clone();
             match (opts.repeats, &opts.arg) {
-                (false, &Zero) => { vs.insert(atom, Switch(false)); }
-                (true, &Zero) => { vs.insert(atom, Counted(0)); }
+                (false, &Zero) => {
+                    match a {
+                        &Positional(_) => vs.insert(atom, Plain(None)),
+                        _ => vs.insert(atom, Switch(false)),
+                    };
+                }
+                (true, &Zero) => {
+                    match a {
+                        &Positional(_) => vs.insert(atom, List(vec!())),
+                        _ => vs.insert(atom, Counted(0)),
+                    };
+                }
                 (false, &One(None)) => { vs.insert(atom, Plain(None)); }
                 (true, &One(None)) => { vs.insert(atom, List(vec!())); }
                 (false, &One(Some(ref v))) => {
