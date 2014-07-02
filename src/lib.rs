@@ -13,7 +13,7 @@
 
 extern crate debug;
 extern crate libc;
-#[cfg(test)]
+// #[cfg(test)] 
 #[phase(plugin, link)]
 extern crate log;
 extern crate regex;
