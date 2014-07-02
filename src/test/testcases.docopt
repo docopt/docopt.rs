@@ -47,7 +47,7 @@ $ prog --verbose
 {"--verbose": true}
 
 $ prog --ver
-{"--verbose": true}
+"user-error"
 
 $ prog -v
 {"--verbose": true}
@@ -80,10 +80,10 @@ $ prog --path=home/
 {"--path": "home/"}
 
 $ prog --pa home/
-{"--path": "home/"}
+"user-error"
 
 $ prog --pa=home/
-{"--path": "home/"}
+"user-error"
 
 $ prog --path
 "user-error"
@@ -178,8 +178,7 @@ $ prog --ver
 "user-error"
 
 $ prog --verb
-{"--version": false,
- "--verbose": true}
+"user-error"
 
 
 r"""usage: prog [-a -r -m <msg>]
@@ -196,7 +195,7 @@ $ prog -armyourass
  "-m": "yourass"}
 
 
-r"""usage: prog [-armmsg]
+r"""usage: prog [-armMSG]
 
 options: -a        Add
          -r        Remote
