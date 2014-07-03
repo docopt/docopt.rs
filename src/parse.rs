@@ -928,7 +928,7 @@ struct MState {
 }
 
 impl MState {
-    fn fill_value(&mut self, key: Atom, rep: bool, arg: Option<String>) {
+    fn fill_value(&mut self, key: Atom, rep: bool, arg: Option<String>) -> bool {
         match (arg, rep) {
             (None, false) => {
                 self.vals.insert(key, Switch(true));
@@ -940,36 +940,35 @@ impl MState {
                 let val = self.vals.find_or_insert(key.clone(), Counted(0));
                 match val {
                     &Counted(ref mut c) => *c += 1,
-                    _ => fail!("Expected a counted value for '{}' but \
-                                got '{}' instead.", key, val),
+                    _ => return false,
                 }
             }
             (Some(arg), true) => {
                 let val = self.vals.find_or_insert(key.clone(), List(vec!()));
                 match val {
                     &List(ref mut vs) => vs.push(arg),
-                    _ => fail!("Expected a list value for '{}' but \
-                                got '{}' instead.", key, val),
+                    _ => return false,
                 }
             }
         }
+        true
     }
 
     fn add_value(&mut self, opts: &Options,
-                 spec: &Atom, atom: &Atom, arg: &Option<String>) {
+                 spec: &Atom, atom: &Atom, arg: &Option<String>) -> bool {
         assert!(opts.arg.has_arg() == arg.is_some(),
                 "'{}' should have an argument but doesn't", atom);
         match atom {
             &Short(_) | &Long(_) => {
-                self.fill_value(spec.clone(), opts.repeats, arg.clone());
+                self.fill_value(spec.clone(), opts.repeats, arg.clone())
             }
             &Positional(ref v) => {
                 assert!(!opts.arg.has_arg());
-                self.fill_value(spec.clone(), opts.repeats, Some(v.clone()));
+                self.fill_value(spec.clone(), opts.repeats, Some(v.clone()))
             }
             &Command(_) => {
                 assert!(!opts.arg.has_arg());
-                self.fill_value(spec.clone(), opts.repeats, None);
+                self.fill_value(spec.clone(), opts.repeats, None)
             }
         }
     }
@@ -1043,9 +1042,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn add_value(&self, state: &mut MState,
-                  atom_spec: &Atom, atom: &Atom, arg: &Option<String>) {
+                  atom_spec: &Atom, atom: &Atom, arg: &Option<String>) -> bool {
         let opts = self.argv.dopt.descs.get(atom_spec);
-        state.add_value(opts, atom_spec, atom, arg);
+        state.add_value(opts, atom_spec, atom, arg)
     }
 
     fn add_flag_values(&self, state: &mut MState) {
@@ -1186,7 +1185,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
                         if !state.match_cmd_or_posarg(atom, tok) {
                             return vec!()
                         }
-                        self.add_value(&mut state, atom, &tok.atom, &tok.arg);
+                        if !self.add_value(&mut state, atom, &tok.atom, &tok.arg) {
+                            return vec!()
+                        }
                     }
                 }
                 vec!(state)
