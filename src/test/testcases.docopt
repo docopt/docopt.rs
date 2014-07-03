@@ -668,6 +668,7 @@ $ prog -aa
 #
 
 r"""Usage: prog [options] A
+
 Options:
     -q  Be quiet
     -v  Be verbose.
@@ -711,6 +712,7 @@ $ prog
 #
 
 r"""usage: prog [options]
+
 options:
  -a        Add
  -m <msg>  Message
@@ -875,7 +877,7 @@ $ prog -pHOME
 # Issue 56: Repeated mutually exclusive args give nested lists sometimes
 #
 
-r"""Usage: foo (--xx=x|--yy=y)..."""
+r"""Usage: foo (--xx=X|--yy=Y)..."""
 $ prog --xx=1 --yy=2
 {"--xx": ["1"], "--yy": ["2"]}
 

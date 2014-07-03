@@ -491,16 +491,19 @@ options: -a
          -b", &["-aa"])
 
 test_expect!(test_133_testcases, "Usage: prog [options] A
+
 Options:
     -q  Be quiet
     -v  Be verbose.", &["arg"], vec!(("A", Plain(Some("arg".to_string()))), ("-v", Switch(false)), ("-q", Switch(false))))
 
 test_expect!(test_134_testcases, "Usage: prog [options] A
+
 Options:
     -q  Be quiet
     -v  Be verbose.", &["-v", "arg"], vec!(("A", Plain(Some("arg".to_string()))), ("-v", Switch(true)), ("-q", Switch(false))))
 
 test_expect!(test_135_testcases, "Usage: prog [options] A
+
 Options:
     -q  Be quiet
     -v  Be verbose.", &["-q", "arg"], vec!(("A", Plain(Some("arg".to_string()))), ("-v", Switch(false)), ("-q", Switch(true))))
@@ -514,6 +517,7 @@ test_expect!(test_138_testcases, "usage: prog [NAME [NAME ...]]", &["a", "b"], v
 test_expect!(test_139_testcases, "usage: prog [NAME [NAME ...]]", &[], vec!(("NAME", List(vec!()))))
 
 test_expect!(test_140_testcases, "usage: prog [options]
+
 options:
  -a        Add
  -m <msg>  Message", &["-a"], vec!(("-m", Plain(None)), ("-a", Switch(true))))
@@ -585,7 +589,7 @@ test_expect!(test_164_testcases, "usage: prog -pPATH
 
 options: -p PATH", &["-pHOME"], vec!(("-p", Plain(Some("HOME".to_string())))))
 
-test_expect!(test_165_testcases, "Usage: foo (--xx=x|--yy=y)...", &["--xx=1", "--yy=2"], vec!(("--yy", List(vec!("2".to_string()))), ("--xx", List(vec!("1".to_string())))))
+test_expect!(test_165_testcases, "Usage: foo (--xx=X|--yy=Y)...", &["--xx=1", "--yy=2"], vec!(("--yy", List(vec!("2".to_string()))), ("--xx", List(vec!("1".to_string())))))
 
 test_expect!(test_166_testcases, "usage: prog [<input file>]", &["f.txt"], vec!(("<input file>", Plain(Some("f.txt".to_string())))))
 

@@ -108,7 +108,7 @@ impl Parser {
     }
 
     fn parse(&mut self, doc: &str) -> Result<(), String> {
-        let musage = regex!(r"(?is)usage:\s+(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
+        let musage = regex!(r"(?is)usage:\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
         let caps = match musage.captures(doc) {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
@@ -142,24 +142,28 @@ impl Parser {
 
         let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog")));
         let pats = Regex::new(mprog.as_slice()).unwrap();
+        let mut last = caps.name("prog");
         for pat in pats.captures_iter(caps.name("pats")) {
             let pattern = try!(PatParser::new(self, pat.at(1)).parse());
+            self.usages.push(pattern);
+            last = pat.at(2);
+        }
+        if last == caps.name("prog") {
+            // The last "Usage: ..." is an empty pattern.
+            let pattern = try!(PatParser::new(self, "").parse());
             self.usages.push(pattern);
         }
         Ok(())
     }
 
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
-        debug!("DESC: {}", full_desc);
         let desc = regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
         let desc = desc.as_slice();
-        debug!("DESC: {}", desc);
-        debug!("---------------------");
-
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
             try!(self.parse_default(full_desc));
             return Ok(())
         }
+
         // Get rid of the description, which must be at least two spaces
         // after the flag or argument.
         let desc = regex!("  .*$").replace(desc, "");
@@ -307,14 +311,9 @@ struct PatParser<'a> {
 
 impl<'a> PatParser<'a> {
     fn new(dopt: &'a mut Parser, pat: &str) -> PatParser<'a> {
-        // Normalize `[xyz]` -> `[ xyz ]` so that grouping operators are
-        // tokenized easily. Don't worry about introducing extra spaces.
-        // Do the same for `...`, `(xyz)` and `|`.
-        let rpat = regex!(r"\.\.\.|\[|\]|\(|\)|\|");
-        let pat = rpat.replace_all(pat.trim(), " $0 ");
         PatParser {
             dopt: dopt,
-            tokens: pat.as_slice().words().map(|s| s.to_string()).collect(),
+            tokens: pattern_tokens(pat),
             curi: 0,
             expecting: vec!(),
         }
@@ -322,11 +321,12 @@ impl<'a> PatParser<'a> {
 
     fn parse(&mut self) -> Result<Pattern, String> {
         // let mut seen = HashSet::new(); 
-        let p = try!(self.pattern());
+        let mut p = try!(self.pattern());
         match self.expecting.pop() {
             None => {},
             Some(c) => err!("Unclosed group. Expected '{}'.", c),
         }
+        p.add_options_shortcut(self.dopt);
         p.tag_repeats(&mut self.dopt.descs);
         Ok(p)
     }
@@ -344,7 +344,6 @@ impl<'a> PatParser<'a> {
                     // As per specification, `-` and `--` by themselves are
                     // just commands that should be interpreted conventionally.
                     seq.push(try!(self.command()));
-                    self.next();
                 }
                 "|" => {
                     if seq.is_empty() {
@@ -382,12 +381,13 @@ impl<'a> PatParser<'a> {
                 "[" => {
                     // Check for special '[options]' shortcut.
                     if self.atis(1, "options") && self.atis(2, "]") {
-                        let atoms = self.dopt.options_atoms();
-                        let opts = Optional(atoms.move_iter().map(Atom).collect());
+                        // let atoms = self.dopt.options_atoms(); 
+                        // let opts = Optional(atoms.move_iter().map(Atom).collect()); 
                         self.next(); // cur == options
                         self.next(); // cur == ]
                         self.next();
-                        seq.push(self.maybe_repeat(opts));
+                        // seq.push(self.maybe_repeat(opts)); 
+                        seq.push(self.maybe_repeat(Optional(vec!())));
                         continue
                     }
                     self.expecting.push(']');
@@ -611,6 +611,46 @@ enum Argument {
 }
 
 impl Pattern {
+    fn add_options_shortcut(&mut self, par: &Parser) {
+        fn add(pat: &mut Pattern, all_atoms: &HashSet<Atom>, par: &Parser) {
+            match pat {
+                &Alternates(ref mut ps) | &Sequence(ref mut ps) => {
+                    for p in ps.mut_iter() { add(p, all_atoms, par) }
+                }
+                &Repeat(box ref mut p) => add(p, all_atoms, par),
+                &Atom(_) => {}
+                &Optional(ref mut ps) => {
+                    if !ps.is_empty() {
+                        for p in ps.mut_iter() { add(p, all_atoms, par) }
+                    } else {
+                        for atom in par.options_atoms().move_iter() {
+                            if !all_atoms.contains(&atom) {
+                                ps.push(Atom(atom));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let all_atoms = self.all_atoms();
+        add(self, &all_atoms, par);
+    }
+
+    fn all_atoms(&self) -> HashSet<Atom> {
+        fn all_atoms(pat: &Pattern, set: &mut HashSet<Atom>) {
+            match pat {
+                &Alternates(ref ps) | &Sequence(ref ps) | &Optional(ref ps) => {
+                    for p in ps.iter() { all_atoms(p, set) }
+                }
+                &Repeat(box ref p) => all_atoms(p, set),
+                &Atom(ref a) => { set.insert(a.clone()); }
+            }
+        }
+        let mut set = HashSet::new();
+        all_atoms(self, &mut set);
+        set
+    }
+
     fn tag_repeats(&self, map: &mut SynonymMap<Atom, Options>) {
         fn dotag(p: &Pattern,
                  rep: bool,
@@ -618,12 +658,21 @@ impl Pattern {
                  seen: &mut HashSet<Atom>) {
             match p {
                 &Alternates(ref ps) => {
+                    // This is a bit tricky. Basically, we don't want the
+                    // existence of an item in mutually exclusive alternations
+                    // to affect whether it repeats or not.
+                    // However, we still need to record seeing each item in
+                    // each alternation.
+                    let fresh = seen.clone();
                     for p in ps.iter() {
-                        dotag(p, rep, map, seen)
+                        let mut isolated = fresh.clone();
+                        dotag(p, rep, map, &mut isolated);
+                        for a in isolated.move_iter() {
+                            seen.insert(a);
+                        }
                     }
                 }
                 &Sequence(ref ps) => {
-                    let seen = &mut seen.clone();
                     for p in ps.iter() {
                         dotag(p, rep, map, seen)
                     }
@@ -641,7 +690,8 @@ impl Pattern {
                 }
             }
         }
-        dotag(self, false, map, &mut HashSet::new());
+        let mut seen = HashSet::new();
+        dotag(self, false, map, &mut seen);
     }
 }
 
@@ -665,7 +715,9 @@ impl Atom {
     }
 
     fn is_short(s: &str) -> bool { return regex!(r"^-[^-]+$").is_match(s) }
-    fn is_long(s: &str) -> bool { return regex!(r"^--\S+$").is_match(s) }
+    fn is_long(s: &str) -> bool {
+        return regex!(r"^--\S+(?:<[^>]+>)?$").is_match(s)
+    }
     fn is_arg(s: &str) -> bool {
         return regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s)
     }
@@ -912,14 +964,10 @@ impl MState {
                 self.fill_value(spec.clone(), opts.repeats, arg.clone());
             }
             &Positional(ref v) => {
-                debug!("Filling. Spec: '{}', got: '{}', arg: '{}'",
-                       spec, atom, arg);
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, Some(v.clone()));
             }
             &Command(_) => {
-                debug!("Command. Filling. Spec: '{}', got: '{}', arg: '{}'",
-                       spec, atom, arg);
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, None);
             }
@@ -1152,10 +1200,12 @@ impl<'a, 'b> Matcher<'a, 'b> {
             states.push(base.clone());
         } else {
             let (pat, rest) = (*pats.head().unwrap(), pats.tail());
-            self.all_option_states(base, states, pats.tail());
             for s in self.states(pat, base).move_iter() {
                 self.all_option_states(&s, states, rest);
             }
+            // Order is important here! This must come after the loop above
+            // because we prefer presence over absence. The first state wins.
+            self.all_option_states(base, states, pats.tail());
         }
     }
 }
@@ -1185,4 +1235,22 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
         Some(cap) =>
             (Atom::new(cap.name("name")), Some(cap.name("arg").to_string())),
     }
+}
+
+// Tokenizes a usage pattern.
+// Beware: regex hack ahead. Tokenizes based on whitespace separated words.
+// It first normalizes `[xyz]` -> `[ xyz ]` so that delimiters are tokens.
+// Similarly for `...`, `(`, `)` and `|`.
+// One hitch: `--flag=<arg spaces>` is allowed, so we use a regex to pick out
+// words.
+fn pattern_tokens(pat: &str) -> Vec<String> {
+    let rpat = regex!(r"\.\.\.|\[|\]|\(|\)|\|");
+    let rwords = regex!(r"--\S+?=<[^>]+>|<[^>]+>|\S+"); // alt order matters
+
+    let pat = rpat.replace_all(pat.trim(), " $0 ");
+    let mut words = vec!();
+    for cap in rwords.captures_iter(pat.as_slice()) {
+        words.push(cap.at(0).to_string());
+    }
+    words
 }

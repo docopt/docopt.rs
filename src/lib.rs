@@ -33,7 +33,19 @@ macro_rules! werr(
     )
 )
 
-pub type Error = String;
+pub enum Error {
+    NoMatch,
+    Usage(String),
+}
+
+impl fmt::Show for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &NoMatch => write!(f, "Invalid arguments."),
+            &Usage(ref s) => write!(f, "{}", s),
+        }
+    }
+}
 
 #[deriving(Show)]
 pub struct Docopt {
@@ -50,17 +62,18 @@ pub struct Config {
 
 impl Docopt {
     pub fn new(doc: &str, conf: Config) -> Result<Docopt, Error> {
-        Ok(Docopt {
-            p: try!(Parser::new(doc, conf.options_first)),
-            conf: conf,
-        })
+        Parser::new(doc, conf.options_first)
+            .map(|p| Docopt { p: p, conf: conf.clone() })
+            .or_else(|s| Err(Usage(s)))
     }
 
     pub fn argv(&self, args: &[&str]) -> Result<ValueMap, Error> {
-        let argv = try!(self.p.parse_argv(args));
-        self.p.matches(&argv)
-            .map(|m| Ok(ValueMap { map: m }))
-            .unwrap_or(Err("".to_string()))
+        self.p.parse_argv(args)
+            .or_else(|s| Err(Usage(s)))
+            .and_then(|argv|
+                self.p.matches(&argv)
+                    .map(|m| Ok(ValueMap { map: m }))
+                    .unwrap_or_else(|| Err(NoMatch)))
     }
 }
 
@@ -193,9 +206,7 @@ fn convenient_parse_argv(dopt: &Docopt) -> ValueMap {
         _ => {},
     }
     dopt.argv(argv.as_slice()).unwrap_or_else(|err| {
-        if !err.is_empty() {
-            werr!("{}\n", err);
-        }
+        werr!("{}\n", err);
         werr!("{}\n", dopt.p.usage.as_slice().trim());
         exit(1);
     })

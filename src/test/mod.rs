@@ -32,14 +32,14 @@ fn same_args(expected: &HashMap<String, Value>, got: &ValueMap) {
         match got.map.find(k) {
             None => fail!("EXPECTED has '{}' but GOT does not.", k),
             Some(vg) => assert!(ve == vg,
-                                "{}: EXPECTED = '{}' != '{}' = GOT", ve, vg, k),
+                                "{}: EXPECTED = '{}' != '{}' = GOT", k, ve, vg),
         }
     }
     for (k, vg) in got.map.iter() {
         match got.map.find(k) {
             None => fail!("GOT has '{}' but EXPECTED does not.", k),
             Some(ve) => assert!(vg == ve,
-                                "{}: GOT = '{}' != '{}' = EXPECTED", vg, ve, k),
+                                "{}: GOT = '{}' != '{}' = EXPECTED", k, vg, ve),
         }
     }
 }
