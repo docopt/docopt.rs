@@ -18,9 +18,12 @@ extern crate libc;
 extern crate log;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
+extern crate serialize;
 
 use std::collections::HashMap;
 use std::fmt;
+use std::from_str::{FromStr, from_str};
+use serialize::Decodable;
 use parse::Parser;
 use synonym::SynonymMap;
 
@@ -90,21 +93,6 @@ pub enum Value {
     List(Vec<String>),
 }
 
-impl ValueMap {
-    pub fn get_bool(&self, key: &str) -> bool {
-        self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
-    }
-    pub fn get_count(&self, key: &str) -> uint {
-        self.find(&key).map(|v| v.as_count()).unwrap_or(0)
-    }
-    pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
-        self.find(&key).map(|v| v.as_str()).unwrap_or("")
-    }
-    pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
-        self.find(&key).map(|v| v.as_vec()).unwrap_or(vec!())
-    }
-}
-
 impl Value {
     pub fn as_bool(&self) -> bool {
         match self {
@@ -136,6 +124,77 @@ impl Value {
             &Plain(Some(ref s)) => vec!(s.as_slice()),
             &List(ref vs) => vs.iter().map(|s| s.as_slice()).collect(),
         }
+    }
+}
+
+impl ValueMap {
+    pub fn decode<'a, T: Decodable<Decoder<'a>, DecoderError>>
+                 (&'a self) -> Result<T, DecoderError> {
+        Decodable::decode(&mut Decoder { vals: self, cur: None })
+    }
+    pub fn get_bool(&self, key: &str) -> bool {
+        self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
+    }
+    pub fn get_count(&self, key: &str) -> uint {
+        self.find(&key).map(|v| v.as_count()).unwrap_or(0)
+    }
+    pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
+        self.find(&key).map(|v| v.as_str()).unwrap_or("")
+    }
+    pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
+        self.find(&key).map(|v| v.as_vec()).unwrap_or(vec!())
+    }
+
+    fn key_to_struct_field(name: &str) -> String {
+        fn sanitize(name: &str) -> String {
+            name.replace("-", "_")
+        }
+
+        let r = regex!(r"--?(?P<flag>[^-]+)|(?:(?P<argu>\p{Lu})|<(?P<argb>[^>]+)>)|(?P<cmd>\S+)");
+        r.replace(name, |cap: &regex::Captures| {
+            let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
+            let (argu, argb) = (cap.name("argu"), cap.name("argb"));
+            let (prefix, name) =
+                if !flag.is_empty() {
+                    ("flag_", flag)
+                } else if !argu.is_empty() {
+                    ("arg_", argu)
+                } else if !argb.is_empty() {
+                    ("arg_", argb)
+                } else if !cmd.is_empty() {
+                    ("cmd_", cmd)
+                } else {
+                    fail!("Unknown ValueMap key: '{}'", name)
+                };
+            prefix.to_string().append(sanitize(name).as_slice())
+        })
+    }
+
+    fn struct_field_to_key(field: &str) -> String {
+        fn desanitize(name: &str) -> String {
+            name.replace("_", "-")
+        }
+        let name =
+            if field.starts_with("flag_") {
+                let name = regex!(r"^flag_").replace(field, "");
+                if name.len() == 1 {
+                    "-".to_string().append(name.as_slice())
+                } else {
+                    "--".to_string().append(name.as_slice())
+                }
+            } else if field.starts_with("arg_") {
+                let name = regex!(r"^arg_").replace(field, "");
+                if regex!(r"^\p{Lu}+$").is_match(name.as_slice()) {
+                    name
+                } else {
+                    "<".to_string().append(name.as_slice()).append(">")
+                }
+            } else if field.starts_with("cmd_") {
+                { regex!(r"^cmd_") }.replace(field, "")
+            } else {
+                fail!("Unrecognized struct field: '{}'", field)
+            };
+        desanitize(name.as_slice())
     }
 }
 
@@ -174,6 +233,193 @@ impl fmt::Show for ValueMap {
             }
         }
         Ok(())
+    }
+}
+
+struct Decoder<'a> {
+    vals: &'a ValueMap,
+    cur: Option<String>,
+}
+
+pub type DecoderError = String;
+
+impl<'a> Decoder<'a> {
+    fn with_key_value<T>(&self, f: |&str, &Value| -> Result<T, DecoderError>)
+                    -> Result<T, DecoderError> {
+        match self.cur {
+            None => Err(format!("Could not decode value into unknown key.")),
+            Some(ref key) => {
+                match self.vals.find(&key.as_slice()) {
+                    None => Err(format!("Could not find argument '{}'.", key)),
+                    Some(v) => f(key.as_slice(), v),
+                }
+            }
+        }
+    }
+
+    fn map<T>(&self, f: |&Value| -> T) -> Result<T, DecoderError> {
+        self.with_key_value(|_, v| Ok(f(v)))
+    }
+
+    fn from_str<T: FromStr>(&self, expect: &str) -> Result<T, DecoderError> {
+        self.with_key_value(|k, v| {
+            match from_str(v.as_str()) {
+                None => Err(format!(
+                            "Could not decode '{}' from string to {} for '{}'.",
+                            v.as_str(), expect, k)),
+                Some(v) => Ok(v),
+            }
+        })
+    }
+}
+
+impl<'a> serialize::Decoder<DecoderError> for Decoder<'a> {
+    fn read_nil(&mut self) -> Result<(), DecoderError> {
+        // I don't know what the right thing is here, so just fail for now.
+        fail!("I don't know how to read into a nil value.")
+    }
+    fn read_uint(&mut self) -> Result<uint, DecoderError> {
+        self.from_str("uint")
+    }
+    fn read_u64(&mut self) -> Result<u64, DecoderError> {
+        self.from_str("u64")
+    }
+    fn read_u32(&mut self) -> Result<u32, DecoderError> {
+        self.from_str("u32")
+    }
+    fn read_u16(&mut self) -> Result<u16, DecoderError> {
+        self.from_str("u16")
+    }
+    fn read_u8(&mut self) -> Result<u8, DecoderError> {
+        self.from_str("u8")
+    }
+    fn read_int(&mut self) -> Result<int, DecoderError> {
+        self.from_str("int")
+    }
+    fn read_i64(&mut self) -> Result<i64, DecoderError> {
+        self.from_str("i64")
+    }
+    fn read_i32(&mut self) -> Result<i32, DecoderError> {
+        self.from_str("i32")
+    }
+    fn read_i16(&mut self) -> Result<i16, DecoderError> {
+        self.from_str("i16")
+    }
+    fn read_i8(&mut self) -> Result<i8, DecoderError> {
+        self.from_str("i8")
+    }
+    fn read_bool(&mut self) -> Result<bool, DecoderError> {
+        self.map(|v| v.as_bool())
+    }
+    fn read_f64(&mut self) -> Result<f64, DecoderError> {
+        self.from_str("f64")
+    }
+    fn read_f32(&mut self) -> Result<f32, DecoderError> {
+        self.from_str("f32")
+    }
+    fn read_char(&mut self) -> Result<char, DecoderError> {
+        self.with_key_value(|k, v| {
+            let vstr = v.as_str();
+            match vstr.len() {
+                1 => Ok(vstr.char_at(0)),
+                _ => Err(format!("Could not decode '{}' into char for '{}'.",
+                                 vstr, k)),
+            }
+        })
+    }
+    fn read_str(&mut self) -> Result<String, DecoderError> {
+        self.map(|v| v.as_str().to_string())
+    }
+    fn read_enum<T>(&mut self, name: &str,
+                    f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                    -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_enum_variant<T>(&mut self, names: &[&str],
+                            f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+                            -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_enum_variant_arg<T>(
+        &mut self, a_idx: uint,
+        f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+        -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_enum_struct_variant<T>(
+        &mut self, names: &[&str],
+        f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+        -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_enum_struct_variant_field<T>(
+        &mut self, f_name: &str, f_idx: uint,
+        f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+        -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_struct<T>(&mut self, s_name: &str, len: uint,
+                      f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                      -> Result<T, DecoderError> {
+        f(self)
+    }
+    fn read_struct_field<T>(&mut self, f_name: &str, f_idx: uint,
+                            f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                            -> Result<T, DecoderError> {
+        self.cur = Some(ValueMap::struct_field_to_key(f_name));
+        let r = f(self);
+        self.cur = None;
+        r
+    }
+    fn read_tuple<T>(&mut self,
+                     f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+                     -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_tuple_arg<T>(&mut self, a_idx: uint,
+                         f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                         -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_tuple_struct<T>(&mut self, s_name: &str,
+                            f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+                            -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_tuple_struct_arg<T>(&mut self, a_idx: uint,
+                                f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                                -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_option<T>(&mut self,
+                      f: |&mut Decoder<'a>, bool| -> Result<T, DecoderError>)
+                      -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_seq<T>(&mut self,
+                   f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+                   -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_seq_elt<T>(&mut self, idx: uint,
+                       f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                       -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_map<T>(&mut self,
+                   f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
+                   -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_map_elt_key<T>(&mut self, idx: uint,
+                           f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                           -> Result<T, DecoderError> {
+        unimplemented!()
+    }
+    fn read_map_elt_val<T>(&mut self, idx: uint,
+                           f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
+                           -> Result<T, DecoderError> {
+        unimplemented!()
     }
 }
 
