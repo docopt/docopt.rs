@@ -23,6 +23,7 @@ extern crate serialize;
 use std::collections::HashMap;
 use std::fmt;
 use std::from_str::{FromStr, from_str};
+use std::num;
 use serialize::Decodable;
 use parse::Parser;
 use synonym::SynonymMap;
@@ -130,7 +131,7 @@ impl Value {
 impl ValueMap {
     pub fn decode<'a, T: Decodable<Decoder<'a>, DecoderError>>
                  (&'a self) -> Result<T, DecoderError> {
-        Decodable::decode(&mut Decoder { vals: self, cur: None })
+        Decodable::decode(&mut Decoder { vals: self, stack: vec!() })
     }
     pub fn get_bool(&self, key: &str) -> bool {
         self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
@@ -238,38 +239,64 @@ impl fmt::Show for ValueMap {
 
 struct Decoder<'a> {
     vals: &'a ValueMap,
-    cur: Option<String>,
+    stack: Vec<DecoderItem>,
+}
+
+#[deriving(Show)]
+struct DecoderItem {
+    key: String,
+    struct_field: String,
+    val: Option<Value>,
 }
 
 pub type DecoderError = String;
 
 impl<'a> Decoder<'a> {
-    fn with_key_value<T>(&self, f: |&str, &Value| -> Result<T, DecoderError>)
-                    -> Result<T, DecoderError> {
-        match self.cur {
+    fn push(&mut self, struct_field: &str) {
+        let key = ValueMap::struct_field_to_key(struct_field);
+        self.stack.push(DecoderItem {
+            key: key.clone(),
+            struct_field: struct_field.to_string(),
+            val: self.vals.find(&key.as_slice()).map(|v| v.clone()),
+        });
+    }
+
+    fn pop(&mut self) -> Result<DecoderItem, DecoderError> {
+        match self.stack.pop() {
             None => Err(format!("Could not decode value into unknown key.")),
-            Some(ref key) => {
-                match self.vals.find(&key.as_slice()) {
-                    None => Err(format!("Could not find argument '{}'.", key)),
-                    Some(v) => f(key.as_slice(), v),
-                }
-            }
+            Some(it) => Ok(it),
         }
     }
 
-    fn map<T>(&self, f: |&Value| -> T) -> Result<T, DecoderError> {
-        self.with_key_value(|_, v| Ok(f(v)))
+    fn pop_key_val(&mut self) -> Result<(String, Value), DecoderError> {
+        let it = try!(self.pop());
+        match it.val {
+            None => Err(format!("Could not find argument '{}' (from struct \
+                                 field '{}').", it.key, it.struct_field)),
+            Some(v) => Ok((it.key, v)),
+        }
     }
 
-    fn from_str<T: FromStr>(&self, expect: &str) -> Result<T, DecoderError> {
-        self.with_key_value(|k, v| {
-            match from_str(v.as_str()) {
-                None => Err(format!(
-                            "Could not decode '{}' from string to {} for '{}'.",
-                            v.as_str(), expect, k)),
-                Some(v) => Ok(v),
+    fn pop_val(&mut self) -> Result<Value, DecoderError> {
+        let (_, v) = try!(self.pop_key_val());
+        Ok(v)
+    }
+
+    fn to_number<T: FromStr + NumCast>
+                (&mut self, expect: &str) -> Result<T, DecoderError> {
+        let (k, v) = try!(self.pop_key_val());
+        match v {
+            Counted(n) => Ok(num::cast(n).unwrap()),
+            _ => {
+                match from_str(v.as_str()) {
+                    None => Err(format!(
+                                "Could not decode '{}' from string \
+                                 to {} for '{}'.",
+                                v.as_str(), expect, k)),
+                    Some(v) => Ok(v),
+                }
             }
-        })
+        }
     }
 }
 
@@ -279,66 +306,76 @@ impl<'a> serialize::Decoder<DecoderError> for Decoder<'a> {
         fail!("I don't know how to read into a nil value.")
     }
     fn read_uint(&mut self) -> Result<uint, DecoderError> {
-        self.from_str("uint")
+        self.to_number("uint")
     }
     fn read_u64(&mut self) -> Result<u64, DecoderError> {
-        self.from_str("u64")
+        self.to_number("u64")
     }
     fn read_u32(&mut self) -> Result<u32, DecoderError> {
-        self.from_str("u32")
+        self.to_number("u32")
     }
     fn read_u16(&mut self) -> Result<u16, DecoderError> {
-        self.from_str("u16")
+        self.to_number("u16")
     }
     fn read_u8(&mut self) -> Result<u8, DecoderError> {
-        self.from_str("u8")
+        self.to_number("u8")
     }
     fn read_int(&mut self) -> Result<int, DecoderError> {
-        self.from_str("int")
+        self.to_number("int")
     }
     fn read_i64(&mut self) -> Result<i64, DecoderError> {
-        self.from_str("i64")
+        self.to_number("i64")
     }
     fn read_i32(&mut self) -> Result<i32, DecoderError> {
-        self.from_str("i32")
+        self.to_number("i32")
     }
     fn read_i16(&mut self) -> Result<i16, DecoderError> {
-        self.from_str("i16")
+        self.to_number("i16")
     }
     fn read_i8(&mut self) -> Result<i8, DecoderError> {
-        self.from_str("i8")
+        self.to_number("i8")
     }
     fn read_bool(&mut self) -> Result<bool, DecoderError> {
-        self.map(|v| v.as_bool())
+        self.pop_val().map(|v| v.as_bool())
     }
     fn read_f64(&mut self) -> Result<f64, DecoderError> {
-        self.from_str("f64")
+        self.to_number("f64")
     }
     fn read_f32(&mut self) -> Result<f32, DecoderError> {
-        self.from_str("f32")
+        self.to_number("f32")
     }
     fn read_char(&mut self) -> Result<char, DecoderError> {
-        self.with_key_value(|k, v| {
-            let vstr = v.as_str();
-            match vstr.len() {
-                1 => Ok(vstr.char_at(0)),
-                _ => Err(format!("Could not decode '{}' into char for '{}'.",
-                                 vstr, k)),
-            }
-        })
+        let (k, v) = try!(self.pop_key_val());
+        let vstr = v.as_str();
+        match vstr.len() {
+            1 => Ok(vstr.char_at(0)),
+            _ => Err(format!("Could not decode '{}' into char for '{}'.",
+                             vstr, k)),
+        }
     }
     fn read_str(&mut self) -> Result<String, DecoderError> {
-        self.map(|v| v.as_str().to_string())
+        self.pop_val().map(|v| v.as_str().to_string())
     }
     fn read_enum<T>(&mut self, name: &str,
                     f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
                     -> Result<T, DecoderError> {
-        unimplemented!()
+        f(self)
     }
     fn read_enum_variant<T>(&mut self, names: &[&str],
                             f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
                             -> Result<T, DecoderError> {
-        unimplemented!()
+        let v = try!(self.pop_val());
+        let vstr = to_lower(v.as_str());
+        let i =
+            match names.iter().map(|&n| to_lower(n)).position(|n| n == vstr) {
+                Some(i) => i,
+                None => {
+                    return Err(format!("Could not match '{}' with any of \
+                                        the allowed variants: {}",
+                                       vstr, names));
+                }
+            };
+        f(self, i)
     }
     fn read_enum_variant_arg<T>(
         &mut self, a_idx: uint,
@@ -366,10 +403,8 @@ impl<'a> serialize::Decoder<DecoderError> for Decoder<'a> {
     fn read_struct_field<T>(&mut self, f_name: &str, f_idx: uint,
                             f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
                             -> Result<T, DecoderError> {
-        self.cur = Some(ValueMap::struct_field_to_key(f_name));
-        let r = f(self);
-        self.cur = None;
-        r
+        self.push(f_name);
+        f(self)
     }
     fn read_tuple<T>(&mut self,
                      f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
@@ -394,17 +429,35 @@ impl<'a> serialize::Decoder<DecoderError> for Decoder<'a> {
     fn read_option<T>(&mut self,
                       f: |&mut Decoder<'a>, bool| -> Result<T, DecoderError>)
                       -> Result<T, DecoderError> {
-        unimplemented!()
+        let option =
+            match self.stack.last() {
+                None => return Err(format!("Could not decode value into \
+                                            unknown key.")),
+                Some(it) => it.val.as_ref()
+                                  .map(|v| v.as_bool())
+                                  .unwrap_or(false),
+            };
+        f(self, option)
     }
     fn read_seq<T>(&mut self,
                    f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
                    -> Result<T, DecoderError> {
-        unimplemented!()
+        let it = try!(self.pop());
+        let list = it.val.unwrap_or(List(vec!()));
+        let vals = list.as_vec();
+        for val in vals.iter().rev() {
+            self.stack.push(DecoderItem {
+                key: it.key.clone(),
+                struct_field: it.struct_field.clone(),
+                val: Some(Plain(Some(val.to_string()))),
+            })
+        }
+        f(self, vals.len())
     }
     fn read_seq_elt<T>(&mut self, idx: uint,
                        f: |&mut Decoder<'a>| -> Result<T, DecoderError>)
                        -> Result<T, DecoderError> {
-        unimplemented!()
+        f(self)
     }
     fn read_map<T>(&mut self,
                    f: |&mut Decoder<'a>, uint| -> Result<T, DecoderError>)
@@ -464,6 +517,10 @@ fn argv_has_help(argv: &[&str]) -> bool {
 
 fn argv_has_version(argv: &[&str]) -> bool {
     argv.contains(&"--version")
+}
+
+fn to_lower(s: &str) -> String {
+    s.chars().map(|c| c.to_lowercase()).collect()
 }
 
 // I've been warned that this is wildly unsafe.
