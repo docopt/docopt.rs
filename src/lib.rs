@@ -9,7 +9,7 @@
 
 //! Docopt for Rust.
 
-#![feature(macro_rules, phase)]
+#![feature(plugin_registrar, macro_rules, phase, quote)]
 
 extern crate debug;
 extern crate libc;
@@ -19,6 +19,9 @@ extern crate log;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 extern crate serialize;
+
+extern crate syntax;
+extern crate rustc;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -151,7 +154,7 @@ impl ValueMap {
             name.replace("-", "_")
         }
 
-        let r = regex!(r"--?(?P<flag>[^-]+)|(?:(?P<argu>\p{Lu})|<(?P<argb>[^>]+)>)|(?P<cmd>\S+)");
+        let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu})|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
         r.replace(name, |cap: &regex::Captures| {
             let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
             let (argu, argb) = (cap.name("argu"), cap.name("argb"));
@@ -167,6 +170,7 @@ impl ValueMap {
                 } else {
                     fail!("Unknown ValueMap key: '{}'", name)
                 };
+            println!("BEFORE: {}, AFTER: {}", name, sanitize(name));
             prefix.to_string().append(sanitize(name).as_slice())
         })
     }
@@ -530,6 +534,7 @@ fn exit(code: uint) -> ! {
     unsafe { libc::exit(code as libc::c_int) }
 }
 
+pub mod macro;
 mod parse;
 mod synonym;
 #[cfg(test)]

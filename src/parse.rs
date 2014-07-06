@@ -55,9 +55,9 @@ pub struct Parser {
     pub program: String,
     pub full_doc: String,
     pub usage: String,
+    pub descs: SynonymMap<Atom, Options>,
     options_first: bool,
     usages: Vec<Pattern>,
-    descs: SynonymMap<Atom, Options>,
     last_atom_added: Option<Atom>, // context for [default: ...]
 }
 
@@ -587,25 +587,25 @@ pub enum Atom {
 }
 
 #[deriving(Clone, Show)]
-struct Options {
+pub struct Options {
     /// Set to true if this atom is ever repeated in any context.
     /// For positional arguments, non-argument flags and commands, repetition 
     /// means that they become countable.
     /// For flags with arguments, repetition means multiple distinct values
     /// can be specified (and are represented as a Vec).
-    repeats: bool,
+    pub repeats: bool,
 
     /// This specifies whether this atom has any arguments.
     /// For commands and positional arguments, this is always Zero.
     /// Flags can have zero or one argument, with an optionally default value.
-    arg: Argument,
+    pub arg: Argument,
 
     /// Whether it shows up in the "options description" second.
-    is_desc: bool,
+    pub is_desc: bool,
 }
 
 #[deriving(Clone, Show, PartialEq)]
-enum Argument {
+pub enum Argument {
     Zero,
     One(Option<String>), // optional default value
 }
