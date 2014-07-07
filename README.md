@@ -13,6 +13,14 @@ Fully functional but the design of the API is up for debate. **I am seeking
 feedback**.
 
 
+### Documentation
+
+[http://burntsushi.net/rustdoc/docopt](http://burntsushi.net/rustdoc/docopt/index.html)
+
+There are several examples and most things are documented, but not quite well 
+enough yet.
+
+
 ### Quick example
 
 Here is a full working example:
@@ -90,13 +98,51 @@ If any value cannot be decoded into a value with the right type, then an error
 will be shown to the user.
 
 
-### Documentation
+### Modeling `rustc`
 
-[http://burntsushi.net/rustdoc/docopt](http://burntsushi.net/rustdoc/docopt/index.html)
+Here's a selected subset for some of `rustc`'s options. This also shows how to 
+restrict values to a list of choices via an `enum` type.
 
-There are several examples and most things are documented, but not quite well 
-enough yet.
+```rust
+#![feature(phase)]
+extern crate serialize;
+#[phase(plugin, link)] extern crate docopt;
 
+docopt!(Args, "
+Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
+       rustc (--help | --version)
+
+Options:
+    -h, --help         Show this message.
+    --version          Show the version of rustc.
+    --cfg SPEC         Configure the compilation environment.
+    -L PATH            Add a directory to the library search path.
+    --emit TYPE        Configure the output that rustc will produce.
+                       Valid values: asm, ir, bc, obj, link.
+    --opt-level LEVEL  Optimize with possible levels 0-3.
+", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>)
+
+#[deriving(Decodable, Show)]
+enum Emit { Asm, Ir, Bc, Obj, Link }
+
+#[deriving(Show)]
+enum OptLevel { Zero, One, Two, Three }
+
+impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
+    fn decode(d: &mut D) -> Result<OptLevel, E> {
+        Ok(match try!(d.read_uint()) {
+            0 => Zero, 1 => One, 2 => Two, 3 => Three,
+            // This is a wart. How can it be fixed?
+            _ => fail!("How to CONVENIENTLY create value with type `E`?"),
+        })
+    }
+}
+
+fn main() {
+    let args = Args::parse();
+    println!("{}", args);
+}
+```
 
 ### Viewing the generated struct
 
