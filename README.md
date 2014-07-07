@@ -31,8 +31,12 @@ Options:
 ")
 
 fn main() {
-    // Try running with `example -a file1 file2 dest/`.
     let args = Args::parse();
+
+    // The Args struct satisfies `Show`:
+    println!("{}", args);
+
+    // Try running with `example -a file1 file2 dest/`.
     assert!(args.flag_archive);
     assert_eq!(args.arg_SOURCE, vec!["file1".to_string(), "file2".to_string()]);
     assert_eq!(args.arg_DIR, "dest/".to_string());
