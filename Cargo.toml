@@ -6,5 +6,5 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 [[lib]]
 name = "docopt"
 path = "src/lib.rs"
-crate_type = ["dylib"]
+crate_type = ["staticlib", "dylib"]
 
