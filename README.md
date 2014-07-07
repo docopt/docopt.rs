@@ -63,6 +63,33 @@ respectively. (The only difference is that the `parse_*` methods don't
 take a Docopt string.)
 
 
+### Data validation example
+
+Here's another example that shows how to specify the types of your arguments:
+
+```rust
+#![feature(phase)]
+extern crate serialize;
+#[phase(plugin, link)] extern crate docopt;
+
+docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
+
+fn main() {
+    let args = Args::parse();
+    println!("x: {:d}, y: {:d}", args.arg_x, args.arg_y);
+}
+```
+
+In this example, specify type annotations were added. They will be 
+automatically inserted into the generated struct. You can override as many (or 
+as few) fields as you want. If you don't specify a type, then one of `bool`, 
+`uint`, `String` or `Vec<String>` will be chosen depending on the type of 
+argument. In this case, both `arg_x` and `arg_y` would have been `String`.
+
+If any value cannot be decoded into a value with the right type, then an error 
+will be shown to the user.
+
+
 ### Documentation
 
 [http://burntsushi.net/rustdoc/docopt](http://burntsushi.net/rustdoc/docopt/index.html)
@@ -70,6 +97,24 @@ take a Docopt string.)
 There are several examples and most things are documented, but not quite well 
 enough yet.
 
+
+### Viewing the generated struct
+
+Generating a struct is pretty magical, but if you want, you can look at it by 
+expanding all macros. Say you wrote the above example for `Usage: add <x> <y>`
+into a file called `add.rs`. Then running:
+
+    rustc -L path/containing/docopt/lib --pretty expanded add.rs
+
+Will show all macros expanded. In the generated code, you should be able to 
+find the generated struct:
+
+```rust
+struct Args {
+    pub arg_x: int,
+    pub arg_y: int,
+}
+```
 
 ### Macros, decoding and hash tables
 
