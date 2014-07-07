@@ -88,7 +88,7 @@ fn main() {
 }
 ```
 
-In this example, specify type annotations were added. They will be 
+In this example, specific type annotations were added. They will be 
 automatically inserted into the generated struct. You can override as many (or 
 as few) fields as you want. If you don't specify a type, then one of `bool`, 
 `uint`, `String` or `Vec<String>` will be chosen depending on the type of 
