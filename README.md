@@ -22,21 +22,6 @@ Here is a full working example:
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
 
-// This macro will create a struct for you! The field names map like this:
-//
-//     -g       => flag_g
-//     --group  => flag_group
-//     FILE     => arg_FILE
-//     <file>   => arg_file
-//     build    => cmd_build
-//
-// The struct has three static methods defined for it: `parse`, `parse_conf`
-// and `parse_args`. These correspond to the module functions
-// [docopt](http://burntsushi.net/rustdoc/docopt/fn.docopt.html),
-// [docopt_conf](http://burntsushi.net/rustdoc/docopt/fn.docopt_conf.html)
-// and [docopt_args](http://burntsushi.net/rustdoc/docopt/fn.docopt_args.html)
-// respectively. (The only difference is that the `parse_*` methods don't
-// take a Docopt string.)
 docopt!(Args, "
 Usage: cp [-a] SOURCE DEST
        cp [-a] SOURCE... DIR
@@ -57,6 +42,25 @@ fn main() {
     assert_eq!(args.arg_DIR, "dest/".to_string());
 }
 ```
+
+The `docopt!` macro will create a struct for you! The field names map like 
+this:
+
+```
+-g       => flag_g
+--group  => flag_group
+FILE     => arg_FILE
+<file>   => arg_file
+build    => cmd_build
+```
+
+The `Args` struct has three static methods defined for it: `parse`, 
+`parse_conf` and `parse_args`. These correspond to the module functions
+[docopt](http://burntsushi.net/rustdoc/docopt/fn.docopt.html),
+[docopt_conf](http://burntsushi.net/rustdoc/docopt/fn.docopt_conf.html)
+and [docopt_args](http://burntsushi.net/rustdoc/docopt/fn.docopt_args.html)
+respectively. (The only difference is that the `parse_*` methods don't
+take a Docopt string.)
 
 
 ### Documentation
