@@ -173,9 +173,8 @@
 //! If you tried to pass, for example, `--emit=whatever`, then the decoding
 //! would fail.
 
-#![crate_id = "docopt#0.1.0"]
-// #![crate_name = "docopt"] 
-#![crate_type = "rlib"]
+#![crate_name = "docopt"]
+// #![crate_type = "rlib"] 
 #![crate_type = "dylib"]
 #![experimental]
 #![license = "UNLICENSE"]
