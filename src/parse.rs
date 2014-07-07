@@ -56,18 +56,16 @@ pub struct Parser {
     pub full_doc: String,
     pub usage: String,
     pub descs: SynonymMap<Atom, Options>,
-    options_first: bool,
     usages: Vec<Pattern>,
     last_atom_added: Option<Atom>, // context for [default: ...]
 }
 
 impl Parser {
-    pub fn new(doc: &str, options_first: bool) -> Result<Parser, String> {
+    pub fn new(doc: &str) -> Result<Parser, String> {
         let mut d = Parser {
             program: "".to_string(),
             full_doc: doc.to_string(),
             usage: "".to_string(),
-            options_first: options_first,
             usages: vec!(),
             descs: SynonymMap::new(),
             last_atom_added: None,
@@ -86,8 +84,9 @@ impl Parser {
         None
     }
 
-    pub fn parse_argv<'a>(&'a self, argv: &[&str]) -> Result<Argv<'a>, String> {
-        Argv::new(self, argv)
+    pub fn parse_argv<'a>(&'a self, argv: &[&str], options_first: bool)
+                         -> Result<Argv<'a>, String> {
+        Argv::new(self, argv, options_first)
     }
 }
 
@@ -696,7 +695,7 @@ impl Pattern {
 }
 
 impl Atom {
-    fn new(s: &str) -> Atom {
+    pub fn new(s: &str) -> Atom {
         if Atom::is_short(s) {
             Short(s.as_slice().char_at(1))
         } else if Atom::is_long(s) {
@@ -794,6 +793,7 @@ struct Argv<'a> {
     dopt: &'a Parser,
     argv: Vec<String>,
     curi: uint,
+    options_first: bool,
 }
 
 #[deriving(Show)]
@@ -803,7 +803,8 @@ struct ArgvToken {
 }
 
 impl<'a> Argv<'a> {
-    fn new(dopt: &'a Parser, argv: &[&str]) -> Result<Argv<'a>, String> {
+    fn new(dopt: &'a Parser, argv: &[&str], options_first: bool)
+          -> Result<Argv<'a>, String> {
         let mut a = Argv {
             positional: vec!(),
             flags: vec!(),
@@ -811,6 +812,7 @@ impl<'a> Argv<'a> {
             dopt: dopt,
             argv: argv.iter().map(|s| s.to_string()).collect(),
             curi: 0,
+            options_first: options_first,
         };
         try!(a.parse());
         for flag in a.flags.iter() {
@@ -822,7 +824,7 @@ impl<'a> Argv<'a> {
 
     fn parse(&mut self) -> Result<(), String> {
         while self.curi < self.argv.len() {
-            let do_flags = !self.dopt.options_first || self.positional.is_empty();
+            let do_flags = !self.options_first || self.positional.is_empty();
             if do_flags && Atom::is_short(self.cur()) {
                 let stacked: String = self.cur().slice_from(1).to_string();
                 for (i, c) in stacked.as_slice().chars().enumerate() {

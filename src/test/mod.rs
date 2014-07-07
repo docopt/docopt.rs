@@ -1,16 +1,10 @@
 use std::collections::HashMap;
-use {Docopt, Config, ValueMap};
+use {Docopt, Config, ValueMap, DEFAULT_CONFIG};
 use {Value, Switch, Counted, Plain, List};
-
-static conf: Config = Config {
-    options_first: false,
-    help: true,
-    version: None,
-};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ValueMap {
     let dopt =
-        match Docopt::new(doc, conf.clone()) {
+        match Docopt::new(DEFAULT_CONFIG.clone(), doc) {
             Err(err) => fail!("Invalid usage: {}", err),
             Ok(dopt) => dopt,
         };

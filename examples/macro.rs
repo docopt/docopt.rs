@@ -1,0 +1,33 @@
+#![feature(phase)]
+
+extern crate serialize;
+#[phase(plugin, link)] extern crate docopt;
+
+docopt!(Args, "
+Naval Fate.
+
+Usage:
+  naval_fate.py ship new <name>...
+  naval_fate.py ship <name> move <x> <y> [--speed=<kn>]
+  naval_fate.py ship shoot <x> <y>
+  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+  naval_fate.py --help
+  naval_fate.py --version
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored (anchored) mine.
+  --drifting    Drifting mine.
+", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int)
+
+fn main() {
+    let args = Args::parse();
+    println!("{}", args);
+
+    println!("\nSome values:");
+    println!("  Speed: {}", args.flag_speed);
+    println!("  Drifting? {}", args.flag_drifting);
+    println!("  Names: {}", args.arg_name);
+}
