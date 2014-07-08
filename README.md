@@ -30,6 +30,8 @@ Here is a full working example:
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
 
+use docopt::FlagParser;
+
 docopt!(Args, "
 Usage: cp [-a] SOURCE DEST
        cp [-a] SOURCE... DIR
@@ -39,7 +41,7 @@ Options:
 ")
 
 fn main() {
-    let args = Args::parse();
+    let args: Args = FlagParser::parse();
 
     // The Args struct satisfies `Show`:
     println!("{}", args);
@@ -80,10 +82,12 @@ Here's another example that shows how to specify the types of your arguments:
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
 
+use docopt::FlagParser;
+
 docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
 
 fn main() {
-    let args = Args::parse();
+    let args: Args = FlagParser::parse();
     println!("x: {:d}, y: {:d}", args.arg_x, args.arg_y);
 }
 ```
@@ -107,6 +111,8 @@ restrict values to a list of choices via an `enum` type.
 #![feature(phase)]
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
+
+use docopt::FlagParser;
 
 docopt!(Args, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
@@ -139,7 +145,7 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args = Args::parse();
+    let args: Args = FlagParser::parse();
     println!("{}", args);
 }
 ```

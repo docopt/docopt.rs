@@ -15,6 +15,8 @@
 //! extern crate serialize;
 //! #[phase(plugin, link)] extern crate docopt;
 //!
+//! use docopt::FlagParser;
+//!
 //! docopt!(Args, "
 //! Usage: cp [-a] SOURCE DEST
 //!        cp [-a] SOURCE... DIR
@@ -25,7 +27,7 @@
 //!
 //! fn main() {
 //!     let argv = &["-a", "file1", "file2", "dest/"];
-//!     let args = Args::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
 //!     assert!(args.flag_archive);
 //!     assert_eq!(args.arg_SOURCE, vec!["file1".to_string(), "file2".to_string()]);
 //!     assert_eq!(args.arg_DIR, "dest/".to_string());
@@ -84,6 +86,7 @@
 //! # #![feature(phase)]
 //! # extern crate serialize;
 //! # #[phase(plugin, link)] extern crate docopt;
+//! # use docopt::FlagParser;
 //! docopt!(Args, "
 //! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
 //!        rustc (--help | --version)
@@ -100,7 +103,7 @@
 //!
 //! fn main() {
 //!     let argv = &["--cfg", "a", "docopt.rs", "-L", ".", "-L.."];
-//!     let args = Args::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
 //!     assert_eq!(args.arg_INPUT, "docopt.rs".to_string());
 //!     assert_eq!(args.flag_L, vec![".".to_string(), "..".to_string()]);
 //!     assert_eq!(args.flag_cfg, vec!["a".to_string()]);
@@ -125,6 +128,7 @@
 //! # #![feature(phase)]
 //! # extern crate serialize;
 //! # #[phase(plugin, link)] extern crate docopt;
+//! # use docopt::FlagParser;
 //! docopt!(Args, "
 //! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
 //!        rustc (--help | --version)
@@ -164,7 +168,7 @@
 //!
 //! fn main() {
 //!     let argv = &["--opt-level", "2", "--emit=ir", "docopt.rs"];
-//!     let args = Args::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
 //!     assert_eq!(args.flag_opt_level, Some(Two));
 //!     assert_eq!(args.flag_emit, Some(Ir));
 //! }
@@ -788,6 +792,14 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
     }
 }
 
+pub trait FlagParser {
+    fn parse_args(conf: Config, args: &[&str]) -> Self;
+    fn parse() -> Self { FlagParser::parse_conf(DEFAULT_CONFIG.clone()) }
+    fn parse_conf(conf: Config) -> Self {
+        with_os_argv(|argv| FlagParser::parse_args(conf.clone(), argv))
+    }
+}
+
 /// Matches the current `argv` against the Docopt string given using the
 /// default configuration.
 ///
@@ -803,10 +815,7 @@ pub fn docopt(doc: &str) -> ValueMap {
 /// If an error occurs, an appropriate message is written to `stderr` and
 /// the program will exit unsafely.
 pub fn docopt_conf(conf: Config, doc: &str) -> ValueMap {
-    match Docopt::new(conf, doc) {
-        Ok(dopt) => convenient_parse(&dopt),
-        Err(err) => fail!("{}", err),
-    }
+    with_os_argv(|argv| docopt_args(conf.clone(), argv, doc))
 }
 
 /// Matches the given `args` against the Docopt string given with the given
@@ -824,10 +833,10 @@ pub fn docopt_args(conf: Config, args: &[&str], doc: &str) -> ValueMap {
     }
 }
 
-fn convenient_parse(dopt: &Docopt) -> ValueMap {
+fn with_os_argv<T>(f: |&[&str]| -> T) -> T {
     let os_argv = std::os::args();
     let argv: Vec<&str> = os_argv.iter().skip(1).map(|s|s.as_slice()).collect();
-    convenient_parse_args(dopt, argv.as_slice())
+    f(argv.as_slice())
 }
 
 fn convenient_parse_args(dopt: &Docopt, argv: &[&str]) -> ValueMap {

@@ -2,6 +2,8 @@
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
 
+use docopt::FlagParser;
+
 docopt!(Args, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
        rustc (--help | --version)
@@ -32,6 +34,6 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args = Args::parse();
+    let args: Args = FlagParser::parse();
     println!("{}", args);
 }

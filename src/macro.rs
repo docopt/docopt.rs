@@ -55,17 +55,10 @@ impl Parsed {
         let struct_name = self.struct_name;
         let full_doc = self.doc.p.full_doc.as_slice();
         its.push(quote_item!(cx,
-            impl $struct_name {
+            impl docopt::FlagParser for $struct_name {
                 #[allow(dead_code)]
-                fn parse() -> $struct_name {
-                    docopt::docopt($full_doc).decode_must()
-                }
-                #[allow(dead_code)]
-                fn parse_conf(conf: docopt::Config) -> $struct_name {
-                    docopt::docopt_conf(conf, $full_doc).decode_must()
-                }
-                #[allow(dead_code)]
-                fn parse_args(conf: docopt::Config, args: &[&str]) -> $struct_name {
+                fn parse_args(conf: docopt::Config, args: &[&str])
+                             -> $struct_name {
                     docopt::docopt_args(conf, args, $full_doc).decode_must()
                 }
             }

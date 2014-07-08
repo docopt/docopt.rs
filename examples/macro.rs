@@ -3,6 +3,8 @@
 extern crate serialize;
 #[phase(plugin, link)] extern crate docopt;
 
+use docopt::FlagParser;
+
 docopt!(Args, "
 Naval Fate.
 
@@ -23,7 +25,7 @@ Options:
 ", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int)
 
 fn main() {
-    let args = Args::parse();
+    let args: Args = FlagParser::parse();
     println!("{}", args);
 
     println!("\nSome values:");
