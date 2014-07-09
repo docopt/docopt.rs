@@ -15,7 +15,7 @@
 //   - The core matching algorithm is reasonably simple and concise, but I
 //     think writing down some contracts will help me figure out how to make
 //     the code clearer.
-// 
+//
 // Some bad things:
 //
 //   - I tried several times to split some of the pieces in this module into
@@ -33,7 +33,7 @@
 //
 //   - Document representation and invariants.
 //   - Less important: write contracts for functions.
-// 
+//
 // Long term:
 //
 //   - Write a specification for Docopt.
@@ -319,7 +319,7 @@ impl<'a> PatParser<'a> {
     }
 
     fn parse(&mut self) -> Result<Pattern, String> {
-        // let mut seen = HashSet::new(); 
+        // let mut seen = HashSet::new();
         let mut p = try!(self.pattern());
         match self.expecting.pop() {
             None => {},
@@ -380,12 +380,12 @@ impl<'a> PatParser<'a> {
                 "[" => {
                     // Check for special '[options]' shortcut.
                     if self.atis(1, "options") && self.atis(2, "]") {
-                        // let atoms = self.dopt.options_atoms(); 
-                        // let opts = Optional(atoms.move_iter().map(Atom).collect()); 
+                        // let atoms = self.dopt.options_atoms();
+                        // let opts = Optional(atoms.move_iter().map(Atom).collect());
                         self.next(); // cur == options
                         self.next(); // cur == ]
                         self.next();
-                        // seq.push(self.maybe_repeat(opts)); 
+                        // seq.push(self.maybe_repeat(opts));
                         seq.push(self.maybe_repeat(Optional(vec!())));
                         continue
                     }
@@ -588,7 +588,7 @@ pub enum Atom {
 #[deriving(Clone, Show)]
 pub struct Options {
     /// Set to true if this atom is ever repeated in any context.
-    /// For positional arguments, non-argument flags and commands, repetition 
+    /// For positional arguments, non-argument flags and commands, repetition
     /// means that they become countable.
     /// For flags with arguments, repetition means multiple distinct values
     /// can be specified (and are represented as a Vec).
@@ -1028,9 +1028,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
 
                 // Build a synonym map so that it's easier to look up values.
                 let mut synmap: SynonymMap<String, Value> =
-                    s.vals.move_iter().map(|(k, v)| (k.to_str(), v)).collect();
+                    s.vals.move_iter().map(|(k, v)| (k.to_string(), v)).collect();
                 for (from, to) in argv.dopt.descs.synonyms() {
-                    let (from, to) = (from.to_str(), to.to_str());
+                    let (from, to) = (from.to_string(), to.to_string());
                     if synmap.contains_key(&to) {
                         synmap.insert_synonym(from, to);
                     }

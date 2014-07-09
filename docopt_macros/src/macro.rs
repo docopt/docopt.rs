@@ -2,6 +2,8 @@
 #![crate_type = "dylib"]
 #![feature(plugin_registrar, macro_rules, quote)]
 
+#![allow(unused_imports)]
+
 extern crate syntax;
 extern crate rustc;
 extern crate docopt;
@@ -95,7 +97,7 @@ impl Parsed {
     fn struct_fields(&self, cx: &ExtCtxt) -> Vec<ast::StructField> {
         let mut fields: Vec<ast::StructField> = vec!();
         for (atom, opts) in self.doc.parser().descs.iter() {
-            let name = ValueMap::key_to_struct_field(atom.to_str().as_slice());
+            let name = ValueMap::key_to_struct_field(atom.to_string().as_slice());
             let ty = match self.types.find(atom) {
                 None => self.pat_type(cx, atom, opts),
                 Some(ty) => ty.clone(),
@@ -170,7 +172,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             &token::EOF, sep, |p| MacParser::parse_type_annotation(p)
         ).move_iter()
          .map(|(ident, ty)| {
-             let field_name = token::get_ident(ident).to_str();
+             let field_name = token::get_ident(ident).to_string();
              let key = ValueMap::struct_field_to_key(field_name.as_slice());
              (Atom::new(key.as_slice()), ty)
           })
@@ -206,18 +208,18 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 _ => false,
             }
         }
-        fn lit_to_str(lit: Gc<ast::Lit>) -> String {
+        fn lit_to_string(lit: Gc<ast::Lit>) -> String {
             match lit.node {
-                ast::LitStr(ref s, _) => s.to_str(),
+                ast::LitStr(ref s, _) => s.to_string(),
                 _ => fail!("BUG: expected string literal"),
             }
         }
         let exp = self.cx.expand_expr(self.p.parse_expr());
         let s = match exp.node {
-            ast::ExprLit(lit) if lit_is_str(lit) => lit_to_str(lit),
+            ast::ExprLit(lit) if lit_is_str(lit) => lit_to_string(lit),
             _ => {
                 let err = format!("Expected string literal but got {}",
-                                  pprust::expr_to_str(exp));
+                                  pprust::expr_to_string(exp));
                 self.cx.span_err(exp.span, err.as_slice());
                 return Err(());
             }

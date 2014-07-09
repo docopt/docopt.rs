@@ -114,6 +114,6 @@ impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
 impl<K: Eq + Hash + Show, V: Show> Show for SynonymMap<K, V> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         try!(self.vals.fmt(f));
-        write!(f, " (synomyns: {})", self.syns.to_str())
+        write!(f, " (synomyns: {})", self.syns.to_string())
     }
 }
