@@ -1,3 +1,5 @@
+#![crate_name = "docopt_macros"]
+#![crate_type = "dylib"]
 #![feature(plugin_registrar, macro_rules, quote)]
 
 extern crate syntax;

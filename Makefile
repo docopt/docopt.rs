@@ -2,20 +2,32 @@ RUSTC ?= rustc
 RUSTDOC ?= rustdoc
 BUILD ?= ./build
 TARGET ?= ./target
+
 RUST_PATH ?= -L $(BUILD) -L target
 # RUSTFLAGS ?= --opt-level=3 
 RUSTFLAGS ?= 
 RUSTTESTFLAGS ?= 
+
+LIB ?= $(BUILD)/.libdocopt.timestamp
 LIB_NAME = docopt
-LIB ?= $(BUILD)/.libregex.timestamp
-LIB_FILES = src/lib.rs src/macro.rs src/parse.rs src/synonym.rs
+LIB_FILES = src/lib.rs src/parse.rs src/synonym.rs
 TEST_FILES = $(wildcard src/test/*.rs)
+
+MACRO_LIB ?= $(BUILD)/.libdocopt_macros.timestamp
+MACRO_LIB_NAME = docopt_macros
+MACRO_LIB_FILES = docopt_macros/src/macro.rs
+
 ARGS ?= 
 
-all: $(LIB)
+all: $(LIB) $(MACRO_LIB)
 
 install:
 	cargo-lite install
+
+$(MACRO_LIB): $(MACRO_LIB_FILES)
+	@mkdir -p $(BUILD) $(TARGET)
+	$(RUSTC) $(RUSTFLAGS) $(RUST_PATH) ./docopt_macros/src/macro.rs --out-dir=$(TARGET)
+	@touch $(MACRO_LIB)
 
 $(LIB): $(LIB_FILES)
 	@mkdir -p $(BUILD) $(TARGET)

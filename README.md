@@ -28,7 +28,8 @@ Here is a full working example:
 ```rust
 #![feature(phase)]
 extern crate serialize;
-#[phase(plugin, link)] extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+extern crate docopt;
 
 use docopt::FlagParser;
 
@@ -80,7 +81,8 @@ Here's another example that shows how to specify the types of your arguments:
 ```rust
 #![feature(phase)]
 extern crate serialize;
-#[phase(plugin, link)] extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+extern crate docopt;
 
 use docopt::FlagParser;
 
@@ -110,7 +112,8 @@ restrict values to a list of choices via an `enum` type.
 ```rust
 #![feature(phase)]
 extern crate serialize;
-#[phase(plugin, link)] extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+extern crate docopt;
 
 use docopt::FlagParser;
 

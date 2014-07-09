@@ -1,6 +1,7 @@
 #![feature(phase)]
 extern crate serialize;
-#[phase(plugin, link)] extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+extern crate docopt;
 
 use docopt::FlagParser;
 
