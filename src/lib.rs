@@ -883,6 +883,7 @@ fn exit(code: uint) -> ! {
     unsafe { libc::exit(code as libc::c_int) }
 }
 
+#[doc(hidden)]
 pub mod parse;
 mod synonym;
 #[cfg(test)]
