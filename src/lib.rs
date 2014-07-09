@@ -197,9 +197,6 @@ extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 extern crate serialize;
 
-extern crate syntax;
-extern crate rustc;
-
 use std::collections::HashMap;
 use std::fmt;
 use std::from_str::{FromStr, from_str};
@@ -294,6 +291,11 @@ impl Docopt {
                 self.p.matches(&argv)
                     .map(|m| Ok(ValueMap { map: m }))
                     .unwrap_or_else(|| Err(NoMatch)))
+    }
+
+    #[inline]
+    pub fn parser<'a>(&'a self) -> &'a Parser {
+        &self.p
     }
 }
 
@@ -467,7 +469,7 @@ impl ValueMap {
     /// This makes a half-hearted attempt at making the key a valid struct
     /// field name (like replacing `-` with `_`), but it does not otherwise
     /// guarantee that the result is a valid struct field name.
-    fn key_to_struct_field(name: &str) -> String {
+    pub fn key_to_struct_field(name: &str) -> String {
         fn sanitize(name: &str) -> String {
             name.replace("-", "_")
         }
@@ -493,7 +495,7 @@ impl ValueMap {
     }
 
     /// Converts a struct field name to a Docopt key.
-    fn struct_field_to_key(field: &str) -> String {
+    pub fn struct_field_to_key(field: &str) -> String {
         fn desanitize(name: &str) -> String {
             name.replace("_", "-")
         }
@@ -878,9 +880,7 @@ fn exit(code: uint) -> ! {
     unsafe { libc::exit(code as libc::c_int) }
 }
 
-#[doc(hidden)]
-pub mod macro;
-mod parse;
+pub mod parse;
 mod synonym;
 #[cfg(test)]
 mod test;

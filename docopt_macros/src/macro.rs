@@ -1,3 +1,9 @@
+#![feature(plugin_registrar, macro_rules, quote)]
+
+extern crate syntax;
+extern crate rustc;
+extern crate docopt;
+
 use std::collections::HashMap;
 use std::gc::{Gc, GC};
 
@@ -12,8 +18,8 @@ use syntax::parse::token;
 use syntax::print::pprust;
 use syntax::util::small_vector::SmallVector;
 
-use {DEFAULT_CONFIG, Config, Docopt, ValueMap};
-use parse::{
+use docopt::{DEFAULT_CONFIG, Config, Docopt, ValueMap};
+use docopt::parse::{
     Options,
     Atom, Short, Long, Command, Positional,
     Argument, Zero, One,
@@ -53,7 +59,7 @@ impl Parsed {
         its.push(self.struct_decl(cx));
 
         let struct_name = self.struct_name;
-        let full_doc = self.doc.p.full_doc.as_slice();
+        let full_doc = self.doc.parser().full_doc.as_slice();
         its.push(quote_item!(cx,
             impl docopt::FlagParser for $struct_name {
                 #[allow(dead_code)]
@@ -86,7 +92,7 @@ impl Parsed {
     /// Handles type annotations.
     fn struct_fields(&self, cx: &ExtCtxt) -> Vec<ast::StructField> {
         let mut fields: Vec<ast::StructField> = vec!();
-        for (atom, opts) in self.doc.p.descs.iter() {
+        for (atom, opts) in self.doc.parser().descs.iter() {
             let name = ValueMap::key_to_struct_field(atom.to_str().as_slice());
             let ty = match self.types.find(atom) {
                 None => self.pat_type(cx, atom, opts),
