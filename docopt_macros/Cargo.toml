@@ -6,7 +6,7 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 [[lib]]
 name = "docopt_macros"
 path = "src/macro.rs"
-crate_type = ["dylib"]
+plugin = true
 
 [dependencies.docopt]
 git = "https://github.com/BurntSushi/docopt.rs"
