@@ -219,7 +219,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             ast::ExprLit(lit) if lit_is_str(lit) => lit_to_string(lit),
             _ => {
                 let err = format!("Expected string literal but got {}",
-                                  pprust::expr_to_string(exp));
+                                  pprust::expr_to_string(&*exp));
                 self.cx.span_err(exp.span, err.as_slice());
                 return Err(());
             }
