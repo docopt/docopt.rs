@@ -556,15 +556,15 @@ impl<'a> PatParser<'a> {
         Ok(())
     }
     fn cur<'r>(&'r self) -> &'r str {
-        self.tokens.get(self.curi).as_slice()
+        self.tokens[self.curi].as_slice()
     }
     fn at<'a>(&'a self, offset: int) -> &'a str {
-        self.tokens.get((self.curi as int + offset) as uint).as_slice()
+        self.tokens[(self.curi as int + offset) as uint].as_slice()
     }
     fn atis(&self, offset: int, is: &str) -> bool {
         let i = (self.curi as int) + offset;
         let iu = i as uint;
-        i >= 0 && iu < self.tokens.len() && self.tokens.get(iu).as_slice() == is
+        i >= 0 && iu < self.tokens.len() && self.tokens[iu].as_slice() == is
     }
 }
 
@@ -887,7 +887,7 @@ impl<'a> Argv<'a> {
 
     fn cur<'a>(&'a self) -> &'a str { self.at(0) }
     fn at<'a>(&'a self, i: int) -> &'a str {
-        self.argv.get((self.curi as int + i) as uint).as_slice()
+        self.argv[(self.curi as int + i) as uint].as_slice()
     }
     fn next(&mut self) {
         if self.curi < self.argv.len() {
