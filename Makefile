@@ -69,6 +69,7 @@ ctags:
 
 clean:
 	rm -f $(BUILD)/.*.timestamp $(BUILD)/*
+	rm -rf target
 
 push:
 	git push origin master
