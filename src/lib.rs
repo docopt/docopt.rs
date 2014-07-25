@@ -21,7 +21,7 @@
 //! docopt!(Args, "
 //! Usage: cp [-a] SOURCE DEST
 //!        cp [-a] SOURCE... DIR
-//! 
+//!
 //! Options:
 //!     -a, --archive  Copy everything.
 //! ")
@@ -68,7 +68,7 @@
 //!     let args = docopt::docopt_args(config, argv, "
 //! Usage: cp [-a] SOURCE DEST
 //!        cp [-a] SOURCE... DIR
-//! 
+//!
 //! Options:
 //!     -a, --archive  Copy everything.
 //!     ");
@@ -92,7 +92,7 @@
 //! docopt!(Args, "
 //! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
 //!        rustc (--help | --version)
-//! 
+//!
 //! Options:
 //!     -h, --help         Show this message.
 //!     --version          Show the version of rustc.
@@ -119,9 +119,9 @@
 //!
 //! This is where data validation can help. In Docopt proper, it is a
 //! *non-goal* to validate and convert the data. However, this implementation
-//! provides some facilities to do just that. All you need to do is provide 
-//! Rust types for the flags/arguments, and the decoder will do the rest. 
-//! Here's an example of limiting the range of values for `--emit` and 
+//! provides some facilities to do just that. All you need to do is provide
+//! Rust types for the flags/arguments, and the decoder will do the rest.
+//! Here's an example of limiting the range of values for `--emit` and
 //! `--opt-level`:
 //!
 //! (Note the extra type annotations in the `docopt!` macro call.)
@@ -135,7 +135,7 @@
 //! docopt!(Args, "
 //! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
 //!        rustc (--help | --version)
-//! 
+//!
 //! Options:
 //!     -h, --help         Show this message.
 //!     --version          Show the version of rustc.
@@ -145,18 +145,18 @@
 //!                        Valid values: asm, ir, bc, obj, link.
 //!     --opt-level LEVEL  Optimize with possible levels 0-3.
 //! ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>)
-//! 
+//!
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
 //! #[deriving(Decodable, PartialEq, Show)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
-//! 
+//!
 //! // This one is harder because we want the user to specify an integer,
 //! // but restrict it to a specific range. So we implement `Decodable`
 //! // ourselves.
 //! #[deriving(PartialEq, Show)]
 //! enum OptLevel { Zero, One, Two, Three }
-//! 
+//!
 //! impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 //!     fn decode(d: &mut D) -> Result<OptLevel, E> {
 //!         Ok(match try!(d.read_uint()) {
@@ -181,8 +181,8 @@
 //! would fail.
 
 #![crate_name = "docopt"]
-#![crate_type = "rlib"] 
-#![crate_type = "dylib"] 
+#![crate_type = "rlib"]
+#![crate_type = "dylib"]
 #![experimental]
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
@@ -193,7 +193,7 @@
 
 extern crate debug;
 extern crate libc;
-// #[cfg(test)] 
+// #[cfg(test)]
 #[phase(plugin, link)]
 extern crate log;
 extern crate regex;
@@ -223,17 +223,68 @@ macro_rules! werr(
 /// usage string, parsing an argv arguments, not matching an argv against
 /// a Docopt pattern and decoding a successful match into a struct.
 pub enum Error {
-    Usage(String),
+    /// Decoding or parsing failed because the command line specified that the
+    /// help message should be printed.
+    ///
+    /// The help message is included as a payload to this variant.
+    Help(String),
+
+    /// Decoding or parsing failed because the command line specified that the
+    /// version should be printed
+    ///
+    /// The version is included as a payload to this variant.
+    Version(String),
+
+    /// Parsing the argv specified failed.
+    ///
+    /// The payload is a string describing why the arguments provided could not
+    /// be parsed.
     Argv(String),
+
+    /// Parsing failed, and the program usage should be printed next to the
+    /// failure message.
+    WithProgramUsage(Box<Error>, String),
+
+    /// The given argv parsed successfully, but it did not match any example
+    /// usage of the program.
     NoMatch,
+
+    Usage(String),
     Decode(String),
+}
+
+impl Error {
+    /// Return whether this was a fatal error or not.
+    ///
+    /// Non-fatal errors include requests to print the help or version
+    /// information of a program, while fatal errors include those such as
+    /// failing to decode or parse.
+    pub fn fatal(&self) -> bool {
+        match *self {
+            Help(..) | Version(..) => false,
+            Argv(..) | Usage(..) | NoMatch | Decode(..) => true,
+            WithProgramUsage(ref b, _) => b.fatal(),
+        }
+    }
+
+    /// Print this error to stderr and immediately exit the program.
+    pub fn exit(&self) -> ! {
+        werr!("{}\n", self);
+        exit(if self.fatal() {1} else {0})
+    }
 }
 
 impl fmt::Show for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &NoMatch => write!(f, "Invalid arguments."),
-            &Usage(ref s) | &Argv(ref s) | &Decode(ref s) => write!(f, "{}", s),
+        match *self {
+            NoMatch => write!(f, "Invalid arguments."),
+            WithProgramUsage(ref other, ref usage) => {
+                write!(f, "{}\n{}", other, usage)
+            }
+            Argv(ref s) | Usage(ref s) | Decode(ref s) | Help(ref s) |
+            Version(ref s) => {
+                write!(f, "{}", s)
+            }
         }
     }
 }
@@ -389,7 +440,7 @@ impl ValueMap {
     /// a struct. All fields of the struct must map to a corresponding key
     /// in the `ValueMap`. To this end, each member must have a special prefix
     /// corresponding to the different kinds of patterns in Docopt. There are
-    /// three prefixes: `flag_`, `arg_` and `cmd_` which respectively 
+    /// three prefixes: `flag_`, `arg_` and `cmd_` which respectively
     /// correspond to short/long flags, positional arguments and commands.
     ///
     /// This documentation needs to be fleshed out more.
@@ -409,7 +460,7 @@ impl ValueMap {
     ///   flag_verbose: bool,
     ///   flag_h: bool,
     /// }
-    /// 
+    ///
     /// let argv = &["-v", "build"];
     /// let doc = docopt_args(DEFAULT_CONFIG.clone(), argv, "
     /// Usage: cargo [options] (build | test)
@@ -440,10 +491,7 @@ impl ValueMap {
     pub fn decode_must<'a, T: Decodable<Decoder<'a>, Error>>(&'a self) -> T {
         match self.decode() {
             Ok(v) => v,
-            Err(err) => {
-                werr!("{}\n", err);
-                exit(1);
-            }
+            Err(err) => err.exit(),
         }
     }
 
@@ -798,9 +846,11 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
 }
 
 pub trait FlagParser {
-    fn parse_args(conf: Config, args: &[&str]) -> Self;
-    fn parse() -> Self { FlagParser::parse_conf(DEFAULT_CONFIG.clone()) }
-    fn parse_conf(conf: Config) -> Self {
+    fn parse_args(conf: Config, args: &[&str]) -> Result<Self, Error>;
+    fn parse() -> Result<Self, Error> {
+        FlagParser::parse_conf(DEFAULT_CONFIG.clone())
+    }
+    fn parse_conf(conf: Config) -> Result<Self, Error> {
         with_os_argv(|argv| FlagParser::parse_args(conf.clone(), argv))
     }
 }
@@ -810,7 +860,7 @@ pub trait FlagParser {
 ///
 /// If an error occurs, an appropriate message is written to `stderr` and
 /// the program will exit unsafely.
-pub fn docopt(doc: &str) -> ValueMap {
+pub fn docopt(doc: &str) -> Result<ValueMap, Error> {
     docopt_conf(DEFAULT_CONFIG.clone(), doc)
 }
 
@@ -819,7 +869,7 @@ pub fn docopt(doc: &str) -> ValueMap {
 ///
 /// If an error occurs, an appropriate message is written to `stderr` and
 /// the program will exit unsafely.
-pub fn docopt_conf(conf: Config, doc: &str) -> ValueMap {
+pub fn docopt_conf(conf: Config, doc: &str) -> Result<ValueMap, Error> {
     with_os_argv(|argv| docopt_args(conf.clone(), argv, doc))
 }
 
@@ -831,11 +881,13 @@ pub fn docopt_conf(conf: Config, doc: &str) -> ValueMap {
 ///
 /// If an error occurs, an appropriate message is written to `stderr` and
 /// the program will exit unsafely.
-pub fn docopt_args(conf: Config, args: &[&str], doc: &str) -> ValueMap {
-    match Docopt::new(conf, doc) {
-        Ok(dopt) => convenient_parse_args(&dopt, args),
+pub fn docopt_args(conf: Config, args: &[&str],
+                   doc: &str) -> Result<ValueMap, Error> {
+    let dopt = match Docopt::new(conf, doc) {
+        Ok(dopt) => dopt,
         Err(err) => fail!("{}", err),
-    }
+    };
+    convenient_parse_args(&dopt, args)
 }
 
 fn with_os_argv<T>(f: |&[&str]| -> T) -> T {
@@ -844,24 +896,21 @@ fn with_os_argv<T>(f: |&[&str]| -> T) -> T {
     f(argv.as_slice())
 }
 
-fn convenient_parse_args(dopt: &Docopt, argv: &[&str]) -> ValueMap {
-    let vals = dopt.argv(argv).unwrap_or_else(|err| {
-        werr!("{}\n", err);
-        werr!("{}\n", dopt.p.usage.as_slice().trim());
-        exit(1);
-    });
+fn convenient_parse_args(dopt: &Docopt,
+                         argv: &[&str]) -> Result<ValueMap, Error> {
+    let vals = try!(dopt.argv(argv).map_err(|e| {
+        WithProgramUsage(box e, dopt.p.usage.as_slice().trim().to_string())
+    }));
     if dopt.conf.help && vals.get_bool("--help") {
-        werr!("{}\n", dopt.p.full_doc.as_slice().trim());
-        exit(1);
+        return Err(Help(dopt.p.full_doc.as_slice().trim().to_string()))
     }
     match dopt.conf.version {
         Some(ref v) if vals.get_bool("--version") => {
-            werr!("{}\n", v);
-            exit(0);
+            return Err(Version(v.clone()))
         }
         _ => {},
     }
-    vals
+    Ok(vals)
 }
 
 fn argv_has_help(argv: &[&str]) -> bool {

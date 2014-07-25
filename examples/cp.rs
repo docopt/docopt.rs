@@ -17,6 +17,6 @@ Options:
 ")
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap();
     println!("{}", args);
 }

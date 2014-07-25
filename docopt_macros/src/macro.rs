@@ -68,8 +68,10 @@ impl Parsed {
             impl docopt::FlagParser for $struct_name {
                 #[allow(dead_code)]
                 fn parse_args(conf: docopt::Config, args: &[&str])
-                             -> $struct_name {
-                    docopt::docopt_args(conf, args, $full_doc).decode_must()
+                             -> Result<$struct_name, docopt::Error> {
+                    docopt::docopt_args(conf, args, $full_doc).and_then(|v| {
+                        v.decode()
+                    })
                 }
             }
         ).unwrap());
