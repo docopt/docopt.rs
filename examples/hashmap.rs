@@ -20,7 +20,7 @@ Options:
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Moored (anchored) mine.
   --drifting    Drifting mine.
-");
+").unwrap_or_else(|e| e.exit());
     println!("{}", args);
 
     // You can conveniently access values with `get_{bool,count,str,vec}`

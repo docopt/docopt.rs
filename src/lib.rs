@@ -28,7 +28,8 @@
 //!
 //! fn main() {
 //!     let argv = &["-a", "file1", "file2", "dest/"];
-//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(
+//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
 //!     assert!(args.flag_archive);
 //!     assert_eq!(args.arg_SOURCE, vec!["file1".to_string(), "file2".to_string()]);
 //!     assert_eq!(args.arg_DIR, "dest/".to_string());
@@ -71,7 +72,7 @@
 //!
 //! Options:
 //!     -a, --archive  Copy everything.
-//!     ");
+//!     ").unwrap_or_else(|e| e.exit());
 //!     assert!(args.get_bool("-a") && args.get_bool("--archive"));
 //!     assert_eq!(args.get_vec("SOURCE"), vec!["file1", "file2"]);
 //!     assert_eq!(args.get_str("DIR"), "dest/");
@@ -105,7 +106,8 @@
 //!
 //! fn main() {
 //!     let argv = &["--cfg", "a", "docopt.rs", "-L", ".", "-L.."];
-//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(
+//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
 //!     assert_eq!(args.arg_INPUT, "docopt.rs".to_string());
 //!     assert_eq!(args.flag_L, vec![".".to_string(), "..".to_string()]);
 //!     assert_eq!(args.flag_cfg, vec!["a".to_string()]);
@@ -171,7 +173,8 @@
 //!
 //! fn main() {
 //!     let argv = &["--opt-level", "2", "--emit=ir", "docopt.rs"];
-//!     let args: Args = FlagParser::parse_args(docopt::DEFAULT_CONFIG.clone(), argv);
+//!     let args: Args = FlagParser::parse_args(
+//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
 //!     assert_eq!(args.flag_opt_level, Some(Two));
 //!     assert_eq!(args.flag_emit, Some(Ir));
 //! }
@@ -468,8 +471,8 @@ impl ValueMap {
     ///
     /// Options: -v, --verbose
     ///          -h, --help
-    /// ");
-    /// let args: Args = doc.decode().unwrap();
+    /// ").unwrap_or_else(|e| e.exit());
+    /// let args: Args = doc.decode().unwrap_or_else(|e| e.exit());
     /// assert!(args.cmd_build && !args.cmd_test
     ///         && args.flag_verbose && !args.flag_h);
     /// # }
