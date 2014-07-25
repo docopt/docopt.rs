@@ -350,7 +350,7 @@ impl Docopt {
                     .unwrap_or_else(|| Err(NoMatch)))
     }
 
-    #[inline]
+    #[doc(hidden)]
     pub fn parser<'a>(&'a self) -> &'a Parser {
         &self.p
     }
