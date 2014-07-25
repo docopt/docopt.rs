@@ -35,6 +35,6 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap();
     println!("{}", args);
 }

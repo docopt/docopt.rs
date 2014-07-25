@@ -1021,7 +1021,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
             .filter(|s| m.state_has_valid_flags(s))
             .filter(|s| m.state_valid_num_flags(s))
             .collect::<Vec<MState>>()
-            .shift()
+            .remove(0)
             .map(|mut s| {
                 m.add_flag_values(&mut s);
                 m.add_default_values(&mut s);

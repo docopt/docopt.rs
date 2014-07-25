@@ -26,7 +26,7 @@ Options:
 ", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int)
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap();
     println!("{}", args);
 
     println!("\nSome values:");
