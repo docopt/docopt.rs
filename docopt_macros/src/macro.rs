@@ -16,6 +16,7 @@ use syntax::ast;
 use syntax::codemap;
 use syntax::ext::base::{ExtCtxt, MacResult, MacItem, DummyResult};
 use syntax::ext::build::AstBuilder;
+use syntax::fold::Folder;
 use syntax::parse::common::SeqSep;
 use syntax::parse::parser::Parser;
 use syntax::parse::token;
@@ -216,7 +217,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 _ => fail!("BUG: expected string literal"),
             }
         }
-        let exp = self.cx.expand_expr(self.p.parse_expr());
+        let exp = self.cx.expander().fold_expr(self.p.parse_expr());
         let s = match exp.node {
             ast::ExprLit(lit) if lit_is_str(lit) => lit_to_string(lit),
             _ => {
