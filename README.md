@@ -42,7 +42,7 @@ Options:
 ")
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
 
     // The Args struct satisfies `Show`:
     println!("{}", args);
@@ -89,7 +89,7 @@ use docopt::FlagParser;
 docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
     println!("x: {:d}, y: {:d}", args.arg_x, args.arg_y);
 }
 ```
@@ -148,7 +148,7 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args: Args = FlagParser::parse();
+    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
     println!("{}", args);
 }
 ```
@@ -170,28 +170,4 @@ struct Args {
     pub arg_y: int,
 }
 ```
-
-### Macros, decoding and hash tables
-
-**I need help designing the API**. It seems as though there are roughly three
-levels increasing magic at which one can use this library:
-
-1. Parse command line arguments into a hash table. The values of this table
-   are [Value](http://burntsushi.net/rustdoc/docopt/type.Value.html) enums.
-   This roughly corresponds to the API provided by the reference Python
-   implementation of Docopt. e.g., keys are `--flag` or `-f` or `cmd` or
-   `<arg>` or `ARG`. The downside of this approach is that you must deal with
-   `Value` everywhere.
-2. Parse command line arguments into a hash table and then decode these values
-   into a struct. The magic here is the conversion from `Value` types to your
-   own types, which must satisfy the `Decodable` trait. This is useful when
-   your values should be integers or floats or enumerations because Docopt
-   proper only knows about the following four types: booleans, counts, strings
-   and lists of strings. The downside of this approach is that you have to
-   define a struct independent of your Docopt usage string, which violates one
-   of its most important features: single point of truth.
-3. Use a macro that *creates a struct for you* from the Docopt usage string.
-   Decoding into that struct would work as in (2). The problem with this
-   approach is that it is very magical given that you don't actually get to
-   see the definition of your struct.
 
