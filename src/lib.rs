@@ -846,6 +846,9 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
                            -> Result<T, Error> {
         unimplemented!()
     }
+    fn error(&mut self, err: &str) -> Error {
+        unimplemented!()
+    }
 }
 
 pub trait FlagParser {
