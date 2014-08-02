@@ -9,6 +9,6 @@ use docopt::FlagParser;
 docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap();
+    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
     println!("x: {:d}, y: {:d}", args.arg_x, args.arg_y);
 }
