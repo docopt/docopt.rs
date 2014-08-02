@@ -163,10 +163,10 @@
 //!     fn decode(d: &mut D) -> Result<OptLevel, E> {
 //!         Ok(match try!(d.read_uint()) {
 //!             0 => Zero, 1 => One, 2 => Two, 3 => Three,
-//!             // This partly defeats the purpose of this example, but
-//!             // hopefully showing a wart will encourage people to help
-//!             // me fix it.
-//!             _ => fail!("How to CONVENIENTLY create value with type `E`?"),
+//!             n => {
+//!                 let err = format!("Could not decode '{}' as opt-level.", n);
+//!                 return Err(d.error(err.as_slice()));
+//!             }
 //!         })
 //!     }
 //! }
@@ -679,6 +679,10 @@ impl<'a> Decoder<'a> {
 }
 
 impl<'a> serialize::Decoder<Error> for Decoder<'a> {
+    fn error(&mut self, err: &str) -> Error {
+        Decode(err.to_string())
+    }
+
     fn read_nil(&mut self) -> Result<(), Error> {
         // I don't know what the right thing is here, so just fail for now.
         fail!("I don't know how to read into a nil value.")
