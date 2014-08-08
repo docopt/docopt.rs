@@ -3,7 +3,7 @@ This implementation conforms to the
 [official description of Docopt](http://docopt.org/) and
 [passes its test suite](https://github.com/docopt/docopt/pull/201).
 
-[![Build status](https://api.travis-ci.org/BurntSushi/docopt.rs.png)](https://travis-ci.org/BurntSushi/docopt.rs)
+[![Build status](https://api.travis-ci.org/docopt/docopt.rs.svg)](https://travis-ci.org/docopt/docopt.rs)
 
 Licensed under the [UNLICENSE](http://unlicense.org).
 
