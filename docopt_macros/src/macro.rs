@@ -36,7 +36,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 }
 
 fn expand(cx: &mut ExtCtxt, span: codemap::Span, tts: &[ast::TokenTree])
-         -> Box<MacResult> {
+         -> Box<MacResult+'static> {
     let parsed = match MacParser::new(cx, tts).parse() {
         Ok(parsed) => parsed,
         Err(_) => return DummyResult::any(span),
@@ -59,7 +59,7 @@ struct Parsed {
 impl Parsed {
     /// Returns a macro result suitable for expansion.
     /// Contains two items: one for the struct and one for the struct impls.
-    fn items(&self, cx: &ExtCtxt) -> Box<MacResult> {
+    fn items(&self, cx: &ExtCtxt) -> Box<MacResult+'static> {
         let mut its = vec!();
         its.push(self.struct_decl(cx));
 
@@ -143,13 +143,13 @@ impl Parsed {
 }
 
 /// State for parsing a `docopt` macro invocation.
-struct MacParser<'a, 'b> {
-    cx: &'b mut ExtCtxt<'a>,
-    p: Parser<'a>,
+struct MacParser<'a, 'b:'a> {
+    cx: &'a mut ExtCtxt<'b>,
+    p: Parser<'b>,
 }
 
 impl<'a, 'b> MacParser<'a, 'b> {
-    fn new(cx: &'b mut ExtCtxt<'a>, tts: &[ast::TokenTree]) -> MacParser<'a, 'b> {
+    fn new(cx: &'a mut ExtCtxt<'b>, tts: &[ast::TokenTree]) -> MacParser<'a, 'b> {
         let p = cx.new_parser_from_tts(tts);
         MacParser { cx: cx, p: p }
     }
@@ -259,8 +259,8 @@ impl MacResult for MacItems {
 }
 
 impl MacItems {
-    fn new(its: Vec<Gc<ast::Item>>) -> Box<MacResult> {
-        box MacItems { its: its } as Box<MacResult>
+    fn new(its: Vec<Gc<ast::Item>>) -> Box<MacResult+'static> {
+        box MacItems { its: its } as Box<MacResult+'static>
     }
 }
 
