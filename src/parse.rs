@@ -917,7 +917,7 @@ impl<'a> fmt::Show for Argv<'a> {
     }
 }
 
-struct Matcher<'a, 'b> {
+struct Matcher<'a, 'b:'a> {
     argv: &'a Argv<'b>,
 }
 
