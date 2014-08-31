@@ -9,4 +9,4 @@ path = "src/macro.rs"
 plugin = true
 
 [dependencies.docopt]
-git = "https://github.com/docopt/docopt.rs"
+path = ".."
