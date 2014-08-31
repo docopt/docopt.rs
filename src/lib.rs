@@ -10,7 +10,7 @@
 //! distinguishes it from most parsers is that the parser is derived from the
 //! usage string. Here's a simple example using the `docopt!` macro:
 //!
-//! ```rust
+//! ```ignore
 //! #![feature(phase)]
 //! extern crate serialize;
 //! #[phase(plugin)] extern crate docopt_macros;
@@ -84,7 +84,7 @@
 //! Here's an example (with a macro) showing a subset of `rustc`'s command
 //! line arguments.
 //!
-//! ```rust
+//! ```ignore
 //! # #![feature(phase)]
 //! # extern crate serialize;
 //! # #[phase(plugin, link)] extern crate docopt_macros;
@@ -128,7 +128,7 @@
 //!
 //! (Note the extra type annotations in the `docopt!` macro call.)
 //!
-//! ```rust
+//! ```ignore
 //! # #![feature(phase)]
 //! # extern crate serialize;
 //! # #[phase(plugin)] extern crate docopt_macros;

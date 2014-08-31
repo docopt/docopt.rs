@@ -3,10 +3,10 @@ name = "docopt_macros"
 version = "0.6.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
-[[lib]]
+[lib]
 name = "docopt_macros"
 path = "src/macro.rs"
 plugin = true
 
 [dependencies.docopt]
-git = "https://github.com/BurntSushi/docopt.rs"
+git = "https://github.com/docopt/docopt.rs"

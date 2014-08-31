@@ -37,7 +37,7 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
 
     fn with_key<T>(&self, k: &K, with: |&K| -> T) -> T {
         if self.syns.contains_key(k) {
-            with(self.syns.get(k))
+            with(&self.syns[*k])
         } else {
             with(k)
         }
@@ -76,7 +76,7 @@ impl<K: Eq + Hash, V> Map<K, V> for SynonymMap<K, V> {
 impl<K: Eq + Hash + Clone, V> MutableMap<K, V> for SynonymMap<K, V> {
     fn find_mut<'a>(&'a mut self, k: &K) -> Option<&'a mut V> {
         if self.syns.contains_key(k) {
-            self.vals.find_mut(self.syns.get(k))
+            self.vals.find_mut(&self.syns[*k])
         } else {
             self.vals.find_mut(k)
         }
@@ -92,7 +92,7 @@ impl<K: Eq + Hash + Clone, V> MutableMap<K, V> for SynonymMap<K, V> {
     }
     fn pop(&mut self, k: &K) -> Option<V> {
         if self.syns.contains_key(k) {
-            let old = self.vals.pop(self.syns.get(k));
+            let old = self.vals.pop(&self.syns[*k]);
             self.syns.remove(k);
             old
         } else {

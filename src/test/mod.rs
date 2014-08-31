@@ -19,9 +19,6 @@ fn map_from_alist(alist: Vec<(&'static str, Value)>) -> HashMap<String, Value> {
 }
 
 fn same_args(expected: &HashMap<String, Value>, got: &ValueMap) {
-    // debug!("GOT: {}", got); 
-    // debug!("EXPECTED: {}", expected); 
-    // debug!("---------------"); 
     for (k, ve) in expected.iter() {
         match got.map.find(k) {
             None => fail!("EXPECTED has '{}' but GOT does not.", k),
