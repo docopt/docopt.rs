@@ -5,7 +5,7 @@ import argparse
 import json
 import re
 
-retests = re.compile('(.*?)"""(.*?)r"""', re.DOTALL)
+retests = re.compile('(.*?)"""(.*?)(r"""|\s*$)', re.DOTALL)
 reinvokes = re.compile('(.+?$)(.+?)\s*(\$|\Z)', re.DOTALL | re.MULTILINE)
 
 p = argparse.ArgumentParser(

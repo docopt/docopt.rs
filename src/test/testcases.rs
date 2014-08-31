@@ -619,3 +619,23 @@ test_expect!(test_173_testcases, "Usage:
  prog --bar
 NOT PART OF SECTION", &["--foo"], vec!(("--bar", Switch(false)), ("--foo", Switch(true))))
 
+test_expect!(test_174_testcases, "Usage: prog [options]
+
+global options: --foo
+local options: --baz
+               --bar
+other options:
+ --egg
+ --spam
+-not-an-option-", &["--bar", "--egg"], vec!(("--bar", Switch(true)), ("--egg", Switch(true)), ("--spam", Switch(false))))
+
+test_expect!(test_175_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a"], vec!(("--", Switch(false)), ("<arg>", List(vec!())), ("-a", Switch(true))))
+
+test_expect!(test_176_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--"], vec!(("--", Switch(true)), ("<arg>", List(vec!())), ("-a", Switch(false))))
+
+test_expect!(test_177_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-b"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-b".to_string()))), ("-a", Switch(true))))
+
+test_expect!(test_178_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-a"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(true))))
+
+test_expect!(test_179_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--", "-a"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(false))))
+

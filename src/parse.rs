@@ -249,7 +249,10 @@ impl Parser {
                -> Result<(), String> {
         assert!(!short.is_empty() || !long.is_empty());
         if !short.is_empty() && short.char_len() != 2 {
-            err!("Short flag '{}' is not of the form '-x'.", short);
+            // It looks like the reference implementation just ignores
+            // these lines.
+            return Ok(());
+            // err!("Short flag '{}' is not of the form '-x'.", short); 
         }
         let mut opts = Options::new(false, if has_arg { One(None) } else { Zero });
         opts.is_desc = true;
@@ -823,8 +826,12 @@ impl<'a> Argv<'a> {
     }
 
     fn parse(&mut self) -> Result<(), String> {
+        let mut seen_double_dash = false;
         while self.curi < self.argv.len() {
-            let do_flags = !self.options_first || self.positional.is_empty();
+            let do_flags =
+                !seen_double_dash
+                && (!self.options_first || self.positional.is_empty());
+
             if do_flags && Atom::is_short(self.cur()) {
                 let stacked: String = self.cur().slice_from(1).to_string();
                 for (i, c) in stacked.as_slice().chars().enumerate() {
@@ -866,6 +873,9 @@ impl<'a> Argv<'a> {
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
             } else {
+                if self.cur() == "--" {
+                    seen_double_dash = true;
+                }
                 let tok = self.as_command_or_arg(self.cur());
                 self.positional.push(tok);
             }

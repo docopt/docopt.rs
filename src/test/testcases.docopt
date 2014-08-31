@@ -954,5 +954,25 @@ other options:
 -not-an-option-
 
 """
-$ prog --baz --egg
-{"--foo": false, "--baz": true, "--bar": false, "--egg": true, "--spam": false}
+$ prog --bar --egg
+{"--bar": true, "--egg": true, "--spam": false}
+
+r"""Usage: prog [-a] [--] [<arg>...]"""
+$ program -a
+{"-a": true, "<arg>": [], "--": false}
+
+r"""Usage: prog [-a] [--] [<arg>...]"""
+$ program --
+{"-a": false, "<arg>": [], "--": true}
+
+r"""Usage: prog [-a] [--] [<arg>...]"""
+$ program -a -- -b
+{"-a": true, "<arg>": ["-b"], "--": true}
+
+r"""Usage: prog [-a] [--] [<arg>...]"""
+$ program -a -- -a
+{"-a": true, "<arg>": ["-a"], "--": true}
+
+r"""Usage: prog [-a] [--] [<arg>...]"""
+$ program -- -a
+{"-a": false, "<arg>": ["-a"], "--": true}
