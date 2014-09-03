@@ -35,13 +35,10 @@ $(LIB): $(LIB_FILES)
 	@touch $(LIB)
 
 docs: $(LIB_FILES)
-	rm -rf doc
-	$(RUSTDOC) $(RUST_PATH) --test ./src/lib.rs
-	$(RUSTDOC) $(RUST_PATH) ./src/lib.rs
+	cargo doc
 	# WTF is rustdoc doing?
-	chmod 755 doc
-	in-dir doc fix-perms
-	rscp ./doc/* gopher:~/www/burntsushi.net/rustdoc/
+	in-dir ./target/doc fix-perms
+	rscp ./target/doc/* gopher:~/www/burntsushi.net/rustdoc/
 
 src/test/testcases.rs: src/test/testcases.docopt scripts/mk-testcases
 	./scripts/mk-testcases ./src/test/testcases.docopt > ./src/test/testcases.rs
