@@ -728,7 +728,7 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
     fn read_char(&mut self) -> Result<char, Error> {
         let (k, v) = try!(self.pop_key_val());
         let vstr = v.as_str();
-        match vstr.len() {
+        match vstr.char_len() {
             1 => Ok(vstr.char_at(0)),
             _ => derr!("Could not decode '{}' into char for '{}'.", vstr, k),
         }
