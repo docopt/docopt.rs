@@ -2,8 +2,3 @@
 name = "docopt"
 version = "0.6.3"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
-
-[lib]
-name = "docopt"
-path = "src/lib.rs"
-crate_type = ["dylib", "rlib"]
