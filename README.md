@@ -21,6 +21,19 @@ There are several examples and most things are documented, but not quite well
 enough yet.
 
 
+### Installation
+
+This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
+
+```toml
+[dependencies.docopt_macros]
+git = "git://github.com/docopt/docopt.rs"
+```
+
+If you don't want to use the macro, then you can change your entry to
+`dependencies.docopt`.
+
+
 ### Quick example
 
 Here is a full working example:
