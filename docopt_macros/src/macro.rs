@@ -9,7 +9,6 @@ extern crate rustc;
 extern crate docopt;
 
 use std::collections::HashMap;
-use std::gc::{Gc, GC};
 
 use rustc::plugin::Registry;
 use syntax::ast;
@@ -21,6 +20,7 @@ use syntax::parse::common::SeqSep;
 use syntax::parse::parser::Parser;
 use syntax::parse::token;
 use syntax::print::pprust;
+use syntax::ptr::P;
 use syntax::util::small_vector::SmallVector;
 
 use docopt::{DEFAULT_CONFIG, Config, Docopt, ValueMap};
@@ -53,7 +53,7 @@ struct Parsed {
     /// When a type annotation for an atom doesn't exist, then one is
     /// inferred automatically. It is one of: `bool`, `uint`, `String` or
     /// `Vec<String>`.
-    types: HashMap<Atom, Gc<ast::Ty>>,
+    types: HashMap<Atom, P<ast::Ty>>,
 }
 
 impl Parsed {
@@ -80,7 +80,7 @@ impl Parsed {
     }
 
     /// Returns an item for the struct definition.
-    fn struct_decl(&self, cx: &ExtCtxt) -> Gc<ast::Item> {
+    fn struct_decl(&self, cx: &ExtCtxt) -> P<ast::Item> {
         let def = ast::StructDef {
             fields: self.struct_fields(cx),
             ctor_id: None,
@@ -112,7 +112,7 @@ impl Parsed {
 
     /// Returns an inferred type for a usage pattern.
     /// This is only invoked when a type annotation is not present.
-    fn pat_type(&self, cx: &ExtCtxt, atom: &Atom, opts: &Options) -> Gc<ast::Ty> {
+    fn pat_type(&self, cx: &ExtCtxt, atom: &Atom, opts: &Options) -> P<ast::Ty> {
         match (opts.repeats, &opts.arg) {
             (false, &Zero) => {
                 match atom {
@@ -132,7 +132,7 @@ impl Parsed {
     }
 
     /// Creates a struct field from a member name and type.
-    fn mk_struct_field(&self, name: &str, ty: Gc<ast::Ty>) -> ast::StructField {
+    fn mk_struct_field(&self, name: &str, ty: P<ast::Ty>) -> ast::StructField {
         codemap::dummy_spanned(ast::StructField_ {
             kind: ast::NamedField(ident(name), ast::Public),
             id: ast::DUMMY_NODE_ID,
@@ -179,7 +179,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
              let key = ValueMap::struct_field_to_key(field_name.as_slice());
              (Atom::new(key.as_slice()), ty)
           })
-         .collect::<HashMap<Atom, Gc<ast::Ty>>>();
+         .collect::<HashMap<Atom, P<ast::Ty>>>();
         self.p.expect(&token::EOF);
 
 
@@ -205,13 +205,13 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Parses a single string literal. On failure, an error is logged and
     /// unit is returned.
     fn parse_str(&mut self) -> Result<String, ()> {
-        fn lit_is_str(lit: Gc<ast::Lit>) -> bool {
+        fn lit_is_str(lit: &ast::Lit) -> bool {
             match lit.node {
                 ast::LitStr(_, _) => true,
                 _ => false,
             }
         }
-        fn lit_to_string(lit: Gc<ast::Lit>) -> String {
+        fn lit_to_string(lit: &ast::Lit) -> String {
             match lit.node {
                 ast::LitStr(ref s, _) => s.to_string(),
                 _ => fail!("BUG: expected string literal"),
@@ -219,7 +219,9 @@ impl<'a, 'b> MacParser<'a, 'b> {
         }
         let exp = self.cx.expander().fold_expr(self.p.parse_expr());
         let s = match exp.node {
-            ast::ExprLit(lit) if lit_is_str(lit) => lit_to_string(lit),
+            ast::ExprLit(ref lit) if lit_is_str(&**lit) => {
+                lit_to_string(&**lit)
+            }
             _ => {
                 let err = format!("Expected string literal but got {}",
                                   pprust::expr_to_string(&*exp));
@@ -234,7 +236,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Parses a type annotation in a `docopt` invocation of the form
     /// `ident: Ty`.
     /// Note that this is a static method as it is used as a HOF.
-    fn parse_type_annotation(p: &mut Parser) -> (ast::Ident, Gc<ast::Ty>) {
+    fn parse_type_annotation(p: &mut Parser) -> (ast::Ident, P<ast::Ty>) {
         let ident = p.parse_ident();
         p.expect(&token::COLON);
         let ty = p.parse_ty(false);
@@ -245,21 +247,17 @@ impl<'a, 'b> MacParser<'a, 'b> {
 /// MacItems is just like `syntax::ext::base::MacItem`, except it supports
 /// writing multiple items.
 struct MacItems {
-    its: Vec<Gc<ast::Item>>,
+    its: Vec<P<ast::Item>>,
 }
 
 impl MacResult for MacItems {
-    fn make_items(&self) -> Option<SmallVector<Gc<ast::Item>>> {
-        let mut small = SmallVector::zero();
-        for it in self.its.iter() {
-            small.push(it.clone());
-        }
-        Some(small)
+    fn make_items(self: Box<MacItems>) -> Option<SmallVector<P<ast::Item>>> {
+        Some(self.its.move_iter().collect())
     }
 }
 
 impl MacItems {
-    fn new(its: Vec<Gc<ast::Item>>) -> Box<MacResult+'static> {
+    fn new(its: Vec<P<ast::Item>>) -> Box<MacResult+'static> {
         box MacItems { its: its } as Box<MacResult+'static>
     }
 }
@@ -270,7 +268,7 @@ fn ident(s: &str) -> ast::Ident {
     ast::Ident::new(token::intern(s))
 }
 
-fn meta_item(cx: &ExtCtxt, s: &str) -> Gc<ast::MetaItem> {
+fn meta_item(cx: &ExtCtxt, s: &str) -> P<ast::MetaItem> {
     cx.meta_word(codemap::DUMMY_SP, intern(s))
 }
 
