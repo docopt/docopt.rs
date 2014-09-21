@@ -15,7 +15,7 @@ fn get_args(doc: &str, argv: &[&'static str]) -> ValueMap {
 }
 
 fn map_from_alist(alist: Vec<(&'static str, Value)>) -> HashMap<String, Value> {
-    alist.move_iter().map(|(k, v)| (k.to_string(), v)).collect()
+    alist.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
 }
 
 fn same_args(expected: &HashMap<String, Value>, got: &ValueMap) {

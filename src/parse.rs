@@ -384,7 +384,7 @@ impl<'a> PatParser<'a> {
                     // Check for special '[options]' shortcut.
                     if self.atis(1, "options") && self.atis(2, "]") {
                         // let atoms = self.dopt.options_atoms();
-                        // let opts = Optional(atoms.move_iter().map(Atom).collect());
+                        // let opts = Optional(atoms.into_iter().map(Atom).collect());
                         self.next(); // cur == options
                         self.next(); // cur == ]
                         self.next();
@@ -459,7 +459,7 @@ impl<'a> PatParser<'a> {
         // here to group a short stack.
         if self.atis(0, "...") {
             self.next();
-            seq = seq.move_iter().map(|p| Repeat(box p)).collect();
+            seq = seq.into_iter().map(|p| Repeat(box p)).collect();
         }
         Ok(seq)
     }
@@ -617,15 +617,15 @@ impl Pattern {
         fn add(pat: &mut Pattern, all_atoms: &HashSet<Atom>, par: &Parser) {
             match pat {
                 &Alternates(ref mut ps) | &Sequence(ref mut ps) => {
-                    for p in ps.mut_iter() { add(p, all_atoms, par) }
+                    for p in ps.iter_mut() { add(p, all_atoms, par) }
                 }
                 &Repeat(box ref mut p) => add(p, all_atoms, par),
                 &PatAtom(_) => {}
                 &Optional(ref mut ps) => {
                     if !ps.is_empty() {
-                        for p in ps.mut_iter() { add(p, all_atoms, par) }
+                        for p in ps.iter_mut() { add(p, all_atoms, par) }
                     } else {
-                        for atom in par.options_atoms().move_iter() {
+                        for atom in par.options_atoms().into_iter() {
                             if !all_atoms.contains(&atom) {
                                 ps.push(PatAtom(atom));
                             }
@@ -669,7 +669,7 @@ impl Pattern {
                     for p in ps.iter() {
                         let mut isolated = fresh.clone();
                         dotag(p, rep, map, &mut isolated);
-                        for a in isolated.move_iter() {
+                        for a in isolated.into_iter() {
                             seen.insert(a);
                         }
                     }
@@ -1026,7 +1026,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
             vals: HashMap::new(),
         };
         m.states(pat, &init)
-            .move_iter()
+            .into_iter()
             .filter(|s| m.state_consumed_all_argv(s))
             .filter(|s| m.state_has_valid_flags(s))
             .filter(|s| m.state_valid_num_flags(s))
@@ -1038,7 +1038,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
 
                 // Build a synonym map so that it's easier to look up values.
                 let mut synmap: SynonymMap<String, Value> =
-                    s.vals.move_iter().map(|(k, v)| (k.to_string(), v)).collect();
+                    s.vals.into_iter().map(|(k, v)| (k.to_string(), v)).collect();
                 for (from, to) in argv.dopt.descs.synonyms() {
                     let (from, to) = (from.to_string(), to.to_string());
                     if synmap.contains_key(&to) {
@@ -1129,7 +1129,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     Some(p) => states.push_all_move(self.states(p, init)),
                 }
                 for p in iter {
-                    for s in states.move_iter() {
+                    for s in states.into_iter() {
                         next.push_all_move(self.states(p, &s));
                     }
                     states = vec!();
@@ -1166,7 +1166,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     for s in grouped_states.last().unwrap().iter() {
                         nextss.push_all_move(
                             self.states(p, s)
-                                .move_iter()
+                                .into_iter()
                                 .filter(|snext| snext != s)
                                 .collect());
                     }
@@ -1176,8 +1176,8 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     grouped_states.push(nextss);
                 }
                 grouped_states
-                    .move_iter()
-                    .flat_map(|ss| ss.move_iter())
+                    .into_iter()
+                    .flat_map(|ss| ss.into_iter())
                     .collect::<Vec<MState>>()
             }
             &PatAtom(ref atom) => {
@@ -1213,7 +1213,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
             states.push(base.clone());
         } else {
             let (pat, rest) = (*pats.head().unwrap(), pats.tail());
-            for s in self.states(pat, base).move_iter() {
+            for s in self.states(pat, base).into_iter() {
                 self.all_option_states(&s, states, rest);
             }
             // Order is important here! This must come after the loop above
