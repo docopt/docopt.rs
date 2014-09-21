@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use rustc::plugin::Registry;
 use syntax::ast;
 use syntax::codemap;
-use syntax::ext::base::{ExtCtxt, MacResult, MacItem, DummyResult};
+use syntax::ext::base::{ExtCtxt, MacResult, MacItems, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
 use syntax::parse::common::SeqSep;
@@ -76,7 +76,7 @@ impl Parsed {
                 }
             }
         ).unwrap());
-        MacItems::new(its)
+        MacItems::new(its.into_iter())
     }
 
     /// Returns an item for the struct definition.
@@ -173,7 +173,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         };
         let types = self.p.parse_seq_to_end(
             &token::EOF, sep, |p| MacParser::parse_type_annotation(p)
-        ).move_iter()
+        ).into_iter()
          .map(|(ident, ty)| {
              let field_name = token::get_ident(ident).to_string();
              let key = ValueMap::struct_field_to_key(field_name.as_slice());
@@ -241,24 +241,6 @@ impl<'a, 'b> MacParser<'a, 'b> {
         p.expect(&token::COLON);
         let ty = p.parse_ty(false);
         (ident, ty)
-    }
-}
-
-/// MacItems is just like `syntax::ext::base::MacItem`, except it supports
-/// writing multiple items.
-struct MacItems {
-    its: Vec<P<ast::Item>>,
-}
-
-impl MacResult for MacItems {
-    fn make_items(self: Box<MacItems>) -> Option<SmallVector<P<ast::Item>>> {
-        Some(self.its.move_iter().collect())
-    }
-}
-
-impl MacItems {
-    fn new(its: Vec<P<ast::Item>>) -> Box<MacResult+'static> {
-        box MacItems { its: its } as Box<MacResult+'static>
     }
 }
 
