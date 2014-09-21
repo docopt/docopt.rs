@@ -252,7 +252,7 @@ impl Parser {
             // It looks like the reference implementation just ignores
             // these lines.
             return Ok(());
-            // err!("Short flag '{}' is not of the form '-x'.", short); 
+            // err!("Short flag '{}' is not of the form '-x'.", short);
         }
         let mut opts = Options::new(false, if has_arg { One(None) } else { Zero });
         opts.is_desc = true;
@@ -429,7 +429,7 @@ impl<'a> PatParser<'a> {
         let stacked: String = self.cur().slice_from(1).to_string();
         for (i, c) in stacked.as_slice().chars().enumerate() {
             let atom = self.dopt.descs.resolve(&Short(c));
-            seq.push(Atom(atom.clone()));
+            seq.push(PatAtom(atom.clone()));
 
             // The only way for a short option to have an argument is if
             // it's specified in an option description.
@@ -487,7 +487,7 @@ impl<'a> PatParser<'a> {
         }
         self.add_atom_ifnotexists(arg, &atom);
         self.next();
-        Ok(self.maybe_repeat(Atom(atom)))
+        Ok(self.maybe_repeat(PatAtom(atom)))
     }
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
@@ -509,14 +509,14 @@ impl<'a> PatParser<'a> {
         let atom = Atom::new(self.cur());
         self.add_atom_ifnotexists(Zero, &atom);
         self.next();
-        Ok(self.maybe_repeat(Atom(atom)))
+        Ok(self.maybe_repeat(PatAtom(atom)))
     }
 
     fn positional(&mut self) -> Result<Pattern, String> {
         let atom = Atom::new(self.cur());
         self.add_atom_ifnotexists(Zero, &atom);
         self.next();
-        Ok(self.maybe_repeat(Atom(atom)))
+        Ok(self.maybe_repeat(PatAtom(atom)))
     }
 
     fn add_atom_ifnotexists(&mut self, arg: Argument, atom: &Atom) {
@@ -577,7 +577,7 @@ enum Pattern {
     Sequence(Vec<Pattern>),
     Optional(Vec<Pattern>),
     Repeat(Box<Pattern>),
-    Atom(Atom),
+    PatAtom(Atom),
 }
 
 #[deriving(PartialEq, Eq, Ord, Hash, Clone)]
@@ -620,14 +620,14 @@ impl Pattern {
                     for p in ps.mut_iter() { add(p, all_atoms, par) }
                 }
                 &Repeat(box ref mut p) => add(p, all_atoms, par),
-                &Atom(_) => {}
+                &PatAtom(_) => {}
                 &Optional(ref mut ps) => {
                     if !ps.is_empty() {
                         for p in ps.mut_iter() { add(p, all_atoms, par) }
                     } else {
                         for atom in par.options_atoms().move_iter() {
                             if !all_atoms.contains(&atom) {
-                                ps.push(Atom(atom));
+                                ps.push(PatAtom(atom));
                             }
                         }
                     }
@@ -645,7 +645,7 @@ impl Pattern {
                     for p in ps.iter() { all_atoms(p, set) }
                 }
                 &Repeat(box ref p) => all_atoms(p, set),
-                &Atom(ref a) => { set.insert(a.clone()); }
+                &PatAtom(ref a) => { set.insert(a.clone()); }
             }
         }
         let mut set = HashSet::new();
@@ -685,7 +685,7 @@ impl Pattern {
                     }
                 }
                 &Repeat(box ref p) => dotag(p, true, map, seen),
-                &Atom(ref atom) => {
+                &PatAtom(ref atom) => {
                     let opt = map.find_mut(atom).expect("bug: no atom found");
                     opt.repeats = opt.repeats || rep || seen.contains(atom);
                     seen.insert(atom.clone());
@@ -1143,7 +1143,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 let mut noflags = vec!();
                 for p in ps.iter() {
                     match p {
-                        &Atom(ref a @ Short(_)) | &Atom(ref a @Long(_)) => {
+                        &PatAtom(ref a @ Short(_)) | &PatAtom(ref a @Long(_)) => {
                             let argv_count = self.argv.counts.find_copy(a).unwrap_or(0);
                             let max_count = base.max_counts.find_copy(a).unwrap_or(0);
                             if argv_count > max_count {
@@ -1180,7 +1180,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     .flat_map(|ss| ss.move_iter())
                     .collect::<Vec<MState>>()
             }
-            &Atom(ref atom) => {
+            &PatAtom(ref atom) => {
                 let mut state = init.clone();
                 match atom {
                     &Short(_) | &Long(_) => {
