@@ -401,7 +401,7 @@ impl<'a> PatParser<'a> {
                 }
                 _ => {
                     if Atom::is_short(self.cur()) {
-                        seq.push_all_move(try!(self.flag_short()));
+                        seq.extend(try!(self.flag_short()).into_iter());
                     } else if Atom::is_long(self.cur()) {
                         seq.push(try!(self.flag_long()));
                     } else if Atom::is_arg(self.cur()) {
@@ -420,7 +420,8 @@ impl<'a> PatParser<'a> {
         if alts.is_empty() {
             Ok(Sequence(seq))
         } else {
-            Ok(Alternates(alts.append_one(Sequence(seq))))
+            alts.push(Sequence(seq));
+            Ok(Alternates(alts))
         }
     }
 
@@ -1117,7 +1118,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
             &Alternates(ref ps) => {
                 let mut alt_states = vec!();
                 for p in ps.iter() {
-                    alt_states.push_all_move(self.states(p, init));
+                    alt_states.extend(self.states(p, init).into_iter());
                 }
                 alt_states
             }
@@ -1126,14 +1127,14 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 let mut iter = ps.iter();
                 match iter.next() {
                     None => return vec!(init.clone()),
-                    Some(p) => states.push_all_move(self.states(p, init)),
+                    Some(p) => states.extend(self.states(p, init).into_iter()),
                 }
                 for p in iter {
                     for s in states.into_iter() {
-                        next.push_all_move(self.states(p, &s));
+                        next.extend(self.states(p, &s).into_iter());
                     }
                     states = vec!();
-                    states.push_all_move(next);
+                    states.extend(next.into_iter());
                     next = vec!();
                 }
                 states
@@ -1164,11 +1165,10 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 loop {
                     let mut nextss = vec!();
                     for s in grouped_states.last().unwrap().iter() {
-                        nextss.push_all_move(
+                        nextss.extend(
                             self.states(p, s)
                                 .into_iter()
-                                .filter(|snext| snext != s)
-                                .collect());
+                                .filter(|snext| snext != s));
                     }
                     if nextss.is_empty() {
                         break

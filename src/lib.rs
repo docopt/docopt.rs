@@ -191,8 +191,7 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
 #![allow(dead_code, unused_variable, unused_imports)]
-#![allow(visible_private_types)]
-#![feature(plugin_registrar, macro_rules, phase, quote)]
+#![feature(plugin_registrar, macro_rules, phase, quote, visible_private_types)]
 
 extern crate debug;
 extern crate libc;
