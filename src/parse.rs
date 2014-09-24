@@ -783,7 +783,8 @@ impl Argument {
     }
 }
 
-struct Argv<'a> {
+#[doc(hidden)]
+pub struct Argv<'a> {
     /// A representation of an argv string as an ordered list of tokens.
     /// This contains only positional arguments and commands.
     positional: Vec<ArgvToken>,
