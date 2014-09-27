@@ -543,7 +543,9 @@ impl ValueMap {
                 } else {
                     fail!("Unknown ValueMap key: '{}'", name)
                 };
-            prefix.to_string().append(sanitize(name).as_slice())
+            let mut prefix = prefix.to_string();
+            prefix.push_str(sanitize(name).as_slice());
+            prefix
         })
     }
 
@@ -555,17 +557,19 @@ impl ValueMap {
         let name =
             if field.starts_with("flag_") {
                 let name = regex!(r"^flag_").replace(field, "");
-                if name.len() == 1 {
-                    "-".to_string().append(name.as_slice())
-                } else {
-                    "--".to_string().append(name.as_slice())
-                }
+                let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
+                                   .to_string();
+                pre_name.push_str(name.as_slice());
+                pre_name
             } else if field.starts_with("arg_") {
                 let name = regex!(r"^arg_").replace(field, "");
                 if regex!(r"^\p{Lu}+$").is_match(name.as_slice()) {
                     name
                 } else {
-                    "<".to_string().append(name.as_slice()).append(">")
+                    let mut pre_name = "<".to_string();
+                    pre_name.push_str(name.as_slice());
+                    pre_name.push('>');
+                    pre_name
                 }
             } else if field.starts_with("cmd_") {
                 { regex!(r"^cmd_") }.replace(field, "")

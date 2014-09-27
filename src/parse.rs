@@ -39,6 +39,7 @@
 //   - Write a specification for Docopt.
 
 use std::collections::{HashMap, HashSet};
+use std::collections::hashmap::{Vacant, Occupied};
 use std::default::Default;
 use std::fmt;
 use regex;
@@ -821,8 +822,10 @@ impl<'a> Argv<'a> {
         };
         try!(a.parse());
         for flag in a.flags.iter() {
-            let count = a.counts.find_or_insert(flag.atom.clone(), 0);
-            *count += 1;
+            match a.counts.entry(flag.atom.clone()) {
+                Vacant(v) => { v.set(1); }
+                Occupied(mut v) => { *v.get_mut() += 1; }
+            }
         }
         Ok(a)
     }
@@ -951,17 +954,25 @@ impl MState {
                 self.vals.insert(key, Plain(Some(arg)));
             }
             (None, true) => {
-                let val = self.vals.find_or_insert(key.clone(), Counted(0));
-                match val {
-                    &Counted(ref mut c) => *c += 1,
-                    _ => return false,
+                match self.vals.entry(key.clone()) {
+                    Vacant(v) => { v.set(Counted(1)); }
+                    Occupied(mut v) => {
+                        match v.get_mut() {
+                            &Counted(ref mut c) => { *c += 1; }
+                            _ => return false,
+                        }
+                    }
                 }
             }
             (Some(arg), true) => {
-                let val = self.vals.find_or_insert(key.clone(), List(vec!()));
-                match val {
-                    &List(ref mut vs) => vs.push(arg),
-                    _ => return false,
+                match self.vals.entry(key.clone()) {
+                    Vacant(v) => { v.set(List(vec!(arg))); }
+                    Occupied(mut v) => {
+                        match v.get_mut() {
+                            &List(ref mut vs) => vs.push(arg),
+                            _ => return false,
+                        }
+                    }
                 }
             }
         }
@@ -988,19 +999,29 @@ impl MState {
     }
 
     fn use_flag(&mut self, flag: &Atom) -> bool {
-        self.max_counts.find_or_insert(flag.clone(), 0);
-        self.counts.find_mut(flag).map_or(false, |c| {
-            if *c == 0 {
-                false
-            } else {
-                *c -= 1;
-                true
+        match self.max_counts.entry(flag.clone()) {
+            Vacant(v) => { v.set(0); }
+            Occupied(_) => {}
+        }
+        match self.counts.entry(flag.clone()) {
+            Vacant(v) => { false }
+            Occupied(mut v) => {
+                let c = v.get_mut();
+                if *c == 0 {
+                    false
+                } else {
+                    *c -= 1;
+                    true
+                }
             }
-        })
+        }
     }
 
     fn use_optional_flag(&mut self, flag: &Atom) {
-        *self.max_counts.find_or_insert(flag.clone(), 0) += 1
+        match self.max_counts.entry(flag.clone()) {
+            Vacant(v) => { v.set(1); }
+            Occupied(mut v) => { *v.get_mut() += 1; }
+        }
     }
 
     fn match_cmd_or_posarg(&mut self, spec: &Atom, argv: &ArgvToken) -> bool {
