@@ -7,8 +7,8 @@ extern crate serialize;
 use docopt::FlagParser;
 
 docopt!(Args, "
-Usage: cp [options] SOURCE DEST
-       cp [options] SOURCE... DIR
+Usage: cp [options] <src> <dst>
+       cp [options] <src>... <dir>
        cp --help
 
 Options:

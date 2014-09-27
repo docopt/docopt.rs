@@ -1,4 +1,4 @@
 [package]
 name = "docopt"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
