@@ -83,9 +83,7 @@ impl Parsed {
     fn struct_decl(&self, cx: &ExtCtxt) -> P<ast::Item> {
         let def = ast::StructDef {
             fields: self.struct_fields(cx),
-            ctor_id: None,
-            super_struct: None,
-            is_virtual: false,
+            ctor_id: None
         };
         let sp = codemap::DUMMY_SP;
         let traits = vec![meta_item(cx, "Decodable"), meta_item(cx, "Show")];
