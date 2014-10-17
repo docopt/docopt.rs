@@ -481,15 +481,15 @@ impl ValueMap {
     ///
     /// In this example, only the `bool` type was used, but any type satisfying
     /// the `Decodable` trait is valid.
-    pub fn decode<'a, T: Decodable<Decoder<'a>, Error>>
-                 (&'a self) -> Result<T, Error> {
+    pub fn decode<T: Decodable<Decoder, Error>>
+                 (self) -> Result<T, Error> {
         Decodable::decode(&mut Decoder { vals: self, stack: vec!() })
     }
 
     /// The same as `decode`, except if there is an error, it is logged to
     /// `stderr` and the current program will *unsafely* exit with an error
     /// code of `1`.
-    pub fn decode_must<'a, T: Decodable<Decoder<'a>, Error>>(&'a self) -> T {
+    pub fn decode_must<T: Decodable<Decoder, Error>>(self) -> T {
         match self.decode() {
             Ok(v) => v,
             Err(err) => err.exit(),
@@ -617,8 +617,8 @@ impl fmt::Show for ValueMap {
     }
 }
 
-struct Decoder<'a> {
-    vals: &'a ValueMap,
+pub struct Decoder {
+    vals: ValueMap,
     stack: Vec<DecoderItem>,
 }
 
@@ -633,7 +633,7 @@ macro_rules! derr(
     ($($arg:tt)*) => (return Err(Decode(format!($($arg)*))))
 )
 
-impl<'a> Decoder<'a> {
+impl Decoder {
     fn push(&mut self, struct_field: &str) {
         let key = ValueMap::struct_field_to_key(struct_field);
         self.stack.push(DecoderItem {
@@ -680,7 +680,7 @@ impl<'a> Decoder<'a> {
     }
 }
 
-impl<'a> serialize::Decoder<Error> for Decoder<'a> {
+impl serialize::Decoder<Error> for Decoder {
     fn error(&mut self, err: &str) -> Error {
         Decode(err.to_string())
     }
@@ -739,12 +739,12 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
         self.pop_val().map(|v| v.as_str().to_string())
     }
     fn read_enum<T>(&mut self, name: &str,
-                    f: |&mut Decoder<'a>| -> Result<T, Error>)
+                    f: |&mut Decoder| -> Result<T, Error>)
                     -> Result<T, Error> {
         f(self)
     }
     fn read_enum_variant<T>(&mut self, names: &[&str],
-                            f: |&mut Decoder<'a>, uint| -> Result<T, Error>)
+                            f: |&mut Decoder, uint| -> Result<T, Error>)
                             -> Result<T, Error> {
         let v = try!(self.pop_val());
         let vstr = to_lower(v.as_str());
@@ -760,52 +760,52 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
     }
     fn read_enum_variant_arg<T>(
         &mut self, a_idx: uint,
-        f: |&mut Decoder<'a>| -> Result<T, Error>) -> Result<T, Error> {
+        f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_enum_struct_variant<T>(
         &mut self, names: &[&str],
-        f: |&mut Decoder<'a>, uint| -> Result<T, Error>) -> Result<T, Error> {
+        f: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_enum_struct_variant_field<T>(
         &mut self, f_name: &str, f_idx: uint,
-        f: |&mut Decoder<'a>| -> Result<T, Error>) -> Result<T, Error> {
+        f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_struct<T>(&mut self, s_name: &str, len: uint,
-                      f: |&mut Decoder<'a>| -> Result<T, Error>)
+                      f: |&mut Decoder| -> Result<T, Error>)
                       -> Result<T, Error> {
         f(self)
     }
     fn read_struct_field<T>(&mut self, f_name: &str, f_idx: uint,
-                            f: |&mut Decoder<'a>| -> Result<T, Error>)
+                            f: |&mut Decoder| -> Result<T, Error>)
                             -> Result<T, Error> {
         self.push(f_name);
         f(self)
     }
     fn read_tuple<T>(&mut self,
-                     f: |&mut Decoder<'a>, uint| -> Result<T, Error>)
+                     f: |&mut Decoder, uint| -> Result<T, Error>)
                      -> Result<T, Error> {
         unimplemented!()
     }
     fn read_tuple_arg<T>(&mut self, a_idx: uint,
-                         f: |&mut Decoder<'a>| -> Result<T, Error>)
+                         f: |&mut Decoder| -> Result<T, Error>)
                          -> Result<T, Error> {
         unimplemented!()
     }
     fn read_tuple_struct<T>(&mut self, s_name: &str,
-                            f: |&mut Decoder<'a>, uint| -> Result<T, Error>)
+                            f: |&mut Decoder, uint| -> Result<T, Error>)
                             -> Result<T, Error> {
         unimplemented!()
     }
     fn read_tuple_struct_arg<T>(&mut self, a_idx: uint,
-                                f: |&mut Decoder<'a>| -> Result<T, Error>)
+                                f: |&mut Decoder| -> Result<T, Error>)
                                 -> Result<T, Error> {
         unimplemented!()
     }
     fn read_option<T>(&mut self,
-                      f: |&mut Decoder<'a>, bool| -> Result<T, Error>)
+                      f: |&mut Decoder, bool| -> Result<T, Error>)
                       -> Result<T, Error> {
         let option =
             match self.stack.last() {
@@ -817,7 +817,7 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
         f(self, option)
     }
     fn read_seq<T>(&mut self,
-                   f: |&mut Decoder<'a>, uint| -> Result<T, Error>)
+                   f: |&mut Decoder, uint| -> Result<T, Error>)
                    -> Result<T, Error> {
         let it = try!(self.pop());
         let list = it.val.unwrap_or(List(vec!()));
@@ -832,22 +832,22 @@ impl<'a> serialize::Decoder<Error> for Decoder<'a> {
         f(self, vals.len())
     }
     fn read_seq_elt<T>(&mut self, idx: uint,
-                       f: |&mut Decoder<'a>| -> Result<T, Error>)
+                       f: |&mut Decoder| -> Result<T, Error>)
                        -> Result<T, Error> {
         f(self)
     }
     fn read_map<T>(&mut self,
-                   f: |&mut Decoder<'a>, uint| -> Result<T, Error>)
+                   f: |&mut Decoder, uint| -> Result<T, Error>)
                    -> Result<T, Error> {
         unimplemented!()
     }
     fn read_map_elt_key<T>(&mut self, idx: uint,
-                           f: |&mut Decoder<'a>| -> Result<T, Error>)
+                           f: |&mut Decoder| -> Result<T, Error>)
                            -> Result<T, Error> {
         unimplemented!()
     }
     fn read_map_elt_val<T>(&mut self, idx: uint,
-                           f: |&mut Decoder<'a>| -> Result<T, Error>)
+                           f: |&mut Decoder| -> Result<T, Error>)
                            -> Result<T, Error> {
         unimplemented!()
     }
