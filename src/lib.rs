@@ -193,7 +193,6 @@
 #![allow(dead_code, unused_variable, unused_imports)]
 #![feature(plugin_registrar, macro_rules, phase, quote)]
 
-extern crate debug;
 extern crate libc;
 // #[cfg(test)]
 #[phase(plugin, link)]
