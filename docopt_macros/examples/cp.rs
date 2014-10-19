@@ -6,7 +6,7 @@ extern crate serialize;
 
 use docopt::FlagParser;
 
-docopt!(Args, "
+docopt!(Args deriving Show, "
 Usage: cp [options] <src> <dst>
        cp [options] <src>... <dir>
        cp --help

@@ -47,7 +47,7 @@ fn expand(cx: &mut ExtCtxt, span: codemap::Span, tts: &[ast::TokenTree])
 /// Parsed corresponds to the result of parsing a `docopt` macro call.
 /// It can be used to write a corresponding struct.
 struct Parsed {
-    struct_name: ast::Ident,
+    struct_info: StructInfo,
     doc: Docopt,
     /// Overrided type annotations for struct members. May be empty.
     /// When a type annotation for an atom doesn't exist, then one is
@@ -63,7 +63,7 @@ impl Parsed {
         let mut its = vec!();
         its.push(self.struct_decl(cx));
 
-        let struct_name = self.struct_name;
+        let struct_name = self.struct_info.name;
         let full_doc = self.doc.parser().full_doc.as_slice();
         its.push(quote_item!(cx,
             impl docopt::FlagParser for $struct_name {
@@ -81,16 +81,26 @@ impl Parsed {
 
     /// Returns an item for the struct definition.
     fn struct_decl(&self, cx: &ExtCtxt) -> P<ast::Item> {
+        let name = self.struct_info.name.clone();
+        let vis = if self.struct_info.public { ast::Public }
+                  else { ast::Inherited };
         let def = ast::StructDef {
             fields: self.struct_fields(cx),
             ctor_id: None
         };
+
         let sp = codemap::DUMMY_SP;
-        let traits = vec![meta_item(cx, "Decodable"), meta_item(cx, "Show")];
+        let mut traits = vec![meta_item(cx, "Decodable")];
+        for trait_name in self.struct_info.deriving.iter() {
+            traits.push(meta_item(cx, trait_name.as_slice()));
+        }
         let deriving = cx.meta_list(sp, intern("deriving"), traits);
         let attrs = vec![cx.attribute(codemap::DUMMY_SP, deriving)];
-        let st = cx.item_struct(sp, self.struct_name.clone(), def);
-        cx.item(sp, self.struct_name.clone(), attrs, st.node.clone())
+        let st = cx.item_struct(sp, name.clone(), def);
+        cx.item(sp, name, attrs, st.node.clone()).map(|mut it| {
+            it.vis = vis;
+            it
+        })
     }
 
     /// Returns a list of fields for the struct definition.
@@ -161,8 +171,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             self.cx.span_err(self.cx.call_site(), "macro expects arguments");
             return Err(());
         }
-        let struct_name = self.p.parse_ident();
-        self.p.expect(&token::COMMA);
+        let struct_info = try!(self.parse_struct_info());
         let docstr = try!(self.parse_str());
 
         let sep = SeqSep {
@@ -180,7 +189,6 @@ impl<'a, 'b> MacParser<'a, 'b> {
          .collect::<HashMap<Atom, P<ast::Ty>>>();
         self.p.expect(&token::EOF);
 
-
         // This config does not matter because we're only asking for the
         // usage patterns in the Docopt string. The configuration does not
         // affect the retrieval of usage patterns.
@@ -194,7 +202,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             }
         };
         Ok(Parsed {
-            struct_name: struct_name,
+            struct_info: struct_info,
             doc: doc,
             types: types,
         })
@@ -240,6 +248,34 @@ impl<'a, 'b> MacParser<'a, 'b> {
         let ty = p.parse_ty(false);
         (ident, ty)
     }
+
+    /// Parses struct information, like visibility, name and deriving.
+    fn parse_struct_info(&mut self) -> Result<StructInfo, ()> {
+        let public = self.p.eat_keyword(token::keywords::Pub);
+        let mut info = StructInfo {
+            name: self.p.parse_ident(),
+            public: public,
+            deriving: vec![],
+        };
+        if self.p.eat(&token::COMMA) { return Ok(info); }
+        let deriving = self.p.parse_ident();
+        if deriving.as_str() != "deriving" {
+            let err = format!("Expected 'deriving' keyword but got '{}'",
+                              deriving);
+            self.cx.span_err(self.cx.call_site(), err.as_slice());
+            return Err(());
+        }
+        while !self.p.eat(&token::COMMA) {
+            info.deriving.push(self.p.parse_ident().as_str().to_string());
+        }
+        Ok(info)
+    }
+}
+
+struct StructInfo {
+    name: ast::Ident,
+    public: bool,
+    deriving: Vec<String>,
 }
 
 // Convenience functions for building intermediate values.

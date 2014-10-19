@@ -6,7 +6,7 @@ extern crate docopt;
 
 use docopt::FlagParser;
 
-docopt!(Args, "
+docopt!(pub Args deriving Show, "
 Naval Fate.
 
 Usage:

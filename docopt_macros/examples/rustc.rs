@@ -5,7 +5,7 @@ extern crate docopt;
 
 use docopt::FlagParser;
 
-docopt!(Args, "
+docopt!(Args deriving Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
        rustc (--help | --version)
 
