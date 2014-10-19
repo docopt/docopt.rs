@@ -46,7 +46,7 @@ extern crate docopt;
 
 use docopt::FlagParser;
 
-docopt!(Args, "
+docopt!(Args deriving Show, "
 Usage: cp [-a] SOURCE DEST
        cp [-a] SOURCE... DIR
 
@@ -57,7 +57,7 @@ Options:
 fn main() {
     let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
 
-    // The Args struct satisfies `Show`:
+    // The Args struct satisfies `Show` because of the `deriving Show`.
     println!("{}", args);
 
     // Try running with `example -a file1 file2 dest/`.
@@ -99,7 +99,7 @@ extern crate docopt;
 
 use docopt::FlagParser;
 
-docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
+docopt!(Args deriving Show, "Usage: add <x> <y>", arg_x: int, arg_y: int)
 
 fn main() {
     let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
@@ -130,7 +130,7 @@ extern crate docopt;
 
 use docopt::FlagParser;
 
-docopt!(Args, "
+docopt!(Args deriving Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
        rustc (--help | --version)
 
