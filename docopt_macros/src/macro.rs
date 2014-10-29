@@ -2,8 +2,6 @@
 #![crate_type = "dylib"]
 #![feature(plugin_registrar, macro_rules, quote)]
 
-#![allow(unused_imports)]
-
 extern crate syntax;
 extern crate rustc;
 extern crate docopt;
@@ -21,14 +19,9 @@ use syntax::parse::parser::Parser;
 use syntax::parse::token;
 use syntax::print::pprust;
 use syntax::ptr::P;
-use syntax::util::small_vector::SmallVector;
 
-use docopt::{DEFAULT_CONFIG, Config, Docopt, ValueMap};
-use docopt::parse::{
-    Options,
-    Atom, Short, Long, Command, Positional,
-    Argument, Zero, One,
-};
+use docopt::{DEFAULT_CONFIG, Docopt, ValueMap};
+use docopt::parse::{Options, Atom, Positional, Zero, One};
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {

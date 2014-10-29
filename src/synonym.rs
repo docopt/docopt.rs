@@ -51,9 +51,6 @@ impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
     pub fn get<'a>(&'a self, k: &K) -> &'a V {
         self.find(k).unwrap()
     }
-    pub fn get_mut<'a>(&'a mut self, k: &K) -> &'a mut V {
-        self.find_mut(k).unwrap()
-    }
 }
 
 impl<K: Eq + Hash, V> Collection for SynonymMap<K, V> {

@@ -190,7 +190,6 @@
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
-#![allow(dead_code, unused_variable, unused_imports)]
 #![feature(plugin_registrar, macro_rules, phase, quote)]
 
 extern crate libc;
@@ -738,7 +737,7 @@ impl serialize::Decoder<Error> for Decoder {
     fn read_str(&mut self) -> Result<String, Error> {
         self.pop_val().map(|v| v.as_str().to_string())
     }
-    fn read_enum<T>(&mut self, name: &str,
+    fn read_enum<T>(&mut self, _: &str,
                     f: |&mut Decoder| -> Result<T, Error>)
                     -> Result<T, Error> {
         f(self)
@@ -759,48 +758,48 @@ impl serialize::Decoder<Error> for Decoder {
         f(self, i)
     }
     fn read_enum_variant_arg<T>(
-        &mut self, a_idx: uint,
-        f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
+        &mut self, _: uint,
+        _: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_enum_struct_variant<T>(
-        &mut self, names: &[&str],
-        f: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> {
+        &mut self, _: &[&str],
+        _: |&mut Decoder, uint| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_enum_struct_variant_field<T>(
-        &mut self, f_name: &str, f_idx: uint,
-        f: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
+        &mut self, _: &str, _: uint,
+        _: |&mut Decoder| -> Result<T, Error>) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_struct<T>(&mut self, s_name: &str, len: uint,
+    fn read_struct<T>(&mut self, _: &str, _: uint,
                       f: |&mut Decoder| -> Result<T, Error>)
                       -> Result<T, Error> {
         f(self)
     }
-    fn read_struct_field<T>(&mut self, f_name: &str, f_idx: uint,
+    fn read_struct_field<T>(&mut self, f_name: &str, _: uint,
                             f: |&mut Decoder| -> Result<T, Error>)
                             -> Result<T, Error> {
         self.push(f_name);
         f(self)
     }
     fn read_tuple<T>(&mut self,
-                     f: |&mut Decoder, uint| -> Result<T, Error>)
+                     _: |&mut Decoder, uint| -> Result<T, Error>)
                      -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_arg<T>(&mut self, a_idx: uint,
-                         f: |&mut Decoder| -> Result<T, Error>)
+    fn read_tuple_arg<T>(&mut self, _: uint,
+                         _: |&mut Decoder| -> Result<T, Error>)
                          -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct<T>(&mut self, s_name: &str,
-                            f: |&mut Decoder, uint| -> Result<T, Error>)
+    fn read_tuple_struct<T>(&mut self, _: &str,
+                            _: |&mut Decoder, uint| -> Result<T, Error>)
                             -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct_arg<T>(&mut self, a_idx: uint,
-                                f: |&mut Decoder| -> Result<T, Error>)
+    fn read_tuple_struct_arg<T>(&mut self, _: uint,
+                                _: |&mut Decoder| -> Result<T, Error>)
                                 -> Result<T, Error> {
         unimplemented!()
     }
@@ -831,28 +830,44 @@ impl serialize::Decoder<Error> for Decoder {
         }
         f(self, vals.len())
     }
-    fn read_seq_elt<T>(&mut self, idx: uint,
+    fn read_seq_elt<T>(&mut self, _: uint,
                        f: |&mut Decoder| -> Result<T, Error>)
                        -> Result<T, Error> {
         f(self)
     }
     fn read_map<T>(&mut self,
-                   f: |&mut Decoder, uint| -> Result<T, Error>)
+                   _: |&mut Decoder, uint| -> Result<T, Error>)
                    -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_map_elt_key<T>(&mut self, idx: uint,
-                           f: |&mut Decoder| -> Result<T, Error>)
+    fn read_map_elt_key<T>(&mut self, _: uint,
+                           _: |&mut Decoder| -> Result<T, Error>)
                            -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_map_elt_val<T>(&mut self, idx: uint,
-                           f: |&mut Decoder| -> Result<T, Error>)
+    fn read_map_elt_val<T>(&mut self, _: uint,
+                           _: |&mut Decoder| -> Result<T, Error>)
                            -> Result<T, Error> {
         unimplemented!()
     }
 }
 
+/// Describes types that can parse and decode an argument string.
+///
+/// This trait mirrors the top-level crate functions `docopt`,
+/// `docopt_conf` and `docopt_args`. It is specifically used inside
+/// of the `docopt!` macro, where the generated struct will implement
+/// this trait. This permits code like the following:
+///
+/// ```ignore
+/// use docopt::FlagParser;
+///
+/// docopt!(StructName, ...)
+///
+/// fn main() {
+///     let args: StructName = FlagParser::parse();
+/// }
+/// ```
 pub trait FlagParser {
     fn parse_args(conf: Config, args: &[&str]) -> Result<Self, Error>;
     fn parse() -> Result<Self, Error> {
@@ -921,14 +936,6 @@ fn convenient_parse_args(dopt: &Docopt,
     Ok(vals)
 }
 
-fn argv_has_help(argv: &[&str]) -> bool {
-    argv.contains(&"-h") || argv.contains(&"--help")
-}
-
-fn argv_has_version(argv: &[&str]) -> bool {
-    argv.contains(&"--version")
-}
-
 fn to_lower(s: &str) -> String {
     s.chars().map(|c| c.to_lowercase()).collect()
 }
@@ -945,4 +952,3 @@ pub mod parse;
 mod synonym;
 #[cfg(test)]
 mod test;
-

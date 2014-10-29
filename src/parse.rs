@@ -40,7 +40,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::collections::hashmap::{Vacant, Occupied};
-use std::default::Default;
 use std::fmt;
 use regex;
 use regex::Regex;
@@ -563,9 +562,6 @@ impl<'a> PatParser<'a> {
     fn cur<'r>(&'r self) -> &'r str {
         self.tokens[self.curi].as_slice()
     }
-    fn at<'a>(&'a self, offset: int) -> &'a str {
-        self.tokens[(self.curi as int + offset) as uint].as_slice()
-    }
     fn atis(&self, offset: int, is: &str) -> bool {
         let i = (self.curi as int) + offset;
         let iu = i as uint;
@@ -1004,7 +1000,7 @@ impl MState {
             Occupied(_) => {}
         }
         match self.counts.entry(flag.clone()) {
-            Vacant(v) => { false }
+            Vacant(_) => { false }
             Occupied(mut v) => {
                 let c = v.get_mut();
                 if *c == 0 {
