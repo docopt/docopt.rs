@@ -213,7 +213,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         fn lit_to_string(lit: &ast::Lit) -> String {
             match lit.node {
                 ast::LitStr(ref s, _) => s.to_string(),
-                _ => fail!("BUG: expected string literal"),
+                _ => panic!("BUG: expected string literal"),
             }
         }
         let exp = self.cx.expander().fold_expr(self.p.parse_expr());
