@@ -160,7 +160,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Second, a string containing the docopt usage patterns.
     /// Third, an optional list of type annotations.
     fn parse(&mut self) -> Result<Parsed, ()> {
-        if self.p.token == token::EOF {
+        if self.p.token == token::Eof {
             self.cx.span_err(self.cx.call_site(), "macro expects arguments");
             return Err(());
         }
@@ -168,11 +168,11 @@ impl<'a, 'b> MacParser<'a, 'b> {
         let docstr = try!(self.parse_str());
 
         let sep = SeqSep {
-            sep: Some(token::COMMA),
+            sep: Some(token::Comma),
             trailing_sep_allowed: true,
         };
         let types = self.p.parse_seq_to_end(
-            &token::EOF, sep, |p| MacParser::parse_type_annotation(p)
+            &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
         ).into_iter()
          .map(|(ident, ty)| {
              let field_name = token::get_ident(ident).to_string();
@@ -180,7 +180,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
              (Atom::new(key.as_slice()), ty)
           })
          .collect::<HashMap<Atom, P<ast::Ty>>>();
-        self.p.expect(&token::EOF);
+        self.p.expect(&token::Eof);
 
         // This config does not matter because we're only asking for the
         // usage patterns in the Docopt string. The configuration does not
@@ -237,7 +237,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Note that this is a static method as it is used as a HOF.
     fn parse_type_annotation(p: &mut Parser) -> (ast::Ident, P<ast::Ty>) {
         let ident = p.parse_ident();
-        p.expect(&token::COLON);
+        p.expect(&token::Colon);
         let ty = p.parse_ty(false);
         (ident, ty)
     }
@@ -250,7 +250,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             public: public,
             deriving: vec![],
         };
-        if self.p.eat(&token::COMMA) { return Ok(info); }
+        if self.p.eat(&token::Comma) { return Ok(info); }
         let deriving = self.p.parse_ident();
         if deriving.as_str() != "deriving" {
             let err = format!("Expected 'deriving' keyword but got '{}'",
@@ -258,7 +258,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             self.cx.span_err(self.cx.call_site(), err.as_slice());
             return Err(());
         }
-        while !self.p.eat(&token::COMMA) {
+        while !self.p.eat(&token::Comma) {
             info.deriving.push(self.p.parse_ident().as_str().to_string());
         }
         Ok(info)
