@@ -212,7 +212,7 @@ macro_rules! werr(
     ($($arg:tt)*) => (
         match std::io::stderr().write_str(format!($($arg)*).as_slice()) {
             Ok(_) => (),
-            Err(err) => fail!("{}", err),
+            Err(err) => panic!("{}", err),
         }
     )
 )
@@ -539,7 +539,7 @@ impl ValueMap {
                 } else if !cmd.is_empty() {
                     ("cmd_", cmd)
                 } else {
-                    fail!("Unknown ValueMap key: '{}'", name)
+                    panic!("Unknown ValueMap key: '{}'", name)
                 };
             let mut prefix = prefix.to_string();
             prefix.push_str(sanitize(name).as_slice());
@@ -572,7 +572,7 @@ impl ValueMap {
             } else if field.starts_with("cmd_") {
                 { regex!(r"^cmd_") }.replace(field, "")
             } else {
-                fail!("Unrecognized struct field: '{}'", field)
+                panic!("Unrecognized struct field: '{}'", field)
             };
         desanitize(name.as_slice())
     }
@@ -685,7 +685,7 @@ impl serialize::Decoder<Error> for Decoder {
     }
     fn read_nil(&mut self) -> Result<(), Error> {
         // I don't know what the right thing is here, so just fail for now.
-        fail!("I don't know how to read into a nil value.")
+        panic!("I don't know how to read into a nil value.")
     }
     fn read_uint(&mut self) -> Result<uint, Error> {
         self.to_number("uint")
@@ -908,7 +908,7 @@ pub fn docopt_args(conf: Config, args: &[&str],
                    doc: &str) -> Result<ValueMap, Error> {
     let dopt = match Docopt::new(conf, doc) {
         Ok(dopt) => dopt,
-        Err(err) => fail!("{}", err),
+        Err(err) => panic!("{}", err),
     };
     convenient_parse_args(&dopt, args)
 }

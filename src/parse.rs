@@ -710,7 +710,7 @@ impl Atom {
         } else if Atom::is_cmd(s) {
             Command(s.to_string())
         } else {
-            fail!("Unknown atom string: '{}'", s)
+            panic!("Unknown atom string: '{}'", s)
         }
     }
 
