@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use {Docopt, Config, ValueMap, DEFAULT_CONFIG};
-use {Value, Switch, Counted, Plain, List};
+use {Docopt, ValueMap, Value, DEFAULT_CONFIG};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ValueMap {
     let dopt =

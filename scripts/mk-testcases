@@ -68,7 +68,7 @@ def show_test(i, t):
                 % (i, t['usage'], args, expect)
 
 print(
-"""use {{Value, Switch, Counted, Plain, List}};
+"""use {{Switch, Counted, Plain, List}};
 use test::{{get_args, map_from_alist, same_args}};
 
 {tests}

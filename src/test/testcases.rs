@@ -1,4 +1,4 @@
-use {Value, Switch, Counted, Plain, List};
+use {Switch, Counted, Plain, List};
 use test::{get_args, map_from_alist, same_args};
 
 test_expect!(test_0_testcases, "Usage: prog", &[], vec!())
