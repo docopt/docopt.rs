@@ -1249,8 +1249,8 @@ impl<'a, 'b> Matcher<'a, 'b> {
 // with the flag atom and whether there is an argument or not.
 // If '=arg' exists and 'arg' isn't a valid argument, an error is returned.
 fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
-    static LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
-    match LONG_EQUAL.captures(flag) {
+    let long_equal = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
+    match long_equal.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
             let arg = cap.name("arg").to_string();
@@ -1264,8 +1264,8 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
 }
 
 fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
-    static LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
-    match LONG_EQUAL.captures(flag) {
+    let long_equal = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
+    match long_equal.captures(flag) {
         None => (Atom::new(flag), None),
         Some(cap) =>
             (Atom::new(cap.name("name")), Some(cap.name("arg").to_string())),

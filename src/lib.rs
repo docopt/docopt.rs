@@ -157,17 +157,15 @@
 //! ```
 
 #![crate_name = "docopt"]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
-#![experimental]
 #![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
-#![feature(plugin_registrar, macro_rules, phase, quote)]
+#![experimental]
+#![deny(missing_docs)]
+#![feature(macro_rules)]
 
 extern crate libc;
 extern crate regex;
-#[phase(plugin)] extern crate regex_macros;
 extern crate serialize;
 
 use std::collections::HashMap;
@@ -185,6 +183,11 @@ macro_rules! werr(
             Err(err) => panic!("{}", err),
         }
     )
+)
+
+// cheat until we get syntax extensions back :-(
+macro_rules! regex(
+    ($s:expr) => (regex::Regex::new($s).unwrap());
 )
 
 /// Represents the different types of Docopt errors.
@@ -626,9 +629,25 @@ impl fmt::Show for ArgvMap {
 /// to values without destructuring manually.
 #[deriving(Clone, PartialEq, Show)]
 pub enum Value {
+    /// A boolean value from a flag that has no argument.
+    ///
+    /// The presence of a flag means `true` and the absence of a flag
+    /// means `false`.
     Switch(bool),
+
+    /// The number of occurrences of a repeated flag.
     Counted(uint),
+
+    /// A positional or flag argument.
+    ///
+    /// This is `None` when the positional argument or flag is not present.
+    /// Note that it is possible to have `Some("")` for a present but empty
+    /// argument.
     Plain(Option<String>),
+
+    /// A List of positional or flag arguments.
+    ///
+    /// This list may be empty when no arguments or flags are present.
     List(Vec<String>),
 }
 
