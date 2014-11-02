@@ -401,7 +401,7 @@ impl Docopt {
                         None => Err(self.err_with_usage(NoMatch)),
                     }));
         if self.help && vals.get_bool("--help") {
-            return Err(self.err_with_usage(Help));
+            return Err(self.err_with_full_doc(Help));
         }
         match self.version {
             Some(ref v) if vals.get_bool("--version") => {
@@ -474,6 +474,10 @@ impl Docopt {
 
     fn err_with_usage(&self, e: Error) -> Error {
         WithProgramUsage(box e, self.p.usage.as_slice().trim().to_string())
+    }
+
+    fn err_with_full_doc(&self, e: Error) -> Error {
+        WithProgramUsage(box e, self.p.full_doc.as_slice().trim().to_string())
     }
 
     fn get_argv() -> Vec<String> {
