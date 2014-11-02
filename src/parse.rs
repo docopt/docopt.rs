@@ -799,7 +799,7 @@ pub struct Argv<'a> {
     options_first: bool,
 }
 
-#[deriving(Show)]
+#[deriving(Clone, Show)]
 struct ArgvToken {
     atom: Atom,
     arg: Option<String>,
@@ -881,23 +881,19 @@ impl<'a> Argv<'a> {
                 if self.cur() == "--" {
                     seen_double_dash = true;
                 }
-                let tok = self.as_command_or_arg(self.cur());
+                // Yup, we *always* insert a positional argument, which
+                // means we completely neglect `Command` here.
+                // This is because we can't tell whether something is a
+                // `command` or not until we start pattern matching.
+                let tok = ArgvToken {
+                    atom: Positional(self.cur().to_string()),
+                    arg: None,
+                };
                 self.positional.push(tok);
             }
             self.next()
         }
         Ok(())
-    }
-
-    fn as_command_or_arg(&self, s: &str) -> ArgvToken {
-        let cmd = Command(s.to_string());
-        let atom =
-            if self.dopt.descs.contains_key(&cmd) {
-                cmd
-            } else {
-                Positional(s.to_string())
-            };
-        ArgvToken { atom: atom, arg: None }
     }
 
     fn cur<'a>(&'a self) -> &'a str { self.at(0) }
@@ -1024,17 +1020,25 @@ impl MState {
         }
     }
 
-    fn match_cmd_or_posarg(&mut self, spec: &Atom, argv: &ArgvToken) -> bool {
+    fn match_cmd_or_posarg(&mut self, spec: &Atom, argv: &ArgvToken)
+                          -> Option<ArgvToken> {
         match (spec, &argv.atom) {
-            (&Command(ref n1), &Command(ref n2)) if n1 == n2 => {
+            (_, &Command(_)) => {
+                // This is impossible because the argv parser doesn't know
+                // how to produce `Command` values.
+                unreachable!()
+            }
+            (&Command(ref n1), &Positional(ref n2)) if n1 == n2 => {
+                // Coerce a positional to a command because the pattern
+                // demands it and the positional argument matches it.
                 self.argvi += 1;
-                true
+                Some(ArgvToken { atom: spec.clone(), arg: None })
             }
             (&Positional(_), _) => {
                 self.argvi += 1;
-                true
+                Some(argv.clone())
             }
-            _ => false,
+            _ => None,
         }
     }
 }
@@ -1216,10 +1220,13 @@ impl<'a, 'b> Matcher<'a, 'b> {
                                 None => return vec!(),
                                 Some(tok) => tok,
                             };
-                        if !state.match_cmd_or_posarg(atom, tok) {
-                            return vec!()
-                        }
-                        if !self.add_value(&mut state, atom, &tok.atom, &tok.arg) {
+                        let tok =
+                            match state.match_cmd_or_posarg(atom, tok) {
+                                None => return vec!(),
+                                Some(tok) => tok,
+                            };
+                        if !self.add_value(&mut state, atom,
+                                           &tok.atom, &tok.arg) {
                             return vec!()
                         }
                     }

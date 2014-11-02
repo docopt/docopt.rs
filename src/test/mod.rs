@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use {Docopt, ArgvMap, Value};
+use {Switch, Plain};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
     let dopt =
@@ -54,5 +55,9 @@ macro_rules! test_user_error(
         fn $name() { get_args($doc, $args); }
     );
 )
+
+test_expect!(test_issue_13, "Usage: prog file <file>", &["file", "file"],
+             vec![("file", Switch(true)),
+                  ("<file>", Plain(Some("file".to_string())))])
 
 mod testcases;
