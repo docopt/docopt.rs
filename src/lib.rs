@@ -2,95 +2,96 @@
 //! [official description of Docopt](http://docopt.org/) and
 //! [passes its test suite](https://github.com/docopt/docopt/pull/201).
 //!
-//! This library is [on GitHub](https://github.com/BurntSushi/docopt.rs)
-//! and is currently very experimental, particularly with respect to the
-//! API and its use of macros. Feedback is **very** welcome.
+//! This library is [on GitHub](https://github.com/docopt/docopt.rs).
 //!
 //! Fundamentally, Docopt is a command line argument parser. The detail that
 //! distinguishes it from most parsers is that the parser is derived from the
-//! usage string. Here's a simple example using the `docopt!` macro:
-//!
-//! ```ignore
-//! #![feature(phase)]
-//! extern crate serialize;
-//! #[phase(plugin)] extern crate docopt_macros;
-//! extern crate docopt;
-//!
-//! use docopt::FlagParser;
-//!
-//! docopt!(Args, "
-//! Usage: cp [-a] SOURCE DEST
-//!        cp [-a] SOURCE... DIR
-//!
-//! Options:
-//!     -a, --archive  Copy everything.
-//! ")
-//!
-//! fn main() {
-//!     let argv = &["-a", "file1", "file2", "dest/"];
-//!     let args: Args = FlagParser::parse_args(
-//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
-//!     assert!(args.flag_archive);
-//!     assert_eq!(args.arg_SOURCE, vec!["file1".to_string(), "file2".to_string()]);
-//!     assert_eq!(args.arg_DIR, "dest/".to_string());
-//! }
-//! ```
-//!
-//! Wait. What did that just do? Yup. It *created a struct definition* for
-//! you. In this case, the struct definition would look like this:
-//!
-//! ```ignore
-//! #[deriving(Decodable, Show)]
-//! struct Args {
-//!     pub flag_archive: bool,
-//!     pub arg_DEST: String,
-//!     pub arg_DIR: String,
-//!     pub arg_SOURCE: Vec<String>,
-//! }
-//! ```
-//!
-//! There are also some accompanying static methods defined, such as `parse`,
-//! `parse_conf` and `parse_args`. These methods will parse command line
-//! arguments, try to match them against your Docopt usage string and then
-//! try to decode matched values into the struct.
-//!
-//! If you're thinking that this is too much magic, then you may be right. This
-//! API should be considered experimental. I do not yet know what the right
-//! level of magic is. Therefore, you can use an API that is less convenient
-//! but with absolutely no magic. Here's the same `cp` example above, but
-//! using a hash table instead:
+//! usage string. Here's a simple example:
 //!
 //! ```rust
-//! extern crate docopt;
+//! use docopt::Docopt;
 //!
-//! fn main() {
-//!     let config = docopt::DEFAULT_CONFIG.clone();
-//!     let argv = &["-a", "file1", "file2", "dest/"];
-//!     let args = docopt::docopt_args(config, argv, "
-//! Usage: cp [-a] SOURCE DEST
-//!        cp [-a] SOURCE... DIR
+//! // Write the Docopt usage string.
+//! static USAGE: &'static str = "
+//! Usage: cp [-a] <source> <dest>
+//!        cp [-a] <source>... <dir>
 //!
 //! Options:
 //!     -a, --archive  Copy everything.
-//!     ").unwrap_or_else(|e| e.exit());
-//!     assert!(args.get_bool("-a") && args.get_bool("--archive"));
-//!     assert_eq!(args.get_vec("SOURCE"), vec!["file1", "file2"]);
-//!     assert_eq!(args.get_str("DIR"), "dest/");
+//! ";
+//!
+//! // The argv. Normally you'd just use `parse` which will automatically
+//! // use `std::os::args()`.
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
+//!
+//! // Parse argv and exit the program with an error message if it fails.
+//! let args = Docopt::new(USAGE)
+//!                   .and_then(|d| d.argv(argv().into_iter()).parse())
+//!                   .unwrap_or_else(|e| e.exit());
+//!
+//! // Now access your argv values. Synonyms work just fine!
+//! assert!(args.get_bool("-a") && args.get_bool("--archive"));
+//! assert_eq!(args.get_vec("<source>"), vec!["file1", "file2"]);
+//! assert_eq!(args.get_str("<dir>"), "dest/");
+//! assert_eq!(args.get_str("<dest>"), "");
+//! ```
+//!
+//! # Type based decoding
+//!
+//! Often, command line values aren't just strings or booleans---sometimes
+//! they are integers, or enums, or something more elaborate. Using the
+//! standard Docopt interface can be inconvenient for this purpose, because
+//! you'll need to convert all of the values explicitly. Instead, this crate
+//! provides a `Decoder` that converts an `ArgvMap` to your custom struct.
+//! Here is the same example as above using type based decoding:
+//!
+//! ```rust
+//! # extern crate docopt; extern crate serialize; fn main() {
+//! use docopt::Docopt;
+//!
+//! // Write the Docopt usage string.
+//! static USAGE: &'static str = "
+//! Usage: cp [-a] <source> <dest>
+//!        cp [-a] <source>... <dir>
+//!
+//! Options:
+//!     -a, --archive  Copy everything.
+//! ";
+//!
+//! #[deriving(Decodable)]
+//! struct Args {
+//!     arg_source: Vec<String>,
+//!     arg_dest: String,
+//!     arg_dir: String,
+//!     flag_archive: bool,
 //! }
+//!
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let args: Args = Docopt::new(USAGE)
+//!                         .and_then(|d| d.argv(argv().into_iter()).decode())
+//!                         .unwrap_or_else(|e| e.exit());
+//!
+//! // Now access your argv values.
+//! fn s(x: &str) -> String { x.to_string() }
+//! assert!(args.flag_archive);
+//! assert_eq!(args.arg_source, vec![s("file1"), s("file2")]);
+//! assert_eq!(args.arg_dir, s("dest/"));
+//! assert_eq!(args.arg_dest, s(""));
+//! # }
 //! ```
 //!
 //! # Command line arguments for `rustc`
 //!
-//! Here's an example (with a macro) showing a subset of `rustc`'s command
-//! line arguments.
+//! Here's an example with a subset of `rustc`'s command line arguments that
+//! shows more of Docopt and some of the benefits of type based decoding.
 //!
-//! ```ignore
-//! # #![feature(phase)]
-//! # extern crate serialize;
-//! # #[phase(plugin, link)] extern crate docopt_macros;
-//! # extern crate docopt;
-//! # use docopt::FlagParser;
-//! docopt!(Args, "
+//! ```rust
+//! # extern crate docopt; extern crate serialize; fn main() {
+//! # #![allow(non_snake_case)]
+//! use docopt::Docopt;
+//!
+//! // Write the Docopt usage string.
+//! static USAGE: &'static str = "
 //! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
 //!        rustc (--help | --version)
 //!
@@ -102,61 +103,29 @@
 //!     --emit TYPE        Configure the output that rustc will produce.
 //!                        Valid values: asm, ir, bc, obj, link.
 //!     --opt-level LEVEL  Optimize with possible levels 0-3.
-//! ")
+//! ";
 //!
-//! fn main() {
-//!     let argv = &["--cfg", "a", "docopt.rs", "-L", ".", "-L.."];
-//!     let args: Args = FlagParser::parse_args(
-//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
-//!     assert_eq!(args.arg_INPUT, "docopt.rs".to_string());
-//!     assert_eq!(args.flag_L, vec![".".to_string(), "..".to_string()]);
-//!     assert_eq!(args.flag_cfg, vec!["a".to_string()]);
+//! #[deriving(Decodable)]
+//! struct Args {
+//!     arg_INPUT: String,
+//!     flag_emit: Option<Emit>,
+//!     flag_opt_level: Option<OptLevel>,
+//!     flag_cfg: Vec<String>,
+//!     flag_L: Vec<String>,
+//!     flag_help: bool,
+//!     flag_version: bool,
 //! }
-//! ```
-//!
-//! This example shows some of the more advanced features of Docopt. However,
-//! there's still one large omission: data validation. In the above example,
-//! *any* value can be given to `--emit` or `--opt-level`, but clearly, the
-//! application defines a limited subset of all possible values.
-//!
-//! This is where data validation can help. In Docopt proper, it is a
-//! *non-goal* to validate and convert the data. However, this implementation
-//! provides some facilities to do just that. All you need to do is provide
-//! Rust types for the flags/arguments, and the decoder will do the rest.
-//! Here's an example of limiting the range of values for `--emit` and
-//! `--opt-level`:
-//!
-//! (Note the extra type annotations in the `docopt!` macro call.)
-//!
-//! ```ignore
-//! # #![feature(phase)]
-//! # extern crate serialize;
-//! # #[phase(plugin)] extern crate docopt_macros;
-//! # extern crate docopt;
-//! # use docopt::FlagParser;
-//! docopt!(Args, "
-//! Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
-//!        rustc (--help | --version)
-//!
-//! Options:
-//!     -h, --help         Show this message.
-//!     --version          Show the version of rustc.
-//!     --cfg SPEC         Configure the compilation environment.
-//!     -L PATH            Add a directory to the library search path.
-//!     --emit TYPE        Configure the output that rustc will produce.
-//!                        Valid values: asm, ir, bc, obj, link.
-//!     --opt-level LEVEL  Optimize with possible levels 0-3.
-//! ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>)
 //!
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
-//! #[deriving(Decodable, PartialEq, Show)]
+//! #[deriving(Decodable)]
+//! # #[deriving(PartialEq, Show)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
 //!
 //! // This one is harder because we want the user to specify an integer,
 //! // but restrict it to a specific range. So we implement `Decodable`
 //! // ourselves.
-//! #[deriving(PartialEq, Show)]
+//! # #[deriving(PartialEq, Show)]
 //! enum OptLevel { Zero, One, Two, Three }
 //!
 //! impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
@@ -171,17 +140,21 @@
 //!     }
 //! }
 //!
-//! fn main() {
-//!     let argv = &["--opt-level", "2", "--emit=ir", "docopt.rs"];
-//!     let args: Args = FlagParser::parse_args(
-//!         docopt::DEFAULT_CONFIG.clone(), argv).unwrap_or_else(|e| e.exit());
-//!     assert_eq!(args.flag_opt_level, Some(Two));
-//!     assert_eq!(args.flag_emit, Some(Ir));
-//! }
-//! ```
+//! let argv = || vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
+//!                             "--opt-level", "2", "--emit=ir", "docopt.rs"];
+//! let args: Args = Docopt::new(USAGE)
+//!                         .and_then(|d| d.argv(argv().into_iter()).decode())
+//!                         .unwrap_or_else(|e| e.exit());
 //!
-//! If you tried to pass, for example, `--emit=whatever`, then the decoding
-//! would fail.
+//! // Now access your argv values.
+//! fn s(x: &str) -> String { x.to_string() }
+//! assert_eq!(args.arg_INPUT, "docopt.rs".to_string());
+//! assert_eq!(args.flag_L, vec![s("."), s("..")]);
+//! assert_eq!(args.flag_cfg, vec![s("a")]);
+//! assert_eq!(args.flag_opt_level, Some(Two));
+//! assert_eq!(args.flag_emit, Some(Ir));
+//! # }
+//! ```
 
 #![crate_name = "docopt"]
 #![crate_type = "rlib"]
@@ -193,9 +166,6 @@
 #![feature(plugin_registrar, macro_rules, phase, quote)]
 
 extern crate libc;
-// #[cfg(test)]
-#[phase(plugin, link)]
-extern crate log;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 extern crate serialize;
@@ -218,39 +188,47 @@ macro_rules! werr(
 )
 
 /// Represents the different types of Docopt errors.
-///
-/// These types correspond to the following operations: parsing a Docopt
-/// usage string, parsing an argv arguments, not matching an argv against
-/// a Docopt pattern and decoding a successful match into a struct.
 pub enum Error {
+    /// Parsing the usage string failed.
+    ///
+    /// This error can only be triggered by the programmer, i.e., the writer
+    /// of the Docopt usage string. This error is usually indicative of a bug
+    /// in your program.
+    Usage(String),
+
+    /// Parsing the argv specified failed.
+    ///
+    /// The payload is a string describing why the arguments provided could not
+    /// be parsed.
+    ///
+    /// This is distinct from `NoMatch` because it will catch errors like
+    /// using flags that aren't defined in the usage string.
+    Argv(String),
+
+    /// The given argv parsed successfully, but it did not match any example
+    /// usage of the program.
+    ///
+    /// Regrettably, there is no descriptive message describing *why* the
+    /// given argv didn't match any of the usage strings.
+    NoMatch,
+
+    /// This indicates a problem decoding a successful argv match into a
+    /// decodable value.
+    Decode(String),
+
+    /// Parsing failed, and the program usage should be printed next to the
+    /// failure message. Typically this wraps `Argv` and `NoMatch` errors.
+    WithProgramUsage(Box<Error>, String),
+
     /// Decoding or parsing failed because the command line specified that the
     /// help message should be printed.
-    ///
-    /// The help message is included as a payload to this variant.
-    Help(String),
+    Help,
 
     /// Decoding or parsing failed because the command line specified that the
     /// version should be printed
     ///
     /// The version is included as a payload to this variant.
     Version(String),
-
-    /// Parsing the argv specified failed.
-    ///
-    /// The payload is a string describing why the arguments provided could not
-    /// be parsed.
-    Argv(String),
-
-    /// Parsing failed, and the program usage should be printed next to the
-    /// failure message.
-    WithProgramUsage(Box<Error>, String),
-
-    /// The given argv parsed successfully, but it did not match any example
-    /// usage of the program.
-    NoMatch,
-
-    Usage(String),
-    Decode(String),
 }
 
 impl Error {
@@ -261,95 +239,191 @@ impl Error {
     /// failing to decode or parse.
     pub fn fatal(&self) -> bool {
         match *self {
-            Help(..) | Version(..) => false,
-            Argv(..) | Usage(..) | NoMatch | Decode(..) => true,
+            Help | Version(..) => false,
+            Usage(..) | Argv(..) | NoMatch | Decode(..) => true,
             WithProgramUsage(ref b, _) => b.fatal(),
         }
     }
 
-    /// Print this error to stderr and immediately exit the program.
+    /// Print this error and immediately exit the program.
+    ///
+    /// If the error is non-fatal (e.g., `Help` or `Version`), then the
+    /// error is printed to stdout and the exit status will be `0`. Otherwise,
+    /// when the error is fatal, the error is printed to stderr and the
+    /// exit status will be `1`.
     pub fn exit(&self) -> ! {
-        werr!("{}\n", self);
-        exit(if self.fatal() {1} else {0})
+        if self.fatal() {
+            werr!("{}\n", self);
+            exit(1)
+        } else {
+            println!("{}", self);
+            exit(0)
+        }
     }
 }
 
 impl fmt::Show for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            NoMatch => write!(f, "Invalid arguments."),
             WithProgramUsage(ref other, ref usage) => {
-                write!(f, "{}\n{}", other, usage)
+                let other = other.to_string();
+                if other.is_empty() {
+                    write!(f, "{}", usage)
+                } else {
+                    write!(f, "{}\n\n{}", other, usage)
+                }
             }
-            Argv(ref s) | Usage(ref s) | Decode(ref s) | Help(ref s) |
-            Version(ref s) => {
+            Help => write!(f, ""),
+            NoMatch => write!(f, "Invalid arguments."),
+            Usage(ref s) | Argv(ref s) | Decode(ref s) | Version(ref s) => {
                 write!(f, "{}", s)
             }
         }
     }
 }
 
-/// A set of Docopt usage patterns.
+/// The main Docopt type, which is constructed with a Docopt usage string.
 ///
-/// This can be used to match command line arguments to produce a `ValueMap`.
-#[deriving(Show)]
+/// This can be used to match command line arguments to produce a `ArgvMap`.
+#[deriving(Clone, Show)]
 pub struct Docopt {
     p: Parser,
-    conf: Config,
+    argv: Option<Vec<String>>,
+    options_first: bool,
+    help: bool,
+    version: Option<String>,
 }
-
-/// Configure how command line arguments are parsed.
-#[deriving(Clone, Show)]
-pub struct Config {
-    /// When true, flags must appear before positional arguments. That is,
-    /// after the first positional argument is seen, no more flags are allowed.
-    pub options_first: bool,
-    /// When true, if `--help` is present, then the full Docopt usage string
-    /// initially given is shown.
-    /// Note that for this to work, `--help` has to be a valid usage pattern.
-    pub help: bool,
-    /// If set, shows the given string when `--version` is present.
-    /// Note that for this to work, `--version` has to be a valid usage pattern.
-    pub version: Option<String>,
-}
-
-/// The default configuration used in covenience functions such as `docopt`.
-pub static DEFAULT_CONFIG: Config = Config {
-    options_first: false,
-    help: true,
-    version: None,
-};
 
 impl Docopt {
-    /// Parse the Docopt usage string given with the configuration specified.
-    /// If there was an error processing the usage string, then a `Usage`
-    /// error is returned.
-    pub fn new(conf: Config, doc: &str) -> Result<Docopt, Error> {
-        Parser::new(doc)
-            .map(|p| Docopt { p: p, conf: conf.clone() })
-            .or_else(|s| Err(Usage(s)))
+    /// Parse the Docopt usage string given.
+    ///
+    /// The `Docopt` value returned may be used immediately to parse command
+    /// line arguments with a default configuration.
+    ///
+    /// If there was a problem parsing the usage string, a `Usage` error
+    /// is returned.
+    pub fn new<S: Str>(usage: S) -> Result<Docopt, Error> {
+        Parser::new(usage.as_slice())
+               .map_err(Usage)
+               .map(|p| Docopt {
+                   p: p,
+                   argv: None,
+                   options_first: false,
+                   help: true,
+                   version: None,
+                })
+    }
+
+    /// Parse and decode the given argv.
+    ///
+    /// This is a convenience method for
+    /// `parse().and_then(|vals| vals.decode())`.
+    ///
+    /// For details on how decoding works, please see the documentation for
+    /// `ArgvMap`.
+    pub fn decode<D>(&self) -> Result<D, Error>
+                 where D: Decodable<Decoder, Error> {
+        self.parse().and_then(|vals| vals.decode())
     }
 
     /// Parse command line arguments and try to match them against a usage
-    /// pattern specified in the Docopt string. If parsing the command line
-    /// arguments fails, then an `Argv` error is returned. If parsing succeeds
-    /// but there is no match, then a `NoMatch` error is returned.
+    /// pattern specified in the Docopt string.
     ///
-    /// The `args` given *must* start with the first argument and *not* with
-    /// the program's name. e.g., `["cp", "src", "dest"]` is wrong while
-    /// `["src", "dest"]` is correct.
-    pub fn argv(&self, args: &[&str]) -> Result<ValueMap, Error> {
-        self.p.parse_argv(args, self.conf.options_first)
-            .or_else(|s| Err(Argv(s)))
-            .and_then(|argv|
-                self.p.matches(&argv)
-                    .map(|m| Ok(ValueMap { map: m }))
-                    .unwrap_or_else(|| Err(NoMatch)))
+    /// If there is a match, then an `ArgvMap` is returned, which maps
+    /// flags, commands and arguments to values.
+    ///
+    /// If parsing the command line arguments fails, then an `Argv` error is
+    /// returned. If parsing succeeds but there is no match, then a `NoMatch`
+    /// error is returned. Both of these errors are always returned inside a
+    /// `WithProgramUsage` error.
+    ///
+    /// If special handling of `help` or `version` is enabled (the former is
+    /// enabled by default), then `Help` or `Version` errors are returned
+    /// if `--help` or `--version` is present.
+    pub fn parse(&self) -> Result<ArgvMap, Error> {
+        let argv = self.argv.clone().unwrap_or_else(|| ::std::os::args());
+        let vals = try!(
+            self.p.parse_argv(argv, self.options_first)
+                .map_err(|s| self.err_with_usage(Argv(s)))
+                .and_then(|argv|
+                    match self.p.matches(&argv) {
+                        Some(m) => Ok(ArgvMap { map: m }),
+                        None => Err(self.err_with_usage(NoMatch)),
+                    }));
+        if self.help && vals.get_bool("--help") {
+            return Err(self.err_with_usage(Help));
+        }
+        match self.version {
+            Some(ref v) if vals.get_bool("--version") => {
+                return Err(Version(v.clone()))
+            }
+            _ => {},
+        }
+        Ok(vals)
+    }
+
+    /// Set the argv to be used for Docopt parsing.
+    ///
+    /// By default, when no argv is set, and it is automatically taken from
+    /// `std::os::args()`.
+    ///
+    /// The `argv` given *must* be the full set of `argv` passed to the
+    /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
+    /// is wrong.
+    pub fn argv<I, S>(mut self, argv: I) -> Docopt
+               where I: Iterator<S>, S: StrAllocating {
+        self.argv = Some(argv.skip(1).map(|s| s.into_string()).collect());
+        self
+    }
+
+    /// Enables the "options first" Docopt behavior.
+    ///
+    /// The options first behavior means that all flags *must* appear before
+    /// position arguments. That is, after the first position argument is
+    /// seen, all proceeding arguments are interpreted as positional
+    /// arguments unconditionally.
+    pub fn options_first(mut self, yes: bool) -> Docopt {
+        self.options_first = yes;
+        self
+    }
+
+    /// Enables automatic handling of `--help`.
+    ///
+    /// When this is enabled and `--help` appears anywhere in the arguments,
+    /// then a `Help` error will be returned. You may then use the `exit`
+    /// method on the error value to conveniently quit the program (which will
+    /// print the full usage string to stdout).
+    ///
+    /// Note that for this to work, `--help` must be a valid pattern.
+    ///
+    /// When disabled, there is no special handling of `--help`.
+    pub fn help(mut self, yes: bool) -> Docopt {
+        self.help = yes;
+        self
+    }
+
+    /// Enables automatic handling of `--version`.
+    ///
+    /// When this is enabled and `--version` appears anywhere in the arguments,
+    /// then a `Version(s)` error will be returned, where `s` is the string
+    /// given here. You may then use the `exit` method on the error value to
+    /// convenient quit the program (which will print the version to stdout).
+    ///
+    /// When disabled (a `None` value), there is no special handling of
+    /// `--version`.
+    pub fn version(mut self, version: Option<String>) -> Docopt {
+        self.version = version;
+        self
     }
 
     #[doc(hidden)]
+    // Exposed for use in `docopt_macros`.
     pub fn parser<'a>(&'a self) -> &'a Parser {
         &self.p
+    }
+
+    fn err_with_usage(&self, e: Error) -> Error {
+        WithProgramUsage(box e, self.p.usage.as_slice().trim().to_string())
     }
 }
 
@@ -360,8 +434,187 @@ impl Docopt {
 /// key will work.) `ARG` or `<arg>` specify a positional argument and `cmd`
 /// specifies a command.
 #[deriving(Clone)]
-pub struct ValueMap {
+pub struct ArgvMap {
     map: SynonymMap<String, Value>,
+}
+
+impl ArgvMap {
+    /// Tries to decode the map of values into a struct.
+    ///
+    /// This method should always be called to decode a `ArgvMap` into
+    /// a struct. All fields of the struct must map to a corresponding key
+    /// in the `ArgvMap`. To this end, each member must have a special prefix
+    /// corresponding to the different kinds of patterns in Docopt. There are
+    /// three prefixes: `flag_`, `arg_` and `cmd_` which respectively
+    /// correspond to short/long flags, positional arguments and commands.
+    ///
+    /// If a Docopt item has a `-` in its name, then it is converted to an `_`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # extern crate docopt; extern crate serialize; fn main() {
+    /// use docopt::Docopt;
+    ///
+    /// static USAGE: &'static str = "
+    /// Usage: cargo [options] (build | test)
+    ///        cargo --help
+    ///
+    /// Options: -v, --verbose
+    ///          -h, --help
+    /// ";
+    ///
+    /// #[deriving(Decodable)]
+    /// struct Args {
+    ///   cmd_build: bool,
+    ///   cmd_test: bool,
+    ///   flag_verbose: bool,
+    ///   flag_h: bool,
+    /// }
+    ///
+    /// let argv = || vec!["cargo", "build", "-v"].into_iter();
+    /// let args: Args = Docopt::new(USAGE)
+    ///                         .and_then(|d| d.argv(argv()).decode())
+    ///                         .unwrap_or_else(|e| e.exit());
+    /// assert!(args.cmd_build && !args.cmd_test
+    ///         && args.flag_verbose && !args.flag_h);
+    /// # }
+    /// ```
+    ///
+    /// Note that in the above example, `flag_h` is used but `flag_help`
+    /// could also be used. (In fact, both could be used at the same time.)
+    ///
+    /// In this example, only the `bool` type was used, but any type satisfying
+    /// the `Decodable` trait is valid.
+    pub fn decode<T: Decodable<Decoder, Error>>
+                 (self) -> Result<T, Error> {
+        Decodable::decode(&mut Decoder { vals: self, stack: vec!() })
+    }
+
+    /// Finds the value corresponding to `key` and calls `as_bool()` on it.
+    /// If the key does not exist, `false` is returned.
+    pub fn get_bool(&self, key: &str) -> bool {
+        self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
+    }
+
+    /// Finds the value corresponding to `key` and calls `as_count()` on it.
+    /// If the key does not exist, `0` is returned.
+    pub fn get_count(&self, key: &str) -> uint {
+        self.find(&key).map(|v| v.as_count()).unwrap_or(0)
+    }
+
+    /// Finds the value corresponding to `key` and calls `as_str()` on it.
+    /// If the key does not exist, `""` is returned.
+    pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
+        self.find(&key).map(|v| v.as_str()).unwrap_or("")
+    }
+
+    /// Finds the value corresponding to `key` and calls `as_vec()` on it.
+    /// If the key does not exist, `vec!()` is returned.
+    pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
+        self.find(&key).map(|v| v.as_vec()).unwrap_or(vec!())
+    }
+
+    /// Converts a Docopt key to a struct field name.
+    /// This makes a half-hearted attempt at making the key a valid struct
+    /// field name (like replacing `-` with `_`), but it does not otherwise
+    /// guarantee that the result is a valid struct field name.
+    #[doc(hidden)]
+    pub fn key_to_struct_field(name: &str) -> String {
+        fn sanitize(name: &str) -> String {
+            name.replace("-", "_")
+        }
+
+        let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
+        r.replace(name, |cap: &regex::Captures| {
+            let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
+            let (argu, argb) = (cap.name("argu"), cap.name("argb"));
+            let (prefix, name) =
+                if !flag.is_empty() {
+                    ("flag_", flag)
+                } else if !argu.is_empty() {
+                    ("arg_", argu)
+                } else if !argb.is_empty() {
+                    ("arg_", argb)
+                } else if !cmd.is_empty() {
+                    ("cmd_", cmd)
+                } else {
+                    panic!("Unknown ArgvMap key: '{}'", name)
+                };
+            let mut prefix = prefix.to_string();
+            prefix.push_str(sanitize(name).as_slice());
+            prefix
+        })
+    }
+
+    /// Converts a struct field name to a Docopt key.
+    #[doc(hidden)]
+    pub fn struct_field_to_key(field: &str) -> String {
+        fn desanitize(name: &str) -> String {
+            name.replace("_", "-")
+        }
+        let name =
+            if field.starts_with("flag_") {
+                let name = regex!(r"^flag_").replace(field, "");
+                let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
+                                   .to_string();
+                pre_name.push_str(name.as_slice());
+                pre_name
+            } else if field.starts_with("arg_") {
+                let name = regex!(r"^arg_").replace(field, "");
+                if regex!(r"^\p{Lu}+$").is_match(name.as_slice()) {
+                    name
+                } else {
+                    let mut pre_name = "<".to_string();
+                    pre_name.push_str(name.as_slice());
+                    pre_name.push('>');
+                    pre_name
+                }
+            } else if field.starts_with("cmd_") {
+                { regex!(r"^cmd_") }.replace(field, "")
+            } else {
+                panic!("Unrecognized struct field: '{}'", field)
+            };
+        desanitize(name.as_slice())
+    }
+}
+
+impl Collection for ArgvMap {
+    fn len(&self) -> uint { self.map.len() }
+}
+
+impl<'k> Map<&'k str, Value> for ArgvMap {
+    fn find<'a>(&'a self, key: & &'k str) -> Option<&'a Value> {
+        self.map.find(&key.to_string())
+    }
+}
+
+impl fmt::Show for ArgvMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_empty() {
+            return write!(f, "{{EMPTY}}");
+        }
+
+        // This is a little crazy, but we want to group synonyms with
+        // their keys and sort them for predictable output.
+        let reverse: HashMap<&String, &String> =
+            self.map.synonyms().map(|(from, to)| (to, from)).collect();
+        let mut keys: Vec<&String> = self.map.keys().collect();
+        keys.sort();
+        let mut first = true;
+        for &k in keys.iter() {
+            if !first { try!(write!(f, "\n")); } else { first = false; }
+            match reverse.find(&k) {
+                None => {
+                    try!(write!(f, "{} => {}", k, self.map.get(k)))
+                }
+                Some(s) => {
+                    try!(write!(f, "{}, {} => {}", s, k, self.map.get(k)))
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// A matched command line value.
@@ -433,191 +686,25 @@ impl Value {
     }
 }
 
-impl ValueMap {
-    /// Tries to decode the map of values into a struct.
-    ///
-    /// This method should always be called to decode a `ValueMap` into
-    /// a struct. All fields of the struct must map to a corresponding key
-    /// in the `ValueMap`. To this end, each member must have a special prefix
-    /// corresponding to the different kinds of patterns in Docopt. There are
-    /// three prefixes: `flag_`, `arg_` and `cmd_` which respectively
-    /// correspond to short/long flags, positional arguments and commands.
-    ///
-    /// This documentation needs to be fleshed out more.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # extern crate serialize;
-    /// # extern crate docopt;
-    /// # fn main() {
-    /// use docopt::{DEFAULT_CONFIG, docopt_args};
-    ///
-    /// #[deriving(Decodable)]
-    /// struct Args {
-    ///   cmd_build: bool,
-    ///   cmd_test: bool,
-    ///   flag_verbose: bool,
-    ///   flag_h: bool,
-    /// }
-    ///
-    /// let argv = &["-v", "build"];
-    /// let doc = docopt_args(DEFAULT_CONFIG.clone(), argv, "
-    /// Usage: cargo [options] (build | test)
-    ///        cargo --help
-    ///
-    /// Options: -v, --verbose
-    ///          -h, --help
-    /// ").unwrap_or_else(|e| e.exit());
-    /// let args: Args = doc.decode().unwrap_or_else(|e| e.exit());
-    /// assert!(args.cmd_build && !args.cmd_test
-    ///         && args.flag_verbose && !args.flag_h);
-    /// # }
-    /// ```
-    ///
-    /// Note that in the above example, `flag_h` is used but `flag_help`
-    /// could also be used. (In fact, both could be used at the same time.)
-    ///
-    /// In this example, only the `bool` type was used, but any type satisfying
-    /// the `Decodable` trait is valid.
-    pub fn decode<T: Decodable<Decoder, Error>>
-                 (self) -> Result<T, Error> {
-        Decodable::decode(&mut Decoder { vals: self, stack: vec!() })
-    }
-
-    /// The same as `decode`, except if there is an error, it is logged to
-    /// `stderr` and the current program will *unsafely* exit with an error
-    /// code of `1`.
-    pub fn decode_must<T: Decodable<Decoder, Error>>(self) -> T {
-        match self.decode() {
-            Ok(v) => v,
-            Err(err) => err.exit(),
-        }
-    }
-
-    /// Finds the value corresponding to `key` and calls `as_bool()` on it.
-    /// If the key does not exist, `false` is returned.
-    pub fn get_bool(&self, key: &str) -> bool {
-        self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
-    }
-    /// Finds the value corresponding to `key` and calls `as_count()` on it.
-    /// If the key does not exist, `0` is returned.
-    pub fn get_count(&self, key: &str) -> uint {
-        self.find(&key).map(|v| v.as_count()).unwrap_or(0)
-    }
-    /// Finds the value corresponding to `key` and calls `as_str()` on it.
-    /// If the key does not exist, `""` is returned.
-    pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
-        self.find(&key).map(|v| v.as_str()).unwrap_or("")
-    }
-    /// Finds the value corresponding to `key` and calls `as_vec()` on it.
-    /// If the key does not exist, `vec!()` is returned.
-    pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
-        self.find(&key).map(|v| v.as_vec()).unwrap_or(vec!())
-    }
-
-    /// Converts a Docopt key to a struct field name.
-    /// This makes a half-hearted attempt at making the key a valid struct
-    /// field name (like replacing `-` with `_`), but it does not otherwise
-    /// guarantee that the result is a valid struct field name.
-    pub fn key_to_struct_field(name: &str) -> String {
-        fn sanitize(name: &str) -> String {
-            name.replace("-", "_")
-        }
-
-        let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
-        r.replace(name, |cap: &regex::Captures| {
-            let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
-            let (argu, argb) = (cap.name("argu"), cap.name("argb"));
-            let (prefix, name) =
-                if !flag.is_empty() {
-                    ("flag_", flag)
-                } else if !argu.is_empty() {
-                    ("arg_", argu)
-                } else if !argb.is_empty() {
-                    ("arg_", argb)
-                } else if !cmd.is_empty() {
-                    ("cmd_", cmd)
-                } else {
-                    panic!("Unknown ValueMap key: '{}'", name)
-                };
-            let mut prefix = prefix.to_string();
-            prefix.push_str(sanitize(name).as_slice());
-            prefix
-        })
-    }
-
-    /// Converts a struct field name to a Docopt key.
-    pub fn struct_field_to_key(field: &str) -> String {
-        fn desanitize(name: &str) -> String {
-            name.replace("_", "-")
-        }
-        let name =
-            if field.starts_with("flag_") {
-                let name = regex!(r"^flag_").replace(field, "");
-                let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
-                                   .to_string();
-                pre_name.push_str(name.as_slice());
-                pre_name
-            } else if field.starts_with("arg_") {
-                let name = regex!(r"^arg_").replace(field, "");
-                if regex!(r"^\p{Lu}+$").is_match(name.as_slice()) {
-                    name
-                } else {
-                    let mut pre_name = "<".to_string();
-                    pre_name.push_str(name.as_slice());
-                    pre_name.push('>');
-                    pre_name
-                }
-            } else if field.starts_with("cmd_") {
-                { regex!(r"^cmd_") }.replace(field, "")
-            } else {
-                panic!("Unrecognized struct field: '{}'", field)
-            };
-        desanitize(name.as_slice())
-    }
-}
-
-impl Collection for ValueMap {
-    fn len(&self) -> uint { self.map.len() }
-}
-
-impl<'k> Map<&'k str, Value> for ValueMap {
-    fn find<'a>(&'a self, key: & &'k str) -> Option<&'a Value> {
-        self.map.find(&key.to_string())
-    }
-}
-
-impl fmt::Show for ValueMap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_empty() {
-            return write!(f, "{{EMPTY}}");
-        }
-
-        // This is a little crazy, but we want to group synonyms with
-        // their keys and sort them for predictable output.
-        let reverse: HashMap<&String, &String> =
-            self.map.synonyms().map(|(from, to)| (to, from)).collect();
-        let mut keys: Vec<&String> = self.map.keys().collect();
-        keys.sort();
-        let mut first = true;
-        for &k in keys.iter() {
-            if !first { try!(write!(f, "\n")); } else { first = false; }
-            match reverse.find(&k) {
-                None => {
-                    try!(write!(f, "{} => {}", k, self.map.get(k)))
-                }
-                Some(s) => {
-                    try!(write!(f, "{}, {} => {}", s, k, self.map.get(k)))
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
+/// Decoder for `ArgvMap` into your own `Decodable` types.
+///
+/// In general, you shouldn't have to use this type directly. It is exposed
+/// in case you want to write a generic function that produces a decodable
+/// value. For example, here's a function that takes a usage string, an argv
+/// and produces a decodable value:
+///
+/// ```rust
+/// # extern crate docopt; extern crate serialize; fn main() {
+/// use docopt::Docopt;
+/// use serialize::Decodable;
+///
+/// fn decode<D>(usage: &str, argv: &[&str]) -> Result<D, docopt::Error>
+///          where D: Decodable<docopt::Decoder, docopt::Error> {
+///     Docopt::new(usage).and_then(|d| d.argv(argv.iter().map(|&v|v)).decode())
+/// }
+/// # }
 pub struct Decoder {
-    vals: ValueMap,
+    vals: ArgvMap,
     stack: Vec<DecoderItem>,
 }
 
@@ -634,7 +721,7 @@ macro_rules! derr(
 
 impl Decoder {
     fn push(&mut self, struct_field: &str) {
-        let key = ValueMap::struct_field_to_key(struct_field);
+        let key = ArgvMap::struct_field_to_key(struct_field);
         self.stack.push(DecoderItem {
             key: key.clone(),
             struct_field: struct_field.to_string(),
@@ -745,6 +832,10 @@ impl serialize::Decoder<Error> for Decoder {
     fn read_enum_variant<T>(&mut self, names: &[&str],
                             f: |&mut Decoder, uint| -> Result<T, Error>)
                             -> Result<T, Error> {
+        fn to_lower(s: &str) -> String {
+            s.chars().map(|c| c.to_lowercase()).collect()
+        }
+
         let v = try!(self.pop_val());
         let vstr = to_lower(v.as_str());
         let i =
@@ -850,94 +941,6 @@ impl serialize::Decoder<Error> for Decoder {
                            -> Result<T, Error> {
         unimplemented!()
     }
-}
-
-/// Describes types that can parse and decode an argument string.
-///
-/// This trait mirrors the top-level crate functions `docopt`,
-/// `docopt_conf` and `docopt_args`. It is specifically used inside
-/// of the `docopt!` macro, where the generated struct will implement
-/// this trait. This permits code like the following:
-///
-/// ```ignore
-/// use docopt::FlagParser;
-///
-/// docopt!(StructName, ...)
-///
-/// fn main() {
-///     let args: StructName = FlagParser::parse();
-/// }
-/// ```
-pub trait FlagParser {
-    fn parse_args(conf: Config, args: &[&str]) -> Result<Self, Error>;
-    fn parse() -> Result<Self, Error> {
-        FlagParser::parse_conf(DEFAULT_CONFIG.clone())
-    }
-    fn parse_conf(conf: Config) -> Result<Self, Error> {
-        with_os_argv(|argv| FlagParser::parse_args(conf.clone(), argv))
-    }
-}
-
-/// Matches the current `argv` against the Docopt string given using the
-/// default configuration.
-///
-/// If an error occurs, an appropriate message is written to `stderr` and
-/// the program will exit unsafely.
-pub fn docopt(doc: &str) -> Result<ValueMap, Error> {
-    docopt_conf(DEFAULT_CONFIG.clone(), doc)
-}
-
-/// Matches the current `argv` against the Docopt string given with the given
-/// configuration.
-///
-/// If an error occurs, an appropriate message is written to `stderr` and
-/// the program will exit unsafely.
-pub fn docopt_conf(conf: Config, doc: &str) -> Result<ValueMap, Error> {
-    with_os_argv(|argv| docopt_args(conf.clone(), argv, doc))
-}
-
-/// Matches the given `args` against the Docopt string given with the given
-/// configuration.
-///
-/// Note that `args` should *not* begin with the program name. e.g.,
-/// `["cp", "src", "dst"]` is wrong while `["src", "dst"]` is correct.
-///
-/// If an error occurs, an appropriate message is written to `stderr` and
-/// the program will exit unsafely.
-pub fn docopt_args(conf: Config, args: &[&str],
-                   doc: &str) -> Result<ValueMap, Error> {
-    let dopt = match Docopt::new(conf, doc) {
-        Ok(dopt) => dopt,
-        Err(err) => panic!("{}", err),
-    };
-    convenient_parse_args(&dopt, args)
-}
-
-fn with_os_argv<T>(f: |&[&str]| -> T) -> T {
-    let os_argv = std::os::args();
-    let argv: Vec<&str> = os_argv.iter().skip(1).map(|s|s.as_slice()).collect();
-    f(argv.as_slice())
-}
-
-fn convenient_parse_args(dopt: &Docopt,
-                         argv: &[&str]) -> Result<ValueMap, Error> {
-    let vals = try!(dopt.argv(argv).map_err(|e| {
-        WithProgramUsage(box e, dopt.p.usage.as_slice().trim().to_string())
-    }));
-    if dopt.conf.help && vals.get_bool("--help") {
-        return Err(Help(dopt.p.full_doc.as_slice().trim().to_string()))
-    }
-    match dopt.conf.version {
-        Some(ref v) if vals.get_bool("--version") => {
-            return Err(Version(v.clone()))
-        }
-        _ => {},
-    }
-    Ok(vals)
-}
-
-fn to_lower(s: &str) -> String {
-    s.chars().map(|c| c.to_lowercase()).collect()
 }
 
 // I've been warned that this is wildly unsafe.

@@ -1,13 +1,15 @@
 use std::collections::HashMap;
-use {Docopt, ValueMap, Value, DEFAULT_CONFIG};
+use {Docopt, ArgvMap, Value};
 
-fn get_args(doc: &str, argv: &[&'static str]) -> ValueMap {
+fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
     let dopt =
-        match Docopt::new(DEFAULT_CONFIG.clone(), doc) {
+        match Docopt::new(doc) {
             Err(err) => panic!("Invalid usage: {}", err),
             Ok(dopt) => dopt,
         };
-    match dopt.argv(argv) {
+    let mut argv: Vec<_> = argv.iter().map(|x| x.to_string()).collect();
+    argv.insert(0, "prog".to_string());
+    match dopt.argv(argv.into_iter()).parse() {
         Err(err) => panic!("{}", err),
         Ok(vals) => vals,
     }
@@ -17,7 +19,7 @@ fn map_from_alist(alist: Vec<(&'static str, Value)>) -> HashMap<String, Value> {
     alist.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
 }
 
-fn same_args(expected: &HashMap<String, Value>, got: &ValueMap) {
+fn same_args(expected: &HashMap<String, Value>, got: &ArgvMap) {
     for (k, ve) in expected.iter() {
         match got.map.find(k) {
             None => panic!("EXPECTED has '{}' but GOT does not.", k),

@@ -51,6 +51,7 @@ macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
 )
 
+#[deriving(Clone)]
 pub struct Parser {
     pub program: String,
     pub full_doc: String,
@@ -84,7 +85,7 @@ impl Parser {
         None
     }
 
-    pub fn parse_argv<'a>(&'a self, argv: &[&str], options_first: bool)
+    pub fn parse_argv<'a>(&'a self, argv: Vec<String>, options_first: bool)
                          -> Result<Argv<'a>, String> {
         Argv::new(self, argv, options_first)
     }
@@ -569,7 +570,7 @@ impl<'a> PatParser<'a> {
     }
 }
 
-#[deriving(Show)]
+#[deriving(Clone, Show)]
 enum Pattern {
     Alternates(Vec<Pattern>),
     Sequence(Vec<Pattern>),
@@ -805,7 +806,7 @@ struct ArgvToken {
 }
 
 impl<'a> Argv<'a> {
-    fn new(dopt: &'a Parser, argv: &[&str], options_first: bool)
+    fn new(dopt: &'a Parser, argv: Vec<String>, options_first: bool)
           -> Result<Argv<'a>, String> {
         let mut a = Argv {
             positional: vec!(),
@@ -840,6 +841,9 @@ impl<'a> Argv<'a> {
                         atom: self.dopt.descs.resolve(&Short(c)),
                         arg: None,
                     };
+                    if !self.dopt.descs.contains_key(&tok.atom) {
+                        err!("Unknown flag: '{}'", &tok.atom)
+                    }
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
                     } else {

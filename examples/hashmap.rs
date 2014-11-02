@@ -1,9 +1,8 @@
 extern crate docopt;
 
-use docopt::docopt;
+use docopt::Docopt;
 
-fn main() {
-    let args = docopt("
+static USAGE: &'static str = "
 Naval Fate.
 
 Usage:
@@ -20,7 +19,12 @@ Options:
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Moored (anchored) mine.
   --drifting    Drifting mine.
-").unwrap_or_else(|e| e.exit());
+";
+
+fn main() {
+    let args = Docopt::new(USAGE)
+                      .and_then(|dopt| dopt.parse())
+                      .unwrap_or_else(|e| e.exit());
     println!("{}", args);
 
     // You can conveniently access values with `get_{bool,count,str,vec}`

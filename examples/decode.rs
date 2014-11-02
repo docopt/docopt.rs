@@ -1,19 +1,9 @@
 extern crate serialize;
 extern crate docopt;
 
-use docopt::docopt;
+use docopt::Docopt;
 
-#[deriving(Decodable, Show)]
-struct Args {
-    flag_speed: int,
-    flag_drifting: bool,
-    arg_name: Vec<String>,
-    arg_x: Option<int>,
-    arg_y: Option<int>,
-}
-
-fn main() {
-    let args: Args = docopt("
+static USAGE: &'static str = "
 Naval Fate.
 
 Usage:
@@ -30,7 +20,21 @@ Options:
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Moored (anchored) mine.
   --drifting    Drifting mine.
-").unwrap_or_else(|e| e.exit()).decode_must();
+";
+
+#[deriving(Decodable, Show)]
+struct Args {
+    flag_speed: int,
+    flag_drifting: bool,
+    arg_name: Vec<String>,
+    arg_x: Option<int>,
+    arg_y: Option<int>,
+}
+
+fn main() {
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
     println!("{}", args);
 
     println!("\nSome values:");

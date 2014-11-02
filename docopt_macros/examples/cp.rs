@@ -1,10 +1,9 @@
 #![feature(phase)]
 
-#[phase(plugin)] extern crate docopt_macros;
-extern crate docopt;
 extern crate serialize;
 
-use docopt::FlagParser;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 docopt!(Args deriving Show, "
 Usage: cp [options] <src> <dst>
@@ -17,6 +16,6 @@ Options:
 ")
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     println!("{}", args);
 }

@@ -1,10 +1,9 @@
 #![feature(phase)]
 
 extern crate serialize;
-#[phase(plugin)] extern crate docopt_macros;
-extern crate docopt;
 
-use docopt::FlagParser;
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 docopt!(pub Args deriving Show, "
 Naval Fate.
@@ -26,7 +25,7 @@ Options:
 ", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int)
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     println!("{}", args);
 
     println!("\nSome values:");

@@ -1,9 +1,10 @@
+#![allow(non_snake_case)]
 #![feature(phase)]
-extern crate serialize;
-#[phase(plugin)] extern crate docopt_macros;
-extern crate docopt;
 
-use docopt::FlagParser;
+extern crate serialize;
+
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 docopt!(Args deriving Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
@@ -38,6 +39,6 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     println!("{}", args);
 }

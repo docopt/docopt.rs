@@ -2,6 +2,9 @@
 #![crate_type = "dylib"]
 #![feature(plugin_registrar, macro_rules, quote)]
 
+//! This crate defines the `docopt!` macro. It is documented in the
+//! documentation of the `docopt` crate.
+
 extern crate syntax;
 extern crate rustc;
 extern crate docopt;
@@ -20,7 +23,7 @@ use syntax::parse::token;
 use syntax::print::pprust;
 use syntax::ptr::P;
 
-use docopt::{DEFAULT_CONFIG, Docopt, ValueMap};
+use docopt::{Docopt, ArgvMap};
 use docopt::parse::{Options, Atom, Positional, Zero, One};
 
 #[plugin_registrar]
@@ -59,13 +62,12 @@ impl Parsed {
         let struct_name = self.struct_info.name;
         let full_doc = self.doc.parser().full_doc.as_slice();
         its.push(quote_item!(cx,
-            impl docopt::FlagParser for $struct_name {
+            impl $struct_name {
                 #[allow(dead_code)]
-                fn parse_args(conf: docopt::Config, args: &[&str])
-                             -> Result<$struct_name, docopt::Error> {
-                    docopt::docopt_args(conf, args, $full_doc).and_then(|v| {
-                        v.decode()
-                    })
+                fn docopt() -> docopt::Docopt {
+                    // The unwrap is justified here because this code
+                    // gen only happens if the Docopt usage string is valid.
+                    docopt::Docopt::new($full_doc).unwrap()
                 }
             }
         ).unwrap());
@@ -101,7 +103,7 @@ impl Parsed {
     fn struct_fields(&self, cx: &ExtCtxt) -> Vec<ast::StructField> {
         let mut fields: Vec<ast::StructField> = vec!();
         for (atom, opts) in self.doc.parser().descs.iter() {
-            let name = ValueMap::key_to_struct_field(atom.to_string().as_slice());
+            let name = ArgvMap::key_to_struct_field(atom.to_string().as_slice());
             let ty = match self.types.find(atom) {
                 None => self.pat_type(cx, atom, opts),
                 Some(ty) => ty.clone(),
@@ -176,7 +178,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         ).into_iter()
          .map(|(ident, ty)| {
              let field_name = token::get_ident(ident).to_string();
-             let key = ValueMap::struct_field_to_key(field_name.as_slice());
+             let key = ArgvMap::struct_field_to_key(field_name.as_slice());
              (Atom::new(key.as_slice()), ty)
           })
          .collect::<HashMap<Atom, P<ast::Ty>>>();
@@ -185,7 +187,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         // This config does not matter because we're only asking for the
         // usage patterns in the Docopt string. The configuration does not
         // affect the retrieval of usage patterns.
-        let doc = match Docopt::new(DEFAULT_CONFIG.clone(), docstr.as_slice()) {
+        let doc = match Docopt::new(docstr) {
             Ok(doc) => doc,
             Err(err) => {
                 self.cx.span_err(self.cx.call_site(),
