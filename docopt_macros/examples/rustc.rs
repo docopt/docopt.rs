@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 #![feature(phase)]
 
 extern crate serialize;

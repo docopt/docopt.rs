@@ -84,15 +84,13 @@ impl Parsed {
             ctor_id: None
         };
 
-        let sp = codemap::DUMMY_SP;
-        let mut traits = vec![meta_item(cx, "Decodable")];
-        for trait_name in self.struct_info.deriving.iter() {
-            traits.push(meta_item(cx, trait_name.as_slice()));
-        }
-        let deriving = cx.meta_list(sp, intern("deriving"), traits);
-        let attrs = vec![cx.attribute(codemap::DUMMY_SP, deriving)];
-        let st = cx.item_struct(sp, name.clone(), def);
-        cx.item(sp, name, attrs, st.node.clone()).map(|mut it| {
+        let mut traits = vec!["Decodable".to_string()];
+        traits.push_all(self.struct_info.deriving.as_slice());
+        let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
+                         attribute(cx, "deriving", traits)];
+
+        let st = cx.item_struct(codemap::DUMMY_SP, name.clone(), def);
+        cx.item(codemap::DUMMY_SP, name, attrs, st.node.clone()).map(|mut it| {
             it.vis = vis;
             it
         })
@@ -277,6 +275,14 @@ struct StructInfo {
 
 fn ident(s: &str) -> ast::Ident {
     ast::Ident::new(token::intern(s))
+}
+
+fn attribute<S, T>(cx: &ExtCtxt, name: S, items: Vec<T>) -> ast::Attribute
+            where S: Str, T: Str {
+    let sp = codemap::DUMMY_SP;
+    let its = items.into_iter().map(|s| meta_item(cx, s.as_slice())).collect();
+    let mi = cx.meta_list(sp, intern(name.as_slice()), its);
+    cx.attribute(sp, mi)
 }
 
 fn meta_item(cx: &ExtCtxt, s: &str) -> P<ast::MetaItem> {
