@@ -17,9 +17,6 @@ feedback**.
 
 [http://burntsushi.net/rustdoc/docopt](http://burntsushi.net/rustdoc/docopt/index.html)
 
-There are several examples and most things are documented, but not quite well 
-enough yet.
-
 
 ### Installation
 
@@ -39,36 +36,64 @@ If you don't want to use the macro, then you can change your entry to
 Here is a full working example:
 
 ```rust
-#![feature(phase)]
 extern crate serialize;
-#[phase(plugin)] extern crate docopt_macros;
 extern crate docopt;
 
-use docopt::FlagParser;
+use docopt::Docopt;
 
-docopt!(Args deriving Show, "
-Usage: cp [-a] SOURCE DEST
-       cp [-a] SOURCE... DIR
+// Write the Docopt usage string.
+static USAGE: &'static str = "
+Usage: cp [-a] <source> <dest>
+       cp [-a] <source>... <dir>
 
 Options:
     -a, --archive  Copy everything.
-")
+";
+
+#[deriving(Decodable, Show)]
+struct Args {
+    arg_source: Vec<String>,
+    arg_dest: String,
+    arg_dir: String,
+    flag_archive: bool,
+}
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
-
-    // The Args struct satisfies `Show` because of the `deriving Show`.
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
     println!("{}", args);
-
-    // Try running with `example -a file1 file2 dest/`.
-    assert!(args.flag_archive);
-    assert_eq!(args.arg_SOURCE, vec!["file1".to_string(), "file2".to_string()]);
-    assert_eq!(args.arg_DIR, "dest/".to_string());
 }
 ```
 
-The `docopt!` macro will create a struct for you! The field names map like 
-this:
+Here is the same example, but with the use of the `docopt!` macro, which will
+*generate a struct for you*:
+
+```rust
+#![feature(phase)]
+
+extern crate serialize;
+
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
+
+docopt!(Args deriving Show, "
+Usage: cp [options] <src> <dst>
+       cp [options] <src>... <dir>
+       cp --help
+
+Options:
+  -h, --help       Show this message.
+  -a, --archive    Copy everything.
+")
+
+fn main() {
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    println!("{}", args);
+}
+```
+
+The field names of the struct map like this:
 
 ```
 -g       => flag_g
@@ -78,13 +103,9 @@ FILE     => arg_FILE
 build    => cmd_build
 ```
 
-The `Args` struct has three static methods defined for it: `parse`, 
-`parse_conf` and `parse_args`. These correspond to the module functions
-[docopt](http://burntsushi.net/rustdoc/docopt/fn.docopt.html),
-[docopt_conf](http://burntsushi.net/rustdoc/docopt/fn.docopt_conf.html)
-and [docopt_args](http://burntsushi.net/rustdoc/docopt/fn.docopt_args.html)
-respectively. (The only difference is that the `parse_*` methods don't
-take a Docopt string.)
+The `Args` struct has one static method defined for it: `docopt`. The method
+returns a normal `Docopt` value, which can be used to set configuration
+options, `argv` and parse or decode command line arguments.
 
 
 ### Data validation example
@@ -93,16 +114,16 @@ Here's another example that shows how to specify the types of your arguments:
 
 ```rust
 #![feature(phase)]
+
 extern crate serialize;
-#[phase(plugin)] extern crate docopt_macros;
+
 extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
-use docopt::FlagParser;
-
-docopt!(Args deriving Show, "Usage: add <x> <y>", arg_x: int, arg_y: int)
+docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int)
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     println!("x: {:d}, y: {:d}", args.arg_x, args.arg_y);
 }
 ```
@@ -116,19 +137,23 @@ argument. In this case, both `arg_x` and `arg_y` would have been `String`.
 If any value cannot be decoded into a value with the right type, then an error 
 will be shown to the user.
 
+And of course, you don't need the macro to do this. You can do the same thing
+with a manually written struct too.
+
 
 ### Modeling `rustc`
 
 Here's a selected subset for some of `rustc`'s options. This also shows how to 
-restrict values to a list of choices via an `enum` type.
+restrict values to a list of choices via an `enum` type and demonstrates more
+Docopt features.
 
 ```rust
 #![feature(phase)]
-extern crate serialize;
-#[phase(plugin)] extern crate docopt_macros;
-extern crate docopt;
 
-use docopt::FlagParser;
+extern crate serialize;
+
+extern crate docopt;
+#[phase(plugin)] extern crate docopt_macros;
 
 docopt!(Args deriving Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
@@ -163,7 +188,7 @@ impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 }
 
 fn main() {
-    let args: Args = FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     println!("{}", args);
 }
 ```
@@ -183,6 +208,54 @@ find the generated struct:
 struct Args {
     pub arg_x: int,
     pub arg_y: int,
+}
+```
+
+
+### Traditional Docopt API
+
+The reference implementation of Docopt returns a Python dictionary with names
+like `<arg>` or `--flag`. If you prefer this access pattern, then you can use
+`docopt::ArgvMap`. The disadvantage is that you have to do all of your type
+conversion manually. Here's the canonical Docopt example with a hash table:
+
+```rust
+extern crate docopt;
+
+use docopt::Docopt;
+
+static USAGE: &'static str = "
+Naval Fate.
+
+Usage:
+  naval_fate.py ship new <name>...
+  naval_fate.py ship <name> move <x> <y> [--speed=<kn>]
+  naval_fate.py ship shoot <x> <y>
+  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+  naval_fate.py (-h | --help)
+  naval_fate.py --version
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored (anchored) mine.
+  --drifting    Drifting mine.
+";
+
+fn main() {
+    let args = Docopt::new(USAGE)
+                      .and_then(|dopt| dopt.parse())
+                      .unwrap_or_else(|e| e.exit());
+    println!("{}", args);
+
+    // You can conveniently access values with `get_{bool,count,str,vec}`
+    // functions. If the key doesn't exist (or if, e.g., you use `get_str` on
+    // a switch), then a sensible default value is returned.
+    println!("\nSome values:");
+    println!("  Speed: {}", args.get_str("--speed"));
+    println!("  Drifting? {}", args.get_bool("--drifting"));
+    println!("  Names: {}", args.get_vec("<name>"));
 }
 ```
 
