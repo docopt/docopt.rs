@@ -548,25 +548,38 @@ impl ArgvMap {
     /// Finds the value corresponding to `key` and calls `as_bool()` on it.
     /// If the key does not exist, `false` is returned.
     pub fn get_bool(&self, key: &str) -> bool {
-        self.find(&key).map(|v| v.as_bool()).unwrap_or(false)
+        self.find(key).map(|v| v.as_bool()).unwrap_or(false)
     }
 
     /// Finds the value corresponding to `key` and calls `as_count()` on it.
     /// If the key does not exist, `0` is returned.
     pub fn get_count(&self, key: &str) -> uint {
-        self.find(&key).map(|v| v.as_count()).unwrap_or(0)
+        self.find(key).map(|v| v.as_count()).unwrap_or(0)
     }
 
     /// Finds the value corresponding to `key` and calls `as_str()` on it.
     /// If the key does not exist, `""` is returned.
     pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
-        self.find(&key).map(|v| v.as_str()).unwrap_or("")
+        self.find(key).map(|v| v.as_str()).unwrap_or("")
     }
 
     /// Finds the value corresponding to `key` and calls `as_vec()` on it.
     /// If the key does not exist, `vec!()` is returned.
     pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
-        self.find(&key).map(|v| v.as_vec()).unwrap_or(vec!())
+        self.find(key).map(|v| v.as_vec()).unwrap_or(vec!())
+    }
+
+    /// Return the raw value corresponding to some `key`.
+    ///
+    /// `key` should be a string in the traditional Docopt format. e.g.,
+    /// `<arg>` or `--flag`.
+    pub fn find<'a>(&'a self, key: &str) -> Option<&'a Value> {
+        self.map.find(&key.to_string())
+    }
+
+    /// Return the number of values, not including synonyms.
+    pub fn len(&self) -> uint {
+        self.map.len()
     }
 
     /// Converts a Docopt key to a struct field name.
@@ -633,19 +646,9 @@ impl ArgvMap {
     }
 }
 
-impl Collection for ArgvMap {
-    fn len(&self) -> uint { self.map.len() }
-}
-
-impl<'k> Map<&'k str, Value> for ArgvMap {
-    fn find<'a>(&'a self, key: & &'k str) -> Option<&'a Value> {
-        self.map.find(&key.to_string())
-    }
-}
-
 impl fmt::Show for ArgvMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_empty() {
+        if self.len() == 0 {
             return write!(f, "{{EMPTY}}");
         }
 
@@ -795,7 +798,7 @@ impl Decoder {
         self.stack.push(DecoderItem {
             key: key.clone(),
             struct_field: struct_field.to_string(),
-            val: self.vals.find(&key.as_slice()).map(|v| v.clone()),
+            val: self.vals.find(key.as_slice()).map(|v| v.clone()),
         });
     }
 
@@ -944,8 +947,8 @@ impl serialize::Decoder<Error> for Decoder {
         self.push(f_name);
         f(self)
     }
-    fn read_tuple<T>(&mut self,
-                     _: |&mut Decoder, uint| -> Result<T, Error>)
+    fn read_tuple<T>(&mut self, _: uint,
+                     _: |&mut Decoder| -> Result<T, Error>)
                      -> Result<T, Error> {
         unimplemented!()
     }
@@ -954,8 +957,8 @@ impl serialize::Decoder<Error> for Decoder {
                          -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct<T>(&mut self, _: &str,
-                            _: |&mut Decoder, uint| -> Result<T, Error>)
+    fn read_tuple_struct<T>(&mut self, _: &str, _: uint,
+                            _: |&mut Decoder| -> Result<T, Error>)
                             -> Result<T, Error> {
         unimplemented!()
     }

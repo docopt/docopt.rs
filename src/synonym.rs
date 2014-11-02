@@ -35,6 +35,18 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.syns.iter()
     }
 
+    pub fn find<'a>(&'a self, k: &K) -> Option<&'a V> {
+        self.with_key(k, |k| self.vals.find(k))
+    }
+
+    pub fn contains_key(&self, k: &K) -> bool {
+        self.with_key(k, |k| self.vals.contains_key(k))
+    }
+    
+    pub fn len(&self) -> uint {
+        self.vals.len()
+    }
+
     fn with_key<T>(&self, k: &K, with: |&K| -> T) -> T {
         if self.syns.contains_key(k) {
             with(&self.syns[*k])
@@ -48,37 +60,20 @@ impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
     pub fn resolve(&self, k: &K) -> K {
         self.with_key(k, |k| k.clone())
     }
+
     pub fn get<'a>(&'a self, k: &K) -> &'a V {
         self.find(k).unwrap()
     }
-}
 
-impl<K: Eq + Hash, V> Collection for SynonymMap<K, V> {
-    fn len(&self) -> uint { self.vals.len() }
-}
-
-impl<K: Eq + Hash, V> Mutable for SynonymMap<K, V> {
-    fn clear(&mut self) { self.vals.clear(); self.syns.clear(); }
-}
-
-impl<K: Eq + Hash, V> Map<K, V> for SynonymMap<K, V> {
-    fn find<'a>(&'a self, k: &K) -> Option<&'a V> {
-        self.with_key(k, |k| self.vals.find(k))
-    }
-    fn contains_key(&self, k: &K) -> bool {
-        self.with_key(k, |k| self.vals.contains_key(k))
-    }
-}
-
-impl<K: Eq + Hash + Clone, V> MutableMap<K, V> for SynonymMap<K, V> {
-    fn find_mut<'a>(&'a mut self, k: &K) -> Option<&'a mut V> {
+    pub fn find_mut<'a>(&'a mut self, k: &K) -> Option<&'a mut V> {
         if self.syns.contains_key(k) {
             self.vals.find_mut(&self.syns[*k])
         } else {
             self.vals.find_mut(k)
         }
     }
-    fn swap(&mut self, k: K, mut new: V) -> Option<V> {
+
+    pub fn swap(&mut self, k: K, mut new: V) -> Option<V> {
         if self.syns.contains_key(&k) {
             let old = self.vals.find_mut(&k).unwrap();
             mem::swap(old, &mut new);
@@ -87,14 +82,9 @@ impl<K: Eq + Hash + Clone, V> MutableMap<K, V> for SynonymMap<K, V> {
             self.vals.swap(k, new)
         }
     }
-    fn pop(&mut self, k: &K) -> Option<V> {
-        if self.syns.contains_key(k) {
-            let old = self.vals.pop(&self.syns[*k]);
-            self.syns.remove(k);
-            old
-        } else {
-            self.vals.pop(k)
-        }
+
+    pub fn insert(&mut self, k: K, v: V) -> bool {
+        self.swap(k, v).is_none()
     }
 }
 
