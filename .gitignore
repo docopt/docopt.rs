@@ -3,5 +3,5 @@ doc
 tags
 build
 target
-scratch.rs
+scratch*
 Cargo.lock
