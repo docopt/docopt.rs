@@ -344,7 +344,7 @@ impl Docopt {
     /// enabled by default), then `Help` or `Version` errors are returned
     /// if `--help` or `--version` is present.
     pub fn parse(&self) -> Result<ArgvMap, Error> {
-        let argv = self.argv.clone().unwrap_or_else(|| ::std::os::args());
+        let argv = self.argv.clone().unwrap_or_else(|| Docopt::get_argv());
         let vals = try!(
             self.p.parse_argv(argv, self.options_first)
                 .map_err(|s| self.err_with_usage(Argv(s)))
@@ -427,6 +427,10 @@ impl Docopt {
 
     fn err_with_usage(&self, e: Error) -> Error {
         WithProgramUsage(box e, self.p.usage.as_slice().trim().to_string())
+    }
+
+    fn get_argv() -> Vec<String> {
+        ::std::os::args().as_slice().slice_from(1).to_vec()
     }
 }
 
