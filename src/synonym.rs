@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::collections::hashmap::{Entries, Keys};
+use std::collections::hash_map::{Entries, Keys};
 use std::fmt::Show;
 use std::hash::Hash;
 use std::mem;
