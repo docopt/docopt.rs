@@ -216,6 +216,7 @@ extern crate regex;
 extern crate serialize;
 
 use std::collections::HashMap;
+use std::error::Error as StdError;
 use std::fmt;
 use std::from_str::{FromStr, from_str};
 use std::num;
@@ -328,6 +329,28 @@ impl fmt::Show for Error {
             Usage(ref s) | Argv(ref s) | Decode(ref s) | Version(ref s) => {
                 write!(f, "{}", s)
             }
+        }
+    }
+}
+
+impl StdError for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Usage(..) => "invalid usage string",
+            Argv(..) => "failed to parse specified argv",
+            NoMatch => "could not match specified argv",
+            Decode(..) => "failed to decode",
+            WithProgramUsage(..) => "failed to parse specified argv",
+            Help => "help message requested",
+            Version(..) => "version message requested",
+        }
+    }
+
+    fn detail(&self) -> Option<String> { Some(self.to_string()) }
+    fn cause(&self) -> Option<&StdError> {
+        match *self {
+            WithProgramUsage(ref cause, _) => Some(&**cause as &StdError),
+            _ => None,
         }
     }
 }
