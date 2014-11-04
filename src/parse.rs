@@ -39,7 +39,7 @@
 //   - Write a specification for Docopt.
 
 use std::collections::{HashMap, HashSet};
-use std::collections::hashmap::{Vacant, Occupied};
+use std::collections::hash_map::{Occupied, Vacant};
 use std::fmt;
 use regex;
 use regex::Regex;
