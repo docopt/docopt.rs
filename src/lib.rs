@@ -746,12 +746,12 @@ impl Value {
     /// Plain strings are `true` if present and `false` otherwise.
     /// Lists are `true` if non-empty and `false` otherwise.
     pub fn as_bool(&self) -> bool {
-        match self {
-            &Switch(b) => b,
-            &Counted(n) => n > 0,
-            &Plain(None) => false,
-            &Plain(Some(_)) => true,
-            &List(ref vs) => !vs.is_empty(),
+        match *self {
+            Switch(b) => b,
+            Counted(n) => n > 0,
+            Plain(None) => false,
+            Plain(Some(_)) => true,
+            List(ref vs) => !vs.is_empty(),
         }
     }
 
@@ -761,12 +761,12 @@ impl Value {
     /// Plain strings are `1` if present and `0` otherwise.
     /// Lists correspond to its length.
     pub fn as_count(&self) -> uint {
-        match self {
-            &Switch(b) => if b { 1 } else { 0 },
-            &Counted(n) => n,
-            &Plain(None) => 0,
-            &Plain(Some(_)) => 1,
-            &List(ref vs) => vs.len(),
+        match *self {
+            Switch(b) => if b { 1 } else { 0 },
+            Counted(n) => n,
+            Plain(None) => 0,
+            Plain(Some(_)) => 1,
+            List(ref vs) => vs.len(),
         }
     }
 
@@ -774,9 +774,9 @@ impl Value {
     ///
     /// All values return an empty string except for a non-empty plain string.
     pub fn as_str<'a>(&'a self) -> &'a str {
-        match self {
-            &Switch(_) | &Counted(_) | &Plain(None) | &List(_) => "",
-            &Plain(Some(ref s)) => s.as_slice(),
+        match *self {
+            Switch(_) | Counted(_) | Plain(None) | List(_) => "",
+            Plain(Some(ref s)) => s.as_slice(),
         }
     }
 
@@ -785,10 +785,10 @@ impl Value {
     /// Booleans, repetitions and empty strings correspond to an empty list.
     /// Plain strings correspond to a list of length `1`.
     pub fn as_vec<'a>(&'a self) -> Vec<&'a str> {
-        match self {
-            &Switch(_) | &Counted(_) | &Plain(None) => vec!(),
-            &Plain(Some(ref s)) => vec!(s.as_slice()),
-            &List(ref vs) => vs.iter().map(|s| s.as_slice()).collect(),
+        match *self {
+            Switch(_) | Counted(_) | Plain(None) => vec!(),
+            Plain(Some(ref s)) => vec!(s.as_slice()),
+            List(ref vs) => vs.iter().map(|s| s.as_slice()).collect(),
         }
     }
 }
