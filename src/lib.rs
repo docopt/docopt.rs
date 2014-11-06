@@ -217,6 +217,7 @@ extern crate serialize;
 
 use std::collections::HashMap;
 use std::error::Error as StdError;
+use std::error::FromError;
 use std::fmt;
 use std::from_str::{FromStr, from_str};
 use std::num;
@@ -352,6 +353,12 @@ impl StdError for Error {
             WithProgramUsage(ref cause, _) => Some(&**cause as &StdError),
             _ => None,
         }
+    }
+}
+
+impl FromError<Error> for Box<StdError> {
+    fn from_error(err: Error) -> Box<StdError> {
+        box err
     }
 }
 
