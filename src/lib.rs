@@ -695,7 +695,7 @@ impl fmt::Show for ArgvMap {
         let mut first = true;
         for &k in keys.iter() {
             if !first { try!(write!(f, "\n")); } else { first = false; }
-            match reverse.find(&k) {
+            match reverse.get(&k) {
                 None => {
                     try!(write!(f, "{} => {}", k, self.map.get(k)))
                 }
