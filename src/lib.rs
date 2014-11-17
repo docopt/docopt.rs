@@ -210,14 +210,13 @@
 #![experimental]
 #![deny(missing_docs)]
 #![feature(macro_rules)]
-#![feature(globs)]
 
 extern crate libc;
 extern crate regex;
 extern crate serialize;
 
-pub use Value::*;
-pub use Error::*;
+pub use Value::{Switch,Counted,Plain,List};
+pub use Error::{Usage,Argv,NoMatch,Decode,WithProgramUsage,Help,Version};
 
 use std::collections::HashMap;
 use std::error::Error as StdError;
