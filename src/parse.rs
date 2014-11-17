@@ -37,6 +37,9 @@
 // Long term:
 //
 //   - Write a specification for Docopt.
+pub use self::Argument::*;
+pub use self::Atom::*;
+use self::Pattern::*;
 
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::{Vacant, Occupied};
