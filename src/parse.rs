@@ -37,6 +37,9 @@
 // Long term:
 //
 //   - Write a specification for Docopt.
+pub use self::Argument::{Zero, One};
+pub use self::Atom::{Short,Long,Command,Positional};
+use self::Pattern::{Alternates,Sequence,Optional,Repeat,PatAtom};
 
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::{Vacant, Occupied};
@@ -1171,8 +1174,8 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 for p in ps.iter() {
                     match p {
                         &PatAtom(ref a @ Short(_)) | &PatAtom(ref a @Long(_)) => {
-                            let argv_count = self.argv.counts.find_copy(a).unwrap_or(0);
-                            let max_count = base.max_counts.find_copy(a).unwrap_or(0);
+                            let argv_count = self.argv.counts.get(a).cloned().unwrap_or(0);
+                            let max_count = base.max_counts.get(a).cloned().unwrap_or(0);
                             if argv_count > max_count {
                                 base.use_optional_flag(a);
                             }
