@@ -131,7 +131,8 @@
 //! impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
 //!     fn decode(d: &mut D) -> Result<OptLevel, E> {
 //!         Ok(match try!(d.read_uint()) {
-//!             0 => Zero, 1 => One, 2 => Two, 3 => Three,
+//!             0 => OptLevel::Zero, 1 => OptLevel::One,
+//!             2 => OptLevel::Two, 3 => OptLevel::Three,
 //!             n => {
 //!                 let err = format!("Could not decode '{}' as opt-level.", n);
 //!                 return Err(d.error(err.as_slice()));
@@ -151,8 +152,8 @@
 //! assert_eq!(args.arg_INPUT, "docopt.rs".to_string());
 //! assert_eq!(args.flag_L, vec![s("."), s("..")]);
 //! assert_eq!(args.flag_cfg, vec![s("a")]);
-//! assert_eq!(args.flag_opt_level, Some(Two));
-//! assert_eq!(args.flag_emit, Some(Ir));
+//! assert_eq!(args.flag_opt_level, Some(OptLevel::Two));
+//! assert_eq!(args.flag_emit, Some(Emit::Ir));
 //! # }
 //! ```
 //!

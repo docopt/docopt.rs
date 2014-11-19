@@ -28,7 +28,8 @@ enum OptLevel { Zero, One, Two, Three }
 impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
     fn decode(d: &mut D) -> Result<OptLevel, E> {
         Ok(match try!(d.read_uint()) {
-            0 => Zero, 1 => One, 2 => Two, 3 => Three,
+            0 => OptLevel::Zero, 1 => OptLevel::One,
+            2 => OptLevel::Two, 3 => OptLevel::Three,
             n => {
                 let err = format!("Could not decode '{}' as opt-level.", n);
                 return Err(d.error(err.as_slice()));
