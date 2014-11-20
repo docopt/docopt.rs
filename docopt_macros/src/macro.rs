@@ -102,7 +102,7 @@ impl Parsed {
         let mut fields: Vec<ast::StructField> = vec!();
         for (atom, opts) in self.doc.parser().descs.iter() {
             let name = ArgvMap::key_to_struct_field(atom.to_string().as_slice());
-            let ty = match self.types.find(atom) {
+            let ty = match self.types.get(atom) {
                 None => self.pat_type(cx, atom, opts),
                 Some(ty) => ty.clone(),
             };

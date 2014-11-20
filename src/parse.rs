@@ -280,7 +280,7 @@ impl Parser {
 }
 
 impl fmt::Show for Parser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fn sorted<T: Ord>(mut xs: Vec<T>) -> Vec<T> {
             xs.sort(); xs
         }
@@ -923,7 +923,7 @@ impl<'a> Argv<'a> {
 }
 
 impl<'a> fmt::Show for Argv<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::FormatError> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         try!(writeln!(f, "Positional: {}", self.positional))
         try!(writeln!(f, "Flags: {}", self.flags))
         try!(writeln!(f, "Counts: {}", self.counts))
