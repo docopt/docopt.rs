@@ -1,7 +1,14 @@
 [package]
 name = "docopt_macros"
-version = "0.6.5"
+version = "0.6.8"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = "Docopt macro for command line argument parsing."
+documentation = "http://burntsushi.net/rustdoc/docopt/"
+homepage = "https://github.com/docopt/docopt.rs"
+repository = "https://github.com/docopt/docopt.rs"
+readme = "../README.md"
+keywords = ["docopt", "argument", "command", "argv"]
+license = "Unlicense"
 
 [lib]
 name = "docopt_macros"
@@ -10,3 +17,4 @@ plugin = true
 
 [dependencies.docopt]
 path = ".."
+version = "~0.6.8"

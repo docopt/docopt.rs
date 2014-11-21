@@ -2,3 +2,10 @@
 name = "docopt"
 version = "0.6.8"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = "Command line argument parsing."
+documentation = "http://burntsushi.net/rustdoc/docopt/"
+homepage = "https://github.com/docopt/docopt.rs"
+repository = "https://github.com/docopt/docopt.rs"
+readme = "README.md"
+keywords = ["docopt", "argument", "command", "argv"]
+license = "Unlicense"
