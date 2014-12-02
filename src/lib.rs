@@ -245,6 +245,31 @@ macro_rules! regex(
 )
 
 /// Represents the different types of Docopt errors.
+///
+/// This error type has a lot of variants. In the common case, you probably
+/// don't care why Docopt has failed, and would rather just quit the program
+/// and show an error message instead. The `exit` method defined on the `Error`
+/// type will do just that. It will also set the exit code appropriately
+/// (no error for `--help` or `--version`, but an error code for bad usage,
+/// bad argv, no match or bad decode).
+///
+/// ### Example
+///
+/// Generally, you want to parse the usage string, try to match the argv
+/// and then quit the program if there was an error reported at any point
+/// in that process. This can be achieved like so:
+///
+/// ```no_run
+/// use docopt::Docopt;
+///
+/// static USAGE: &'static str = "
+/// Usage: ...
+/// ";
+///
+/// let args = Docopt::new(USAGE)
+///                   .and_then(|d| d.parse())
+///                   .unwrap_or_else(|e| e.exit());
+/// ```
 pub enum Error {
     /// Parsing the usage string failed.
     ///
