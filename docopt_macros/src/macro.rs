@@ -238,7 +238,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
     fn parse_type_annotation(p: &mut Parser) -> (ast::Ident, P<ast::Ty>) {
         let ident = p.parse_ident();
         p.expect(&token::Colon);
-        let ty = p.parse_ty();
+        let ty = p.parse_ty(false);
         (ident, ty)
     }
 
