@@ -47,7 +47,7 @@ use std::fmt;
 use regex;
 use regex::Regex;
 
-use {Value, Switch, Counted, Plain, List};
+use Value::{mod, Switch, Counted, Plain, List};
 use synonym::SynonymMap;
 
 macro_rules! err(
