@@ -205,7 +205,6 @@
 //! ```
 
 #![crate_name = "docopt"]
-#![license = "UNLICENSE"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
 #![experimental]
