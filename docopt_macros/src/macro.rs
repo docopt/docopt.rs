@@ -17,6 +17,7 @@ use syntax::codemap;
 use syntax::ext::base::{ExtCtxt, MacResult, MacItems, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
+use syntax::owned_slice::OwnedSlice;
 use syntax::parse::common::SeqSep;
 use syntax::parse::parser::Parser;
 use syntax::parse::token;
@@ -114,21 +115,22 @@ impl Parsed {
     /// Returns an inferred type for a usage pattern.
     /// This is only invoked when a type annotation is not present.
     fn pat_type(&self, cx: &ExtCtxt, atom: &Atom, opts: &Options) -> P<ast::Ty> {
+        let sp = codemap::DUMMY_SP;
         match (opts.repeats, &opts.arg) {
             (false, &Zero) => {
                 match atom {
-                    &Positional(_) => quote_ty!(cx, String),
-                    _ => quote_ty!(cx, bool),
+                    &Positional(_) => cx.ty_ident(sp, ident("String")),
+                    _ => cx.ty_ident(sp, ident("bool")),
                 }
             }
             (true, &Zero) => {
                 match atom {
-                    &Positional(_) => quote_ty!(cx, Vec<String>),
-                    _ => quote_ty!(cx, uint),
+                    &Positional(_) => ty_vec_string(cx),
+                    _ => cx.ty_ident(sp, ident("uint")),
                 }
             }
-            (false, &One(_)) => quote_ty!(cx, String),
-            (true, &One(_)) => quote_ty!(cx, Vec<String>),
+            (false, &One(_)) => cx.ty_ident(sp, ident("String")),
+            (true, &One(_)) => ty_vec_string(cx),
         }
     }
 
@@ -291,4 +293,20 @@ fn meta_item(cx: &ExtCtxt, s: &str) -> P<ast::MetaItem> {
 
 fn intern(s: &str) -> token::InternedString {
     token::intern_and_get_ident(s)
+}
+
+fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
+    let sp = codemap::DUMMY_SP;
+    let tystr = ast::AngleBracketedParameterData {
+        lifetimes: vec![],
+        types: OwnedSlice::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
+    };
+    cx.ty_path(ast::Path {
+        span: sp,
+        global: false,
+        segments: vec![ast::PathSegment {
+            identifier: ident("Vec"),
+            parameters: ast::PathParameters::AngleBracketedParameters(tystr),
+        }]
+    })
 }
