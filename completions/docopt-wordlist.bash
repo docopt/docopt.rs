@@ -1,4 +1,3 @@
-
 # This is your basic tab completion that will work well with commands that
 # have only one usage (i.e., no distinct sub-commands).
 #
@@ -15,7 +14,7 @@ function _docopt_wordlist {
   gen "$cword" "$wordlist"
 }
 
-# This is a fanciery version of the above that supports commands that have
+# This is a fancier version of the above that supports commands that have
 # multiple sub-commands (i.e., distinct usages like Cargo).
 #
 # This supports sub-command completion only if `$cmd --list` shows a list of
@@ -46,7 +45,7 @@ function _docopt_wordlist_commands {
   if [ "$COMP_CWORD" = 1 ]; then
     cmd="${COMP_WORDS[0]}"
     wordlist=$("$cmd" --help 2>&1 | "$DOCOPT_WORDLIST_BIN")
-    wordlist+="$("$cmd" --list | egrep '^ +\w' | awk '{print $1}')"
+    wordlist+=" $("$cmd" --list | egrep '^ +\w' | awk '{print $1}')"
     gen "$cword" "$wordlist"
   else
     for ((i="$COMP_CWORD"; i >= 1; i++)); do
