@@ -1,5 +1,5 @@
 Docopt for Rust with automatic type based decoding (i.e., data validation).
-This implementation conforms to the 
+This implementation conforms to the
 [official description of Docopt](http://docopt.org/) and
 [passes its test suite](https://github.com/docopt/docopt/pull/201).
 
@@ -9,7 +9,8 @@ Licensed under the [UNLICENSE](http://unlicense.org).
 
 
 ### Current status
-Fully functional but the design of the API is up for debate. **I am seeking 
+
+Fully functional but the design of the API is up for debate. **I am seeking
 feedback**.
 
 
@@ -128,13 +129,13 @@ fn main() {
 }
 ```
 
-In this example, specific type annotations were added. They will be 
-automatically inserted into the generated struct. You can override as many (or 
-as few) fields as you want. If you don't specify a type, then one of `bool`, 
-`uint`, `String` or `Vec<String>` will be chosen depending on the type of 
+In this example, specific type annotations were added. They will be
+automatically inserted into the generated struct. You can override as many (or
+as few) fields as you want. If you don't specify a type, then one of `bool`,
+`uint`, `String` or `Vec<String>` will be chosen depending on the type of
 argument. In this case, both `arg_x` and `arg_y` would have been `String`.
 
-If any value cannot be decoded into a value with the right type, then an error 
+If any value cannot be decoded into a value with the right type, then an error
 will be shown to the user.
 
 And of course, you don't need the macro to do this. You can do the same thing
@@ -143,7 +144,7 @@ with a manually written struct too.
 
 ### Modeling `rustc`
 
-Here's a selected subset for some of `rustc`'s options. This also shows how to 
+Here's a selected subset for some of `rustc`'s options. This also shows how to
 restrict values to a list of choices via an `enum` type and demonstrates more
 Docopt features.
 
@@ -195,13 +196,13 @@ fn main() {
 
 ### Viewing the generated struct
 
-Generating a struct is pretty magical, but if you want, you can look at it by 
+Generating a struct is pretty magical, but if you want, you can look at it by
 expanding all macros. Say you wrote the above example for `Usage: add <x> <y>`
 into a file called `add.rs`. Then running:
 
     rustc -L path/containing/docopt/lib --pretty expanded add.rs
 
-Will show all macros expanded. In the generated code, you should be able to 
+Will show all macros expanded. In the generated code, you should be able to
 find the generated struct:
 
 ```rust
@@ -258,4 +259,49 @@ fn main() {
     println!("  Names: {}", args.get_vec("<name>"));
 }
 ```
+
+### Tab completion support
+
+This particular implementation bundles a command called `docopt-wordlist` that
+can be used to automate tab completion. This repository also collects some
+basic completion support for various shells (currently only bash) in the
+`completions` directory.
+
+You can use them to setup tab completion on your system. It should work with
+any program that uses Docopt (or rather, any program that outputs usage
+messages that look like Docopt). For example, to get tab completion support for
+Cargo, you'll have to install `docopt-wordlist` and add some voodoo to your
+`$HOME/.bash_completion` file (this may vary for other shells).
+
+Here it is step by step:
+
+```bash
+# Download and build `docopt-wordlist` (as part of the Docopt package)
+$ git clone git://github.com/docopt/docopt.rs
+$ cd docopt.rs
+$ cargo build --release
+
+# Now setup tab completion (for bash)
+$ echo "DOCOPT_WORDLIST_BIN=\"$(pwd)/target/release/docopt-wordlist\"" >> $HOME/.bash_completion
+$ echo "source \"$(pwd)/completions/docopt-wordlist.bash\"" >> $HOME/.bash_completion
+$ echo "complete -F _docopt_wordlist_commands cargo" >> $HOME/.bash_completion
+```
+
+My [CSV toolkit](https://github.com/BurntSushi/xsv) is supported too:
+
+```bash
+# shameless plug...
+$ echo "complete -F _docopt_wordlist_commands xsv" >> $HOME/.bash_completion
+```
+
+Note that this is emphatically a first pass. There are several improvements
+that I'd like to make:
+
+1. Take context into account when completing. For example, it should be
+   possible to only show completions that can lead to a valid Docopt match.
+   This may be hard. (i.e., It may require restructuring Docopt's internals.)
+2. Support more shells. (I'll happily accept pull requests on this one. I doubt
+   I'll venture outside of bash any time soon.)
+3. Make tab completion support more seamless. The way it works right now is
+   pretty hacky by intermingling file/directory completion.
 
