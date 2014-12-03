@@ -9,3 +9,12 @@ repository = "https://github.com/docopt/docopt.rs"
 readme = "README.md"
 keywords = ["docopt", "argument", "command", "argv"]
 license = "Unlicense"
+
+[lib]
+name = "docopt"
+
+[[bin]]
+name = "docopt-wordlist"
+path = "src/wordlist.rs"
+doc = false
+test = false

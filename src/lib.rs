@@ -215,9 +215,6 @@ extern crate libc;
 extern crate regex;
 extern crate serialize;
 
-use Value::{Switch, Counted, Plain, List};
-use Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
-
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::error::FromError;
@@ -225,9 +222,14 @@ use std::fmt;
 use std::str::{FromStr, from_str};
 use std::num;
 use std::num::NumCast;
+
 use serialize::Decodable;
+
 use parse::Parser;
 use synonym::SynonymMap;
+
+use Value::{Switch, Counted, Plain, List};
+use Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
 
 macro_rules! werr(
     ($($arg:tt)*) => (
