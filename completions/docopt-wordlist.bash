@@ -10,7 +10,7 @@ function _docopt_wordlist {
 
   cword=$(_get_cword)
   cmd="${COMP_WORDS[0]}"
-  wordlist=$("$cmd" --help | "$DOCOPT_WORDLIST_BIN")
+  wordlist=$("$cmd" --help 2>&1 | "$DOCOPT_WORDLIST_BIN")
   gen "$cword" "$wordlist"
 }
 
