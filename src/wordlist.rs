@@ -1,5 +1,5 @@
 #![experimental]
-#![feature(if_let, macro_rules)]
+#![feature(macro_rules)]
 
 extern crate regex;
 extern crate serialize;
