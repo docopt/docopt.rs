@@ -1,6 +1,6 @@
 [package]
 name = "docopt_macros"
-version = "0.6.12"
+version = "0.6.13"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Docopt macro for command line argument parsing."
 documentation = "http://burntsushi.net/rustdoc/docopt/"
@@ -17,4 +17,4 @@ plugin = true
 
 [dependencies.docopt]
 path = ".."
-version = "0.6.12"
+version = "0.6.13"
