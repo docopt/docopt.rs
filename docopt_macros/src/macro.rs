@@ -300,6 +300,7 @@ fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     let tystr = ast::AngleBracketedParameterData {
         lifetimes: vec![],
         types: OwnedSlice::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
+        bindings: OwnedSlice::empty(),
     };
     cx.ty_path(ast::Path {
         span: sp,
