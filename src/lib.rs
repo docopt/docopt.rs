@@ -658,7 +658,7 @@ impl ArgvMap {
         }
 
         let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
-        r.replace(name, |cap: &regex::Captures| {
+        r.replace(name, |&: cap: &regex::Captures| {
             let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
             let (argu, argb) = (cap.name("argu"), cap.name("argb"));
             let (prefix, name) =
