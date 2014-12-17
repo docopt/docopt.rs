@@ -899,8 +899,8 @@ impl<'a> Argv<'a> {
         Ok(())
     }
 
-    fn cur<'a>(&'a self) -> &'a str { self.at(0) }
-    fn at<'a>(&'a self, i: int) -> &'a str {
+    fn cur<'b>(&'b self) -> &'b str { self.at(0) }
+    fn at<'b>(&'b self, i: int) -> &'b str {
         self.argv[(self.curi as int + i) as uint].as_slice()
     }
     fn next(&mut self) {
@@ -908,7 +908,7 @@ impl<'a> Argv<'a> {
             self.curi += 1
         }
     }
-    fn next_arg<'a>(&'a mut self, atom: &Atom) -> Result<&'a str, String> {
+    fn next_arg<'b>(&'b mut self, atom: &Atom) -> Result<&'b str, String> {
         let expected = format!("argument for flag '{}'", atom);
         try!(self.next_noeof(expected.as_slice()));
         Ok(self.cur())
