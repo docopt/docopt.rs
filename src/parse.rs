@@ -180,7 +180,7 @@ impl Parser {
         let mut has_arg = false;
         let mut last_end = 0;
         for flags in rflags.captures_iter(desc) {
-            last_end = flags.pos(0).unwrap().val1();
+            last_end = flags.pos(0).unwrap().1;
             let (s, l) = (flags.name("short"), flags.name("long"));
             if !s.is_empty() {
                 if !short.is_empty() {
