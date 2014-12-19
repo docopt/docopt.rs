@@ -46,7 +46,7 @@ macro_rules! test_expect(
             same_args(&expected, &vals);
         }
     );
-)
+);
 
 macro_rules! test_user_error(
     ($name:ident, $doc:expr, $args:expr) => (
@@ -54,10 +54,10 @@ macro_rules! test_user_error(
         #[should_fail]
         fn $name() { get_args($doc, $args); }
     );
-)
+);
 
 test_expect!(test_issue_13, "Usage: prog file <file>", &["file", "file"],
              vec![("file", Switch(true)),
-                  ("<file>", Plain(Some("file".to_string())))])
+                  ("<file>", Plain(Some("file".to_string())))]);
 
 mod testcases;

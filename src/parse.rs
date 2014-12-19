@@ -52,7 +52,7 @@ use synonym::SynonymMap;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
-)
+);
 
 #[deriving(Clone)]
 pub struct Parser {
@@ -211,7 +211,7 @@ impl Parser {
             err!("Extraneous text '{}' in option description '{}'.",
                  desc.slice_from(last_end), desc)
         }
-        try!(self.add_desc(short.as_slice(), long.as_slice(), has_arg))
+        try!(self.add_desc(short.as_slice(), long.as_slice(), has_arg));
         // Looking for default in this line must come after adding the
         // description, otherwise `parse_default` won't know which option
         // to assign it to.
@@ -285,24 +285,24 @@ impl fmt::Show for Parser {
             xs.sort(); xs
         }
 
-        try!(writeln!(f, "====="))
-        try!(writeln!(f, "Program: {}", self.program))
+        try!(writeln!(f, "====="));
+        try!(writeln!(f, "Program: {}", self.program));
 
-        try!(writeln!(f, "Option descriptions:"))
+        try!(writeln!(f, "Option descriptions:"));
         let keys = sorted(self.descs.keys().collect());
         for &k in keys.iter() {
-            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)))
+            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)));
         }
 
-        try!(writeln!(f, "Synonyms:"))
+        try!(writeln!(f, "Synonyms:"));
         let keys: Vec<(&Atom, &Atom)> = sorted(self.descs.synonyms().collect());
         for &(from, to) in keys.iter() {
-            try!(writeln!(f, "  {} => {}", from, to))
+            try!(writeln!(f, "  {} => {}", from, to));
         }
 
-        try!(writeln!(f, "Usages:"))
+        try!(writeln!(f, "Usages:"));
         for pat in self.usages.iter() {
-            try!(writeln!(f, "  {}", pat))
+            try!(writeln!(f, "  {}", pat));
         }
         writeln!(f, "=====")
     }
@@ -924,9 +924,9 @@ impl<'a> Argv<'a> {
 
 impl<'a> fmt::Show for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        try!(writeln!(f, "Positional: {}", self.positional))
-        try!(writeln!(f, "Flags: {}", self.flags))
-        try!(writeln!(f, "Counts: {}", self.counts))
+        try!(writeln!(f, "Positional: {}", self.positional));
+        try!(writeln!(f, "Flags: {}", self.flags));
+        try!(writeln!(f, "Counts: {}", self.counts));
         Ok(())
     }
 }

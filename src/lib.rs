@@ -238,12 +238,12 @@ macro_rules! werr(
             Err(err) => panic!("{}", err),
         }
     )
-)
+);
 
 // cheat until we get syntax extensions back :-(
 macro_rules! regex(
     ($s:expr) => (regex::Regex::new($s).unwrap());
-)
+);
 
 /// Represents the different types of Docopt errors.
 ///
@@ -855,7 +855,7 @@ struct DecoderItem {
 
 macro_rules! derr(
     ($($arg:tt)*) => (return Err(Decode(format!($($arg)*))))
-)
+);
 
 impl Decoder {
     fn push(&mut self, struct_field: &str) {
