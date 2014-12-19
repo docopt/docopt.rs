@@ -967,8 +967,8 @@ impl serialize::Decoder<Error> for Decoder {
     {
         f(self)
     }
-    fn read_enum_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
+    fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
     {
         fn to_lower(s: &str) -> String {
             s.chars().map(|c| c.to_lowercase()).collect()
@@ -992,7 +992,7 @@ impl serialize::Decoder<Error> for Decoder {
         unimplemented!()
     }
     fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
     {
         unimplemented!()
     }
@@ -1032,8 +1032,8 @@ impl serialize::Decoder<Error> for Decoder {
     {
         unimplemented!()
     }
-    fn read_option<T, F>(&mut self, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, bool) -> Result<T, Error>
+    fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, bool) -> Result<T, Error>
     {
         let option =
             match self.stack.last() {
