@@ -52,7 +52,7 @@ use synonym::SynonymMap;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
-)
+);
 
 #[deriving(Clone)]
 pub struct Parser {
@@ -116,11 +116,11 @@ impl Parser {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
         };
-        if caps.name("prog").is_empty() {
+        if caps.name("prog").unwrap_or("").is_empty() {
             err!("Could not find program name in doc string.")
         }
-        self.program = caps.name("prog").to_string();
-        self.usage = caps.at(0).to_string();
+        self.program = caps.name("prog").unwrap_or("").to_string();
+        self.usage = caps.at(0).unwrap_or("").to_string();
 
         // Before we parse the usage patterns, we look for option descriptions.
         // We do this because the information in option descriptions can be
@@ -143,15 +143,15 @@ impl Parser {
             try!(self.parse_desc(line));
         }
 
-        let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog")));
+        let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog").unwrap_or("")));
         let pats = Regex::new(mprog.as_slice()).unwrap();
-        let mut last = caps.name("prog");
-        for pat in pats.captures_iter(caps.name("pats")) {
-            let pattern = try!(PatParser::new(self, pat.at(1)).parse());
+        let mut last = caps.name("prog").unwrap_or("");
+        for pat in pats.captures_iter(caps.name("pats").unwrap_or("")) {
+            let pattern = try!(PatParser::new(self, pat.at(1).unwrap_or("")).parse());
             self.usages.push(pattern);
-            last = pat.at(2);
+            last = pat.at(2).unwrap_or("");
         }
-        if last == caps.name("prog") {
+        if last == caps.name("prog").unwrap_or("") {
             // The last "Usage: ..." is an empty pattern.
             let pattern = try!(PatParser::new(self, "").parse());
             self.usages.push(pattern);
@@ -181,7 +181,7 @@ impl Parser {
         let mut last_end = 0;
         for flags in rflags.captures_iter(desc) {
             last_end = flags.pos(0).unwrap().1;
-            let (s, l) = (flags.name("short"), flags.name("long"));
+            let (s, l) = (flags.name("short").unwrap_or(""), flags.name("long").unwrap_or(""));
             if !s.is_empty() {
                 if !short.is_empty() {
                     err!("Only one short flag is allowed in an option \
@@ -196,8 +196,8 @@ impl Parser {
                 }
                 long = l.to_string()
             }
-            if !flags.name("arg").is_empty() {
-                let arg = flags.name("arg");
+            if !flags.name("arg").unwrap_or("").is_empty() {
+                let arg = flags.name("arg").unwrap_or("");
                 if !Atom::is_arg(arg) {
                     err!("Argument '{}' is not of the form ARG or <arg>.", arg)
                 }
@@ -211,7 +211,7 @@ impl Parser {
             err!("Extraneous text '{}' in option description '{}'.",
                  desc.slice_from(last_end), desc)
         }
-        try!(self.add_desc(short.as_slice(), long.as_slice(), has_arg))
+        try!(self.add_desc(short.as_slice(), long.as_slice(), has_arg));
         // Looking for default in this line must come after adding the
         // description, otherwise `parse_default` won't know which option
         // to assign it to.
@@ -223,7 +223,7 @@ impl Parser {
         let defval =
             match rdefault.captures(desc) {
                 None => return Ok(()),
-                Some(c) => c.name("val").trim(),
+                Some(c) => c.name("val").unwrap_or("").trim(),
             };
         let last_atom =
             match self.last_atom_added {
@@ -285,24 +285,24 @@ impl fmt::Show for Parser {
             xs.sort(); xs
         }
 
-        try!(writeln!(f, "====="))
-        try!(writeln!(f, "Program: {}", self.program))
+        try!(writeln!(f, "====="));
+        try!(writeln!(f, "Program: {}", self.program));
 
-        try!(writeln!(f, "Option descriptions:"))
+        try!(writeln!(f, "Option descriptions:"));
         let keys = sorted(self.descs.keys().collect());
         for &k in keys.iter() {
-            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)))
+            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)));
         }
 
-        try!(writeln!(f, "Synonyms:"))
+        try!(writeln!(f, "Synonyms:"));
         let keys: Vec<(&Atom, &Atom)> = sorted(self.descs.synonyms().collect());
         for &(from, to) in keys.iter() {
-            try!(writeln!(f, "  {} => {}", from, to))
+            try!(writeln!(f, "  {} => {}", from, to));
         }
 
-        try!(writeln!(f, "Usages:"))
+        try!(writeln!(f, "Usages:"));
         for pat in self.usages.iter() {
-            try!(writeln!(f, "  {}", pat))
+            try!(writeln!(f, "  {}", pat));
         }
         writeln!(f, "=====")
     }
@@ -924,9 +924,9 @@ impl<'a> Argv<'a> {
 
 impl<'a> fmt::Show for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        try!(writeln!(f, "Positional: {}", self.positional))
-        try!(writeln!(f, "Flags: {}", self.flags))
-        try!(writeln!(f, "Counts: {}", self.counts))
+        try!(writeln!(f, "Positional: {}", self.positional));
+        try!(writeln!(f, "Flags: {}", self.flags));
+        try!(writeln!(f, "Counts: {}", self.counts));
         Ok(())
     }
 }
@@ -1263,12 +1263,12 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
     match long_equal.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
-            let arg = cap.name("arg").to_string();
+            let arg = cap.name("arg").unwrap_or("").to_string();
             if !Atom::is_arg(arg.as_slice()) {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
-            Ok((Atom::new(cap.name("name")), One(None)))
+            Ok((Atom::new(cap.name("name").unwrap_or("")), One(None)))
         }
     }
 }
@@ -1278,7 +1278,7 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
     match long_equal.captures(flag) {
         None => (Atom::new(flag), None),
         Some(cap) =>
-            (Atom::new(cap.name("name")), Some(cap.name("arg").to_string())),
+            (Atom::new(cap.name("name").unwrap_or("")), Some(cap.name("arg").unwrap_or("").to_string())),
     }
 }
 
@@ -1295,7 +1295,7 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
     let pat = rpat.replace_all(pat.trim(), " $0 ");
     let mut words = vec!();
     for cap in rwords.captures_iter(pat.as_slice()) {
-        words.push(cap.at(0).to_string());
+        words.push(cap.at(0).unwrap_or("").to_string());
     }
     words
 }

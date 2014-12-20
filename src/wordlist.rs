@@ -17,7 +17,7 @@ use parse::{Atom, Parser};
 // cheat until we get syntax extensions back :-(
 macro_rules! regex(
     ($s:expr) => (regex::Regex::new($s).unwrap());
-)
+);
 
 #[allow(dead_code)]
 mod parse;

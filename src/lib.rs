@@ -238,12 +238,12 @@ macro_rules! werr(
             Err(err) => panic!("{}", err),
         }
     )
-)
+);
 
 // cheat until we get syntax extensions back :-(
 macro_rules! regex(
     ($s:expr) => (regex::Regex::new($s).unwrap());
-)
+);
 
 /// Represents the different types of Docopt errors.
 ///
@@ -659,8 +659,8 @@ impl ArgvMap {
 
         let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
         r.replace(name, |&: cap: &regex::Captures| {
-            let (flag, cmd) = (cap.name("flag"), cap.name("cmd"));
-            let (argu, argb) = (cap.name("argu"), cap.name("argb"));
+            let (flag, cmd) = (cap.name("flag").unwrap_or(""), cap.name("cmd").unwrap_or(""));
+            let (argu, argb) = (cap.name("argu").unwrap_or(""), cap.name("argb").unwrap_or(""));
             let (prefix, name) =
                 if !flag.is_empty() {
                     ("flag_", flag)
@@ -855,7 +855,7 @@ struct DecoderItem {
 
 macro_rules! derr(
     ($($arg:tt)*) => (return Err(Decode(format!($($arg)*))))
-)
+);
 
 impl Decoder {
     fn push(&mut self, struct_field: &str) {
@@ -967,8 +967,8 @@ impl serialize::Decoder<Error> for Decoder {
     {
         f(self)
     }
-    fn read_enum_variant<T, F>(&mut self, names: &[&str], f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
+    fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
     {
         fn to_lower(s: &str) -> String {
             s.chars().map(|c| c.to_lowercase()).collect()
@@ -992,7 +992,7 @@ impl serialize::Decoder<Error> for Decoder {
         unimplemented!()
     }
     fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
     {
         unimplemented!()
     }
@@ -1032,8 +1032,8 @@ impl serialize::Decoder<Error> for Decoder {
     {
         unimplemented!()
     }
-    fn read_option<T, F>(&mut self, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, bool) -> Result<T, Error>
+    fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Error>
+        where F: FnMut(&mut Decoder, bool) -> Result<T, Error>
     {
         let option =
             match self.stack.last() {
