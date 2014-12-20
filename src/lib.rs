@@ -134,7 +134,8 @@
 //!             0 => OptLevel::Zero, 1 => OptLevel::One,
 //!             2 => OptLevel::Two, 3 => OptLevel::Three,
 //!             n => {
-//!                 let err = format!("Could not decode '{}' as opt-level.", n);
+//!                 let err = format!(
+//!                     "Could not decode '{}' as opt-level.", n);
 //!                 return Err(d.error(err.as_slice()));
 //!             }
 //!         })
@@ -659,8 +660,14 @@ impl ArgvMap {
 
         let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
         r.replace(name, |&: cap: &regex::Captures| {
-            let (flag, cmd) = (cap.name("flag").unwrap_or(""), cap.name("cmd").unwrap_or(""));
-            let (argu, argb) = (cap.name("argu").unwrap_or(""), cap.name("argb").unwrap_or(""));
+            let (flag, cmd) = (
+                cap.name("flag").unwrap_or(""),
+                cap.name("cmd").unwrap_or(""),
+            );
+            let (argu, argb) = (
+                cap.name("argu").unwrap_or(""),
+                cap.name("argb").unwrap_or(""),
+            );
             let (prefix, name) =
                 if !flag.is_empty() {
                     ("flag_", flag)
@@ -838,7 +845,8 @@ impl Value {
 ///
 /// fn decode<D>(usage: &str, argv: &[&str]) -> Result<D, docopt::Error>
 ///          where D: Decodable<docopt::Decoder, docopt::Error> {
-///     Docopt::new(usage).and_then(|d| d.argv(argv.iter().map(|&v|v)).decode())
+///     Docopt::new(usage)
+///            .and_then(|d| d.argv(argv.iter().map(|&v|v)).decode())
 /// }
 /// # }
 pub struct Decoder {
@@ -963,13 +971,12 @@ impl serialize::Decoder<Error> for Decoder {
         self.pop_val().map(|v| v.as_str().to_string())
     }
     fn read_enum<T, F>(&mut self, _: &str, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+        where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
-    fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F) -> Result<T, Error>
-        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
-    {
+    fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F)
+                              -> Result<T, Error>
+            where F: FnMut(&mut Decoder, uint) -> Result<T, Error> {
         fn to_lower(s: &str) -> String {
             s.chars().map(|c| c.to_lowercase()).collect()
         }
@@ -986,55 +993,51 @@ impl serialize::Decoder<Error> for Decoder {
             };
         f(self, i)
     }
-    fn read_enum_variant_arg<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+    fn read_enum_variant_arg<T, F>(&mut self, _: uint, _: F)
+                                  -> Result<T, Error>
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F) -> Result<T, Error>
-        where F: FnMut(&mut Decoder, uint) -> Result<T, Error>
-    {
+    fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F)
+                                     -> Result<T, Error>
+            where F: FnMut(&mut Decoder, uint) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_enum_struct_variant_field<T, F>(&mut self, _: &str, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
-            unimplemented!()
+    fn read_enum_struct_variant_field<T, F>(&mut self, _: &str, _: uint, _: F)
+                                           -> Result<T, Error>
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
+        unimplemented!()
     }
     fn read_struct<T, F>(&mut self, _: &str, _: uint, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
-    fn read_struct_field<T, F>(&mut self, f_name: &str, _: uint, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+    fn read_struct_field<T, F>(&mut self, f_name: &str, _: uint, f: F)
+                              -> Result<T, Error>
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         self.push(f_name);
         f(self)
     }
     fn read_tuple<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_tuple_arg<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct<T, F>(&mut self, _: &str, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+    fn read_tuple_struct<T, F>(&mut self, _: &str, _: uint, _: F)
+                              -> Result<T, Error>
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct_arg<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+    fn read_tuple_struct_arg<T, F>(&mut self, _: uint, _: F)
+                                  -> Result<T, Error>
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Error>
-        where F: FnMut(&mut Decoder, bool) -> Result<T, Error>
-    {
+            where F: FnMut(&mut Decoder, bool) -> Result<T, Error> {
         let option =
             match self.stack.last() {
                 None => derr!("Could not decode value into unknown key."),
@@ -1045,8 +1048,7 @@ impl serialize::Decoder<Error> for Decoder {
         f(self, option)
     }
     fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder, uint) -> Result<T, Error> {
         let it = try!(self.pop());
         let list = it.val.unwrap_or(List(vec!()));
         let vals = list.as_vec();
@@ -1060,23 +1062,19 @@ impl serialize::Decoder<Error> for Decoder {
         f(self, vals.len())
     }
     fn read_seq_elt<T, F>(&mut self, _: uint, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
     fn read_map<T, F>(&mut self, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder, uint) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder, uint) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_map_elt_key<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_map_elt_val<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error>
-    {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
 }

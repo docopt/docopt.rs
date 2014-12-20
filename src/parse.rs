@@ -143,11 +143,13 @@ impl Parser {
             try!(self.parse_desc(line));
         }
 
-        let mprog = format!("(?s)(.*?)({}|$)", regex::quote(caps.name("prog").unwrap_or("")));
+        let mprog = format!(
+            "(?s)(.*?)({}|$)", regex::quote(caps.name("prog").unwrap_or("")));
         let pats = Regex::new(mprog.as_slice()).unwrap();
         let mut last = caps.name("prog").unwrap_or("");
         for pat in pats.captures_iter(caps.name("pats").unwrap_or("")) {
-            let pattern = try!(PatParser::new(self, pat.at(1).unwrap_or("")).parse());
+            let pattern = try!(
+                PatParser::new(self, pat.at(1).unwrap_or("")).parse());
             self.usages.push(pattern);
             last = pat.at(2).unwrap_or("");
         }
@@ -160,7 +162,8 @@ impl Parser {
     }
 
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
-        let desc = regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
+        let desc =
+            regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
         let desc = desc.as_slice();
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
             try!(self.parse_default(full_desc));
@@ -181,7 +184,10 @@ impl Parser {
         let mut last_end = 0;
         for flags in rflags.captures_iter(desc) {
             last_end = flags.pos(0).unwrap().1;
-            let (s, l) = (flags.name("short").unwrap_or(""), flags.name("long").unwrap_or(""));
+            let (s, l) = (
+                flags.name("short").unwrap_or(""),
+                flags.name("long").unwrap_or(""),
+            );
             if !s.is_empty() {
                 if !short.is_empty() {
                     err!("Only one short flag is allowed in an option \
@@ -258,7 +264,8 @@ impl Parser {
             return Ok(());
             // err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        let mut opts = Options::new(false, if has_arg { One(None) } else { Zero });
+        let mut opts = Options::new(false,
+                                    if has_arg { One(None) } else { Zero });
         opts.is_desc = true;
 
         if !short.is_empty() && !long.is_empty() {
@@ -295,7 +302,8 @@ impl fmt::Show for Parser {
         }
 
         try!(writeln!(f, "Synonyms:"));
-        let keys: Vec<(&Atom, &Atom)> = sorted(self.descs.synonyms().collect());
+        let keys: Vec<(&Atom, &Atom)> =
+            sorted(self.descs.synonyms().collect());
         for &(from, to) in keys.iter() {
             try!(writeln!(f, "  {} => {}", from, to));
         }
@@ -374,7 +382,8 @@ impl<'a> PatParser<'a> {
                             }
                         }
                     }
-                    let mk = if self.cur() == "]" { Optional } else { Sequence };
+                    let mk = if self.cur() == "]" { Optional }
+                             else { Sequence };
                     self.next();
                     return
                         if alts.is_empty() {
@@ -387,12 +396,9 @@ impl<'a> PatParser<'a> {
                 "[" => {
                     // Check for special '[options]' shortcut.
                     if self.atis(1, "options") && self.atis(2, "]") {
-                        // let atoms = self.dopt.options_atoms();
-                        // let opts = Optional(atoms.into_iter().map(Atom).collect());
                         self.next(); // cur == options
                         self.next(); // cur == ]
                         self.next();
-                        // seq.push(self.maybe_repeat(opts));
                         seq.push(self.maybe_repeat(Optional(vec!())));
                         continue
                     }
@@ -617,13 +623,13 @@ pub enum Argument {
 impl Pattern {
     fn add_options_shortcut(&mut self, par: &Parser) {
         fn add(pat: &mut Pattern, all_atoms: &HashSet<Atom>, par: &Parser) {
-            match pat {
-                &Alternates(ref mut ps) | &Sequence(ref mut ps) => {
+            match *pat {
+                Alternates(ref mut ps) | Sequence(ref mut ps) => {
                     for p in ps.iter_mut() { add(p, all_atoms, par) }
                 }
-                &Repeat(box ref mut p) => add(p, all_atoms, par),
-                &PatAtom(_) => {}
-                &Optional(ref mut ps) => {
+                Repeat(box ref mut p) => add(p, all_atoms, par),
+                PatAtom(_) => {}
+                Optional(ref mut ps) => {
                     if !ps.is_empty() {
                         for p in ps.iter_mut() { add(p, all_atoms, par) }
                     } else {
@@ -642,12 +648,12 @@ impl Pattern {
 
     fn all_atoms(&self) -> HashSet<Atom> {
         fn all_atoms(pat: &Pattern, set: &mut HashSet<Atom>) {
-            match pat {
-                &Alternates(ref ps) | &Sequence(ref ps) | &Optional(ref ps) => {
+            match *pat {
+                Alternates(ref ps) | Sequence(ref ps) | Optional(ref ps) => {
                     for p in ps.iter() { all_atoms(p, set) }
                 }
-                &Repeat(box ref p) => all_atoms(p, set),
-                &PatAtom(ref a) => { set.insert(a.clone()); }
+                Repeat(box ref p) => all_atoms(p, set),
+                PatAtom(ref a) => { set.insert(a.clone()); }
             }
         }
         let mut set = HashSet::new();
@@ -660,8 +666,8 @@ impl Pattern {
                  rep: bool,
                  map: &mut SynonymMap<Atom, Options>,
                  seen: &mut HashSet<Atom>) {
-            match p {
-                &Alternates(ref ps) => {
+            match *p {
+                Alternates(ref ps) => {
                     // This is a bit tricky. Basically, we don't want the
                     // existence of an item in mutually exclusive alternations
                     // to affect whether it repeats or not.
@@ -676,18 +682,18 @@ impl Pattern {
                         }
                     }
                 }
-                &Sequence(ref ps) => {
+                Sequence(ref ps) => {
                     for p in ps.iter() {
                         dotag(p, rep, map, seen)
                     }
                 }
-                &Optional(ref ps) => {
+                Optional(ref ps) => {
                     for p in ps.iter() {
                         dotag(p, rep, map, seen)
                     }
                 }
-                &Repeat(box ref p) => dotag(p, true, map, seen),
-                &PatAtom(ref atom) => {
+                Repeat(box ref p) => dotag(p, true, map, seen),
+                PatAtom(ref atom) => {
                     let opt = map.find_mut(atom).expect("bug: no atom found");
                     opt.repeats = opt.repeats || rep || seen.contains(atom);
                     seen.insert(atom.clone());
@@ -718,24 +724,18 @@ impl Atom {
         }
     }
 
-    fn is_short(s: &str) -> bool { return regex!(r"^-[^-]+$").is_match(s) }
-    fn is_long(s: &str) -> bool {
-        return regex!(r"^--\S+(?:<[^>]+>)?$").is_match(s)
-    }
-    fn is_arg(s: &str) -> bool {
-        return regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s)
-    }
-    fn is_cmd(s: &str) -> bool {
-        return regex!(r"^(-|--|[^-]\S*)$").is_match(s)
-    }
+    fn is_short(s: &str) -> bool { regex!(r"^-[^-]+$").is_match(s) }
+    fn is_long(s: &str) -> bool { regex!(r"^--\S+(?:<[^>]+>)?$").is_match(s) }
+    fn is_arg(s: &str) -> bool { regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s) }
+    fn is_cmd(s: &str) -> bool { regex!(r"^(-|--|[^-]\S*)$").is_match(s) }
 
     // Assigns an integer to each variant of Atom. (For easier sorting.)
     fn type_as_uint(&self) -> uint {
-        match self {
-            &Short(_) => 0,
-            &Long(_) => 1,
-            &Command(_) => 2,
-            &Positional(_) => 3,
+        match *self {
+            Short(_) => 0,
+            Long(_) => 1,
+            Command(_) => 2,
+            Positional(_) => 3,
         }
     }
 }
@@ -754,11 +754,11 @@ impl PartialOrd for Atom {
 
 impl fmt::Show for Atom {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Short(c) => write!(f, "-{}", c),
-            &Long(ref s) => write!(f, "--{}", s),
-            &Command(ref s) => write!(f, "{}", s),
-            &Positional(ref s) => {
+        match *self {
+            Short(c) => write!(f, "-{}", c),
+            Long(ref s) => write!(f, "--{}", s),
+            Command(ref s) => write!(f, "{}", s),
+            Positional(ref s) => {
                 if s.as_slice().chars().all(|c| c.is_uppercase()) {
                     write!(f, "{}", s)
                 } else {
@@ -944,7 +944,8 @@ struct MState {
 }
 
 impl MState {
-    fn fill_value(&mut self, key: Atom, rep: bool, arg: Option<String>) -> bool {
+    fn fill_value(&mut self, key: Atom, rep: bool, arg: Option<String>)
+                 -> bool {
         match (arg, rep) {
             (None, false) => {
                 self.vals.insert(key, Switch(true));
@@ -956,8 +957,8 @@ impl MState {
                 match self.vals.entry(key.clone()) {
                     Vacant(v) => { v.set(Counted(1)); }
                     Occupied(mut v) => {
-                        match v.get_mut() {
-                            &Counted(ref mut c) => { *c += 1; }
+                        match *v.get_mut() {
+                            Counted(ref mut c) => { *c += 1; }
                             _ => return false,
                         }
                     }
@@ -967,8 +968,8 @@ impl MState {
                 match self.vals.entry(key.clone()) {
                     Vacant(v) => { v.set(List(vec!(arg))); }
                     Occupied(mut v) => {
-                        match v.get_mut() {
-                            &List(ref mut vs) => vs.push(arg),
+                        match *v.get_mut() {
+                            List(ref mut vs) => vs.push(arg),
                             _ => return false,
                         }
                     }
@@ -982,15 +983,15 @@ impl MState {
                  spec: &Atom, atom: &Atom, arg: &Option<String>) -> bool {
         assert!(opts.arg.has_arg() == arg.is_some(),
                 "'{}' should have an argument but doesn't", atom);
-        match atom {
-            &Short(_) | &Long(_) => {
+        match *atom {
+            Short(_) | Long(_) => {
                 self.fill_value(spec.clone(), opts.repeats, arg.clone())
             }
-            &Positional(ref v) => {
+            Positional(ref v) => {
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, Some(v.clone()))
             }
-            &Command(_) => {
+            Command(_) => {
                 assert!(!opts.arg.has_arg());
                 self.fill_value(spec.clone(), opts.repeats, None)
             }
@@ -1047,7 +1048,8 @@ impl MState {
 }
 
 impl<'a, 'b> Matcher<'a, 'b> {
-    fn matches(argv: &'a Argv, pat: &Pattern) -> Option<SynonymMap<String, Value>> {
+    fn matches(argv: &'a Argv, pat: &Pattern)
+              -> Option<SynonymMap<String, Value>> {
         let m = Matcher { argv: argv };
         let init = MState {
             argvi: 0,
@@ -1068,7 +1070,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
 
                 // Build a synonym map so that it's easier to look up values.
                 let mut synmap: SynonymMap<String, Value> =
-                    s.vals.into_iter().map(|(k, v)| (k.to_string(), v)).collect();
+                    s.vals.into_iter()
+                          .map(|(k, v)| (k.to_string(), v))
+                          .collect();
                 for (from, to) in argv.dopt.descs.synonyms() {
                     let (from, to) = (from.to_string(), to.to_string());
                     if synmap.contains_key(&to) {
@@ -1084,7 +1088,8 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn add_value(&self, state: &mut MState,
-                  atom_spec: &Atom, atom: &Atom, arg: &Option<String>) -> bool {
+                 atom_spec: &Atom, atom: &Atom, arg: &Option<String>)
+                -> bool {
         let opts = self.argv.dopt.descs.get(atom_spec);
         state.add_value(opts, atom_spec, atom, arg)
     }
@@ -1143,15 +1148,15 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn states(&self, pat: &Pattern, init: &MState) -> Vec<MState> {
-        match pat {
-            &Alternates(ref ps) => {
+        match *pat {
+            Alternates(ref ps) => {
                 let mut alt_states = vec!();
                 for p in ps.iter() {
                     alt_states.extend(self.states(p, init).into_iter());
                 }
                 alt_states
             }
-            &Sequence(ref ps) => {
+            Sequence(ref ps) => {
                 let (mut states, mut next) = (vec!(), vec!());
                 let mut iter = ps.iter();
                 match iter.next() {
@@ -1168,14 +1173,17 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 }
                 states
             }
-            &Optional(ref ps) => {
+            Optional(ref ps) => {
                 let mut base = init.clone();
                 let mut noflags = vec!();
                 for p in ps.iter() {
                     match p {
-                        &PatAtom(ref a @ Short(_)) | &PatAtom(ref a @Long(_)) => {
-                            let argv_count = self.argv.counts.get(a).cloned().unwrap_or(0);
-                            let max_count = base.max_counts.get(a).cloned().unwrap_or(0);
+                        &PatAtom(ref a @ Short(_))
+                        | &PatAtom(ref a @ Long(_)) => {
+                            let argv_count =
+                                self.argv.counts.get(a).cloned().unwrap_or(0);
+                            let max_count =
+                                base.max_counts.get(a).cloned().unwrap_or(0);
                             if argv_count > max_count {
                                 base.use_optional_flag(a);
                             }
@@ -1189,7 +1197,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 self.all_option_states(&base, &mut states, noflags.as_slice());
                 states
             }
-            &Repeat(box ref p) => {
+            Repeat(box ref p) => {
                 let mut grouped_states = vec!(self.states(p, init));
                 loop {
                     let mut nextss = vec!();
@@ -1209,15 +1217,15 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     .flat_map(|ss| ss.into_iter())
                     .collect::<Vec<MState>>()
             }
-            &PatAtom(ref atom) => {
+            PatAtom(ref atom) => {
                 let mut state = init.clone();
-                match atom {
-                    &Short(_) | &Long(_) => {
+                match *atom {
+                    Short(_) | Long(_) => {
                         if !state.use_flag(atom) {
                             return vec!()
                         }
                     }
-                    &Command(_) | &Positional(_) => {
+                    Command(_) | Positional(_) => {
                         let tok =
                             match self.token_from(init) {
                                 None => return vec!(),
@@ -1277,8 +1285,10 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
     let long_equal = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
     match long_equal.captures(flag) {
         None => (Atom::new(flag), None),
-        Some(cap) =>
-            (Atom::new(cap.name("name").unwrap_or("")), Some(cap.name("arg").unwrap_or("").to_string())),
+        Some(cap) => (
+            Atom::new(cap.name("name").unwrap_or("")),
+            Some(cap.name("arg").unwrap_or("").to_string()),
+        ),
     }
 }
 
