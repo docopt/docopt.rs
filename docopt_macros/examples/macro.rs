@@ -22,7 +22,7 @@ Options:
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Moored (anchored) mine.
   --drifting    Drifting mine.
-", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int)
+", arg_x: Option<int>, arg_y: Option<int>, flag_speed: int);
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());

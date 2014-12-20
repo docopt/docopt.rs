@@ -17,7 +17,7 @@ Options:
     --emit TYPE        Configure the output that rustc will produce.
                        Valid values: asm, ir, bc, obj, link.
     --opt-level LEVEL  Optimize with possible levels 0-3.
-", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>)
+", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>);
 
 #[deriving(Decodable, Show)]
 enum Emit { Asm, Ir, Bc, Obj, Link }

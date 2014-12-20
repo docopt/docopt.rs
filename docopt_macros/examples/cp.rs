@@ -13,7 +13,7 @@ Usage: cp [options] <src> <dst>
 Options:
   -h, --help       Show this message.
   -a, --archive    Copy everything.
-")
+");
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
