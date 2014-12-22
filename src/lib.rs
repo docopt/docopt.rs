@@ -695,7 +695,7 @@ impl ArgvMap {
         let name =
             if field.starts_with("flag_") {
                 let name = regex!(r"^flag_").replace(field, "");
-                let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
+                let mut pre_name = (if name.len() <= 1 { "-" } else { "--" })
                                    .to_string();
                 pre_name.push_str(name.as_slice());
                 pre_name
