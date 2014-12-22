@@ -42,7 +42,7 @@ pub use self::Atom::{Short,Long,Command,Positional};
 use self::Pattern::{Alternates,Sequence,Optional,Repeat,PatAtom};
 
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::{Vacant, Occupied};
+use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::fmt;
 use regex;
 use regex::Regex;
