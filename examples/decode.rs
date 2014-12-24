@@ -1,4 +1,4 @@
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -22,7 +22,7 @@ Options:
   --drifting    Drifting mine.
 ";
 
-#[deriving(Decodable, Show)]
+#[deriving(RustcDecodable, Show)]
 struct Args {
     flag_speed: int,
     flag_drifting: bool,

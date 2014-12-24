@@ -1,4 +1,4 @@
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -12,7 +12,7 @@ Options:
     -a, --archive  Copy everything.
 ";
 
-#[deriving(Decodable, Show)]
+#[deriving(RustcDecodable, Show)]
 struct Args {
     arg_source: Vec<String>,
     arg_dest: String,

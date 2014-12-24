@@ -2,7 +2,7 @@
 #![feature(macro_rules)]
 
 extern crate regex;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
 
@@ -44,7 +44,7 @@ Which will only include 'a', 'b' and 'c' in the wordlist if
 'your-command --help' contains a positional argument named 'arg'.
 ";
 
-#[deriving(Decodable, Show)]
+#[deriving(RustcDecodable, Show)]
 struct Args {
     arg_name: Vec<String>,
     arg_possibles: Vec<String>,

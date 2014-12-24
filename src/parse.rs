@@ -258,7 +258,7 @@ impl Parser {
     fn add_desc(&mut self, short: &str, long: &str, has_arg: bool)
                -> Result<(), String> {
         assert!(!short.is_empty() || !long.is_empty());
-        if !short.is_empty() && short.char_len() != 2 {
+        if !short.is_empty() && short.chars().count() != 2 {
             // It looks like the reference implementation just ignores
             // these lines.
             return Ok(());
@@ -382,8 +382,11 @@ impl<'a> PatParser<'a> {
                             }
                         }
                     }
-                    let mk = if self.cur() == "]" { Optional }
-                             else { Sequence };
+                    let mk = if self.cur() == "]" {
+                        Optional as fn(Vec<Pattern>) -> Pattern
+                    } else {
+                        Sequence as fn(Vec<Pattern>) -> Pattern
+                    };
                     self.next();
                     return
                         if alts.is_empty() {

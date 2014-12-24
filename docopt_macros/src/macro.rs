@@ -85,7 +85,7 @@ impl Parsed {
             ctor_id: None
         };
 
-        let mut traits = vec!["Decodable".to_string()];
+        let mut traits = vec!["RustcDecodable".to_string()];
         traits.push_all(self.struct_info.deriving.as_slice());
         let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
                          attribute(cx, "deriving", traits)];

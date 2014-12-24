@@ -46,7 +46,9 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
-//! # extern crate docopt; extern crate serialize; fn main() {
+//! # extern crate docopt;
+//! # extern crate "rustc-serialize" as rustc_serialize;
+//! # fn main() {
 //! use docopt::Docopt;
 //!
 //! // Write the Docopt usage string.
@@ -58,7 +60,7 @@
 //!     -a, --archive  Copy everything.
 //! ";
 //!
-//! #[deriving(Decodable)]
+//! #[deriving(RustcDecodable)]
 //! struct Args {
 //!     arg_source: Vec<String>,
 //!     arg_dest: String,
@@ -86,7 +88,9 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
-//! # extern crate docopt; extern crate serialize; fn main() {
+//! # extern crate docopt;
+//! # extern crate "rustc-serialize" as rustc_serialize;
+//! # fn main() {
 //! # #![allow(non_snake_case)]
 //! use docopt::Docopt;
 //!
@@ -105,7 +109,7 @@
 //!     --opt-level LEVEL  Optimize with possible levels 0-3.
 //! ";
 //!
-//! #[deriving(Decodable)]
+//! #[deriving(RustcDecodable)]
 //! struct Args {
 //!     arg_INPUT: String,
 //!     flag_emit: Option<Emit>,
@@ -118,7 +122,7 @@
 //!
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
-//! #[deriving(Decodable)]
+//! #[deriving(RustcDecodable)]
 //! # #[deriving(PartialEq, Show)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
 //!
@@ -128,7 +132,8 @@
 //! # #[deriving(PartialEq, Show)]
 //! enum OptLevel { Zero, One, Two, Three }
 //!
-//! impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
+//! impl<E, D> rustc_serialize::Decodable<D, E> for OptLevel
+//!         where D: rustc_serialize::Decoder<E> {
 //!     fn decode(d: &mut D) -> Result<OptLevel, E> {
 //!         Ok(match try!(d.read_uint()) {
 //!             0 => OptLevel::Zero, 1 => OptLevel::One,
@@ -175,7 +180,7 @@
 //! ```ignore
 //! #![feature(phase)]
 //!
-//! extern crate serialize
+//! extern crate "rustc-serialize" as rustc_serialize;
 //!
 //! extern crate docopt;
 //! #[phase(plugin)] extern crate docopt_macros;
@@ -214,17 +219,18 @@
 
 extern crate libc;
 extern crate regex;
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::error::FromError;
 use std::fmt;
-use std::str::{FromStr, from_str};
+use std::str::FromStr;
 use std::num;
 use std::num::NumCast;
 
-use serialize::Decodable;
+use rustc_serialize::Decodable;
 
 use parse::Parser;
 use synonym::SynonymMap;
@@ -394,6 +400,23 @@ impl FromError<Error> for Box<StdError> {
     }
 }
 
+/// Encapsulate allocating of strings.
+///
+/// This is a temporary measure until the standard library provides more
+/// impls for `std::string::IntoString`.
+pub trait StrAllocating {
+    /// Provide an owned String.
+    fn into_str(self) -> String;
+}
+
+impl StrAllocating for String {
+    fn into_str(self) -> String { self }
+}
+
+impl<'a> StrAllocating for &'a str {
+    fn into_str(self) -> String { self.to_owned() }
+}
+
 /// The main Docopt type, which is constructed with a Docopt usage string.
 ///
 /// This can be used to match command line arguments to produce a `ArgvMap`.
@@ -484,7 +507,7 @@ impl Docopt {
     /// is wrong.
     pub fn argv<I, S>(mut self, argv: I) -> Docopt
                where I: Iterator<S>, S: StrAllocating {
-        self.argv = Some(argv.skip(1).map(|s| s.into_string()).collect());
+        self.argv = Some(argv.skip(1).map(|s| s.into_str()).collect());
         self
     }
 
@@ -573,7 +596,9 @@ impl ArgvMap {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate docopt; extern crate serialize; fn main() {
+    /// # extern crate docopt;
+    /// # extern crate "rustc-serialize" as rustc_serialize;
+    /// # fn main() {
     /// use docopt::Docopt;
     ///
     /// static USAGE: &'static str = "
@@ -584,7 +609,7 @@ impl ArgvMap {
     ///          -h, --help
     /// ";
     ///
-    /// #[deriving(Decodable)]
+    /// #[deriving(RustcDecodable)]
     /// struct Args {
     ///   cmd_build: bool,
     ///   cmd_test: bool,
@@ -839,9 +864,11 @@ impl Value {
 /// and produces a decodable value:
 ///
 /// ```rust
-/// # extern crate docopt; extern crate serialize; fn main() {
+/// # extern crate docopt;
+/// # extern crate "rustc-serialize" as rustc_serialize;
+/// # fn main() {
 /// use docopt::Docopt;
-/// use serialize::Decodable;
+/// use rustc_serialize::Decodable;
 ///
 /// fn decode<D>(usage: &str, argv: &[&str]) -> Result<D, docopt::Error>
 ///          where D: Decodable<docopt::Decoder, docopt::Error> {
@@ -902,7 +929,7 @@ impl Decoder {
         match v {
             Counted(n) => Ok(num::cast(n).unwrap()),
             _ => {
-                match from_str(v.as_str()) {
+                match v.as_str().parse() {
                     None => derr!("Could not decode '{}' to {} for '{}'.",
                                   v.as_str(), expect, k),
                     Some(v) => Ok(v),
@@ -912,7 +939,7 @@ impl Decoder {
     }
 }
 
-impl serialize::Decoder<Error> for Decoder {
+impl rustc_serialize::Decoder<Error> for Decoder {
     fn error(&mut self, err: &str) -> Error {
         Decode(err.to_string())
     }
@@ -962,7 +989,7 @@ impl serialize::Decoder<Error> for Decoder {
     fn read_char(&mut self) -> Result<char, Error> {
         let (k, v) = try!(self.pop_key_val());
         let vstr = v.as_str();
-        match vstr.char_len() {
+        match vstr.chars().count() {
             1 => Ok(vstr.char_at(0)),
             _ => derr!("Could not decode '{}' into char for '{}'.", vstr, k),
         }

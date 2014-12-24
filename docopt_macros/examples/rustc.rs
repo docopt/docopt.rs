@@ -1,6 +1,6 @@
 #![feature(phase)]
 
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
 #[phase(plugin)] extern crate docopt_macros;
@@ -19,13 +19,14 @@ Options:
     --opt-level LEVEL  Optimize with possible levels 0-3.
 ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>);
 
-#[deriving(Decodable, Show)]
+#[deriving(RustcDecodable, Show)]
 enum Emit { Asm, Ir, Bc, Obj, Link }
 
 #[deriving(Show)]
 enum OptLevel { Zero, One, Two, Three }
 
-impl<E, D: serialize::Decoder<E>> serialize::Decodable<D, E> for OptLevel {
+impl<E, D> rustc_serialize::Decodable<D, E> for OptLevel
+        where D: rustc_serialize::Decoder<E> {
     fn decode(d: &mut D) -> Result<OptLevel, E> {
         Ok(match try!(d.read_uint()) {
             0 => OptLevel::Zero, 1 => OptLevel::One,
