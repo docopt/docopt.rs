@@ -144,19 +144,21 @@ impl Parser {
         }
 
         let mprog = format!(
-            "(?s)(.*?)({}|$)", regex::quote(caps.name("prog").unwrap_or("")));
+            "^(?:{})?\\s*(.*?)\\s*$", regex::quote(caps.name("prog").unwrap_or("")));
         let pats = Regex::new(mprog.as_slice()).unwrap();
-        let mut last = caps.name("prog").unwrap_or("");
-        for pat in pats.captures_iter(caps.name("pats").unwrap_or("")) {
+
+        if caps.name("pats").unwrap_or("") == "" {
             let pattern = try!(
-                PatParser::new(self, pat.at(1).unwrap_or("")).parse());
+                PatParser::new(self, "").parse());
             self.usages.push(pattern);
-            last = pat.at(2).unwrap_or("");
-        }
-        if last == caps.name("prog").unwrap_or("") {
-            // The last "Usage: ..." is an empty pattern.
-            let pattern = try!(PatParser::new(self, "").parse());
-            self.usages.push(pattern);
+        } else {
+            for line in caps.name("pats").unwrap_or("").lines() {
+                for pat in pats.captures_iter(line.trim()) {
+                    let pattern = try!(
+                        PatParser::new(self, pat.at(1).unwrap_or("")).parse());
+                    self.usages.push(pattern);
+                }
+            }
         }
         Ok(())
     }
