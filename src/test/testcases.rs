@@ -643,3 +643,7 @@ test_expect!(test_178_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--
 
 test_expect!(test_179_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--", "-a"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(false))));
 
+test_expect!(test_180_testcases, "Usage: prog arg-prog", &["arg-prog"], vec!(("arg-prog", Switch(true))));
+
+test_expect!(test_181_testcases, "Usage: prog --opt-prog", &["--opt-prog"], vec!(("--opt-prog", Switch(true))));
+
