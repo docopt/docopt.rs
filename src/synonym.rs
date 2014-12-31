@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::collections::hash_map::{Entries, Keys};
+use std::collections::hash_map::{Iter, Keys};
 use std::fmt::Show;
 use std::hash::Hash;
 use std::mem;
@@ -27,11 +27,11 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.vals.keys()
     }
 
-    pub fn iter<'a>(&'a self) -> Entries<'a, K, V> {
+    pub fn iter<'a>(&'a self) -> Iter<'a, K, V> {
         self.vals.iter()
     }
 
-    pub fn synonyms<'a>(&'a self) -> Entries<'a, K, K> {
+    pub fn synonyms<'a>(&'a self) -> Iter<'a, K, K> {
         self.syns.iter()
     }
 
