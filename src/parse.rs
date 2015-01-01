@@ -1063,29 +1063,30 @@ impl<'a, 'b> Matcher<'a, 'b> {
             vals: HashMap::new(),
         };
         m.states(pat, &init)
-            .into_iter()
-            .filter(|s| m.state_consumed_all_argv(s))
-            .filter(|s| m.state_has_valid_flags(s))
-            .filter(|s| m.state_valid_num_flags(s))
-            .collect::<Vec<MState>>()
-            .remove(0)
-            .map(|mut s| {
-                m.add_flag_values(&mut s);
-                m.add_default_values(&mut s);
+         .into_iter()
+         .filter(|s| m.state_consumed_all_argv(s))
+         .filter(|s| m.state_has_valid_flags(s))
+         .filter(|s| m.state_valid_num_flags(s))
+         .collect::<Vec<MState>>()
+         .into_iter()
+         .next()
+         .map(|mut s| {
+             m.add_flag_values(&mut s);
+             m.add_default_values(&mut s);
 
-                // Build a synonym map so that it's easier to look up values.
-                let mut synmap: SynonymMap<String, Value> =
-                    s.vals.into_iter()
-                          .map(|(k, v)| (k.to_string(), v))
-                          .collect();
-                for (from, to) in argv.dopt.descs.synonyms() {
-                    let (from, to) = (from.to_string(), to.to_string());
-                    if synmap.contains_key(&to) {
-                        synmap.insert_synonym(from, to);
-                    }
-                }
-                synmap
-            })
+             // Build a synonym map so that it's easier to look up values.
+             let mut synmap: SynonymMap<String, Value> =
+                 s.vals.into_iter()
+                       .map(|(k, v)| (k.to_string(), v))
+                       .collect();
+             for (from, to) in argv.dopt.descs.synonyms() {
+                 let (from, to) = (from.to_string(), to.to_string());
+                 if synmap.contains_key(&to) {
+                     synmap.insert_synonym(from, to);
+                 }
+             }
+             synmap
+         })
     }
 
     fn token_from(&'a self, state: &MState) -> Option<&'a ArgvToken> {
@@ -1257,7 +1258,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
         if pats.is_empty() {
             states.push(base.clone());
         } else {
-            let (pat, rest) = (*pats.head().unwrap(), pats.tail());
+            let (pat, rest) = (*pats.first().unwrap(), pats.tail());
             for s in self.states(pat, base).into_iter() {
                 self.all_option_states(&s, states, rest);
             }
