@@ -1,3 +1,5 @@
+#![feature(old_orphan_check)]
+
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
@@ -30,7 +32,7 @@ Some common cargo commands are:
 See 'cargo help <command>' for more information on a specific command.
 ";
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 struct Args {
     arg_command: Command,
     arg_args: Vec<String>,
@@ -38,7 +40,7 @@ struct Args {
     flag_verbose: bool,
 }
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 enum Command {
     Build, Clean, Doc, New, Run, Test, Bench, Update,
 }

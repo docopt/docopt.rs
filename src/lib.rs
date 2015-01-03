@@ -46,6 +46,7 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
+//! # #![feature(old_orphan_check)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -60,7 +61,7 @@
 //!     -a, --archive  Copy everything.
 //! ";
 //!
-//! #[deriving(RustcDecodable)]
+//! #[derive(RustcDecodable)]
 //! struct Args {
 //!     arg_source: Vec<String>,
 //!     arg_dest: String,
@@ -88,6 +89,7 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
+//! # #![feature(old_orphan_check)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -109,7 +111,7 @@
 //!     --opt-level LEVEL  Optimize with possible levels 0-3.
 //! ";
 //!
-//! #[deriving(RustcDecodable)]
+//! #[derive(RustcDecodable)]
 //! struct Args {
 //!     arg_INPUT: String,
 //!     flag_emit: Option<Emit>,
@@ -122,14 +124,14 @@
 //!
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
-//! #[deriving(RustcDecodable)]
-//! # #[deriving(PartialEq, Show)]
+//! #[derive(RustcDecodable)]
+//! # #[derive(PartialEq, Show)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
 //!
 //! // This one is harder because we want the user to specify an integer,
 //! // but restrict it to a specific range. So we implement `Decodable`
 //! // ourselves.
-//! # #[deriving(PartialEq, Show)]
+//! # #[derive(PartialEq, Show)]
 //! enum OptLevel { Zero, One, Two, Three }
 //!
 //! impl<E, D> rustc_serialize::Decodable<D, E> for OptLevel
@@ -420,7 +422,7 @@ impl<'a> StrAllocating for &'a str {
 /// The main Docopt type, which is constructed with a Docopt usage string.
 ///
 /// This can be used to match command line arguments to produce a `ArgvMap`.
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 pub struct Docopt {
     p: Parser,
     argv: Option<Vec<String>>,
@@ -576,7 +578,7 @@ impl Docopt {
 /// `-f` for a short flag. (If `-f` is a synonym for `--flag`, then either
 /// key will work.) `ARG` or `<arg>` specify a positional argument and `cmd`
 /// specifies a command.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct ArgvMap {
     map: SynonymMap<String, Value>,
 }
@@ -596,6 +598,7 @@ impl ArgvMap {
     /// # Example
     ///
     /// ```rust
+    /// # #![feature(old_orphan_check)]
     /// # extern crate docopt;
     /// # extern crate "rustc-serialize" as rustc_serialize;
     /// # fn main() {
@@ -609,7 +612,7 @@ impl ArgvMap {
     ///          -h, --help
     /// ";
     ///
-    /// #[deriving(RustcDecodable)]
+    /// #[derive(RustcDecodable)]
     /// struct Args {
     ///   cmd_build: bool,
     ///   cmd_test: bool,
@@ -778,7 +781,7 @@ impl fmt::Show for ArgvMap {
 ///
 /// The various `as_{bool,count,str,vec}` methods provide convenient access
 /// to values without destructuring manually.
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 pub enum Value {
     /// A boolean value from a flag that has no argument.
     ///
@@ -881,7 +884,7 @@ pub struct Decoder {
     stack: Vec<DecoderItem>,
 }
 
-#[deriving(Show)]
+#[derive(Show)]
 struct DecoderItem {
     key: String,
     struct_field: String,

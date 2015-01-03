@@ -1,3 +1,5 @@
+#![feature(old_orphan_check)]
+
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
@@ -12,7 +14,7 @@ Options:
     -a, --archive  Copy everything.
 ";
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 struct Args {
     arg_source: Vec<String>,
     arg_dest: String,
