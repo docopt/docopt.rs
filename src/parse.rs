@@ -43,18 +43,19 @@ use self::Pattern::{Alternates,Sequence,Optional,Repeat,PatAtom};
 
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Vacant, Occupied};
+use std::cmp::Ordering;
 use std::fmt;
 use regex;
 use regex::Regex;
 
-use Value::{mod, Switch, Counted, Plain, List};
+use Value::{self, Switch, Counted, Plain, List};
 use synonym::SynonymMap;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
 );
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Parser {
     pub program: String,
     pub full_doc: String,
@@ -584,7 +585,7 @@ impl<'a> PatParser<'a> {
     }
 }
 
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 enum Pattern {
     Alternates(Vec<Pattern>),
     Sequence(Vec<Pattern>),
@@ -593,7 +594,7 @@ enum Pattern {
     PatAtom(Atom),
 }
 
-#[deriving(PartialEq, Eq, Ord, Hash, Clone)]
+#[derive(PartialEq, Eq, Ord, Hash, Clone)]
 pub enum Atom {
     Short(char),
     Long(String),
@@ -601,7 +602,7 @@ pub enum Atom {
     Positional(String),
 }
 
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 pub struct Options {
     /// Set to true if this atom is ever repeated in any context.
     /// For positional arguments, non-argument flags and commands, repetition
@@ -619,7 +620,7 @@ pub struct Options {
     pub is_desc: bool,
 }
 
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 pub enum Argument {
     Zero,
     One(Option<String>), // optional default value
@@ -807,7 +808,7 @@ pub struct Argv<'a> {
     options_first: bool,
 }
 
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 struct ArgvToken {
     atom: Atom,
     arg: Option<String>,
@@ -940,7 +941,7 @@ struct Matcher<'a, 'b:'a> {
     argv: &'a Argv<'b>,
 }
 
-#[deriving(Clone, PartialEq, Show)]
+#[derive(Clone, PartialEq, Show)]
 struct MState {
     argvi: uint, // index into Argv.positional
     counts: HashMap<Atom, uint>, // flags remaining for pattern consumption

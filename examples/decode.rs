@@ -1,3 +1,5 @@
+#![feature(old_orphan_check)]
+
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
@@ -22,7 +24,7 @@ Options:
   --drifting    Drifting mine.
 ";
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 struct Args {
     flag_speed: int,
     flag_drifting: bool,

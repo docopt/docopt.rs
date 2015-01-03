@@ -1,5 +1,5 @@
 #![experimental]
-#![feature(macro_rules)]
+#![feature(macro_rules, old_orphan_check)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -44,7 +44,7 @@ Which will only include 'a', 'b' and 'c' in the wordlist if
 'your-command --help' contains a positional argument named 'arg'.
 ";
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 struct Args {
     arg_name: Vec<String>,
     arg_possibles: Vec<String>,
