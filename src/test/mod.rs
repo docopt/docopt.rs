@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use {Docopt, ArgvMap};
-use Value::{mod, Switch, Plain};
+use Value::{self, Switch, Plain};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
     let dopt =
