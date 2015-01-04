@@ -21,6 +21,4 @@ test = false
 
 [dependencies]
 regex = "*"
-
-[dependencies.rustc-serialize]
-git = "https://github.com/rust-lang/rustc-serialize"
+rustc-serialize = "*"
