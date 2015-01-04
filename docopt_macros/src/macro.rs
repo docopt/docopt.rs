@@ -88,7 +88,7 @@ impl Parsed {
         let mut traits = vec!["RustcDecodable".to_string()];
         traits.push_all(self.struct_info.deriving.as_slice());
         let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
-                         attribute(cx, "deriving", traits)];
+                         attribute(cx, "derive", traits)];
 
         let st = cx.item_struct(codemap::DUMMY_SP, name.clone(), def);
         cx.item(codemap::DUMMY_SP, name, attrs, st.node.clone()).map(|mut it| {
@@ -254,8 +254,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
         };
         if self.p.eat(&token::Comma) { return Ok(info); }
         let deriving = self.p.parse_ident();
-        if deriving.as_str() != "deriving" {
-            let err = format!("Expected 'deriving' keyword but got '{}'",
+        if deriving.as_str() != "derive" {
+            let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
             self.cx.span_err(self.cx.call_site(), err.as_slice());
             return Err(());
