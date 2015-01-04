@@ -20,5 +20,7 @@ doc = false
 test = false
 
 [dependencies]
-regex = "*"
 rustc-serialize = "*"
+
+[dependencies.regex]
+git = "git://github.com/rust-lang/regex"
