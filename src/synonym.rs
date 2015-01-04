@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::collections::hash_map::{Iter, Keys};
 use std::fmt::Show;
 use std::hash::Hash;
+use std::iter::FromIterator;
 use std::mem;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct SynonymMap<K, V> {
     vals: HashMap<K, V>,
     syns: HashMap<K, K>,
