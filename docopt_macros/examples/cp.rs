@@ -1,11 +1,12 @@
 #![feature(phase)]
+#![feature(old_orphan_check)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
 #[phase(plugin)] extern crate docopt_macros;
 
-docopt!(Args deriving Show, "
+docopt!(Args derive Show, "
 Usage: cp [options] <src> <dst>
        cp [options] <src>... <dir>
        cp --help
