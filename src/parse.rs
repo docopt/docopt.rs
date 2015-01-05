@@ -828,8 +828,8 @@ impl<'a> Argv<'a> {
         };
         try!(a.parse());
         for flag in a.flags.iter() {
-            match a.counts.entry(flag.atom.clone()) {
-                Vacant(v) => { v.set(1); }
+            match a.counts.entry(&flag.atom) {
+                Vacant(v) => { v.insert(1); }
                 Occupied(mut v) => { *v.get_mut() += 1; }
             }
         }
@@ -960,8 +960,8 @@ impl MState {
                 self.vals.insert(key, Plain(Some(arg)));
             }
             (None, true) => {
-                match self.vals.entry(key.clone()) {
-                    Vacant(v) => { v.set(Counted(1)); }
+                match self.vals.entry(&key) {
+                    Vacant(v) => { v.insert(Counted(1)); }
                     Occupied(mut v) => {
                         match *v.get_mut() {
                             Counted(ref mut c) => { *c += 1; }
@@ -971,8 +971,8 @@ impl MState {
                 }
             }
             (Some(arg), true) => {
-                match self.vals.entry(key.clone()) {
-                    Vacant(v) => { v.set(List(vec!(arg))); }
+                match self.vals.entry(&key) {
+                    Vacant(v) => { v.insert(List(vec!(arg))); }
                     Occupied(mut v) => {
                         match *v.get_mut() {
                             List(ref mut vs) => vs.push(arg),
@@ -1005,11 +1005,11 @@ impl MState {
     }
 
     fn use_flag(&mut self, flag: &Atom) -> bool {
-        match self.max_counts.entry(flag.clone()) {
-            Vacant(v) => { v.set(0); }
+        match self.max_counts.entry(flag) {
+            Vacant(v) => { v.insert(0); }
             Occupied(_) => {}
         }
-        match self.counts.entry(flag.clone()) {
+        match self.counts.entry(flag) {
             Vacant(_) => { false }
             Occupied(mut v) => {
                 let c = v.get_mut();
@@ -1024,8 +1024,8 @@ impl MState {
     }
 
     fn use_optional_flag(&mut self, flag: &Atom) {
-        match self.max_counts.entry(flag.clone()) {
-            Vacant(v) => { v.set(1); }
+        match self.max_counts.entry(flag) {
+            Vacant(v) => { v.insert(1); }
             Occupied(mut v) => { *v.get_mut() += 1; }
         }
     }
