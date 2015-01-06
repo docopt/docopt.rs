@@ -1,6 +1,5 @@
 #![experimental]
 #![feature(macro_rules)]
-#![feature(old_orphan_check)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
