@@ -48,7 +48,7 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.vals.len()
     }
 
-    fn with_key<T>(&self, k: &K, with: |&K| -> T) -> T {
+    fn with_key<T, F>(&self, k: &K, with: F) -> T where F: FnOnce(&K) -> T {
         if self.syns.contains_key(k) {
             with(&self.syns[*k])
         } else {
