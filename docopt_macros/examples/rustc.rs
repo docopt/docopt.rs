@@ -1,5 +1,4 @@
 #![feature(phase)]
-#![feature(old_orphan_check)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
@@ -26,9 +25,8 @@ enum Emit { Asm, Ir, Bc, Obj, Link }
 #[derive(Show)]
 enum OptLevel { Zero, One, Two, Three }
 
-impl<E, D> rustc_serialize::Decodable<D, E> for OptLevel
-        where D: rustc_serialize::Decoder<E> {
-    fn decode(d: &mut D) -> Result<OptLevel, E> {
+impl rustc_serialize::Decodable for OptLevel {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OptLevel, D::Error> {
         Ok(match try!(d.read_uint()) {
             0 => OptLevel::Zero, 1 => OptLevel::One,
             2 => OptLevel::Two, 3 => OptLevel::Three,
