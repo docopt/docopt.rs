@@ -9,7 +9,6 @@
 //! usage string. Here's a simple example:
 //!
 //! ```rust
-//! #![feature(old_orphan_check)]
 //! use docopt::Docopt;
 //!
 //! // Write the Docopt usage string.
@@ -23,7 +22,7 @@
 //!
 //! // The argv. Normally you'd just use `parse` which will automatically
 //! // use `std::os::args()`.
-//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //! // Parse argv and exit the program with an error message if it fails.
 //! let args = Docopt::new(USAGE)
@@ -47,7 +46,6 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
-//! #![feature(old_orphan_check)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -70,7 +68,7 @@
 //!     flag_archive: bool,
 //! }
 //!
-//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
 //!                         .unwrap_or_else(|e| e.exit());
@@ -90,7 +88,6 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
-//! #![feature(old_orphan_check)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -135,9 +132,9 @@
 //! # #[derive(PartialEq, Show)]
 //! enum OptLevel { Zero, One, Two, Three }
 //!
-//! impl<E, D> rustc_serialize::Decodable<D, E> for OptLevel
-//!         where D: rustc_serialize::Decoder<E> {
-//!     fn decode(d: &mut D) -> Result<OptLevel, E> {
+//! impl rustc_serialize::Decodable for OptLevel {
+//!     fn decode<D: rustc_serialize::Decoder>(d: &mut D)
+//!                                            -> Result<OptLevel, D::Error> {
 //!         Ok(match try!(d.read_uint()) {
 //!             0 => OptLevel::Zero, 1 => OptLevel::One,
 //!             2 => OptLevel::Two, 3 => OptLevel::Three,
@@ -150,7 +147,7 @@
 //!     }
 //! }
 //!
-//! let argv = || vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
+//! let argv = |&:| vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
 //!                             "--opt-level", "2", "--emit=ir", "docopt.rs"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
@@ -198,7 +195,7 @@
 //! ")
 //!
 //! fn main() {
-//!     let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
+//!     let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //!     // Your `Args` struct has a single static method defined on it,
 //!     // `docopt`, which will return a normal `Docopt` value.
@@ -218,8 +215,7 @@
 
 #![experimental]
 #![deny(missing_docs)]
-#![feature(macro_rules)]
-#![feature(old_orphan_check)]
+#![feature(macro_rules, associated_types)]
 
 extern crate libc;
 extern crate regex;
@@ -460,8 +456,7 @@ impl Docopt {
     ///
     /// For details on how decoding works, please see the documentation for
     /// `ArgvMap`.
-    pub fn decode<D>(&self) -> Result<D, Error>
-                 where D: Decodable<Decoder, Error> {
+    pub fn decode<D>(&self) -> Result<D, Error> where D: Decodable {
         self.parse().and_then(|vals| vals.decode())
     }
 
@@ -600,7 +595,6 @@ impl ArgvMap {
     /// # Example
     ///
     /// ```rust
-    /// #![feature(old_orphan_check)]
     /// # extern crate docopt;
     /// # extern crate "rustc-serialize" as rustc_serialize;
     /// # fn main() {
@@ -622,7 +616,7 @@ impl ArgvMap {
     ///   flag_h: bool,
     /// }
     ///
-    /// let argv = || vec!["cargo", "build", "-v"].into_iter();
+    /// let argv = |&:| vec!["cargo", "build", "-v"].into_iter();
     /// let args: Args = Docopt::new(USAGE)
     ///                         .and_then(|d| d.argv(argv()).decode())
     ///                         .unwrap_or_else(|e| e.exit());
@@ -636,8 +630,7 @@ impl ArgvMap {
     ///
     /// In this example, only the `bool` type was used, but any type satisfying
     /// the `Decodable` trait is valid.
-    pub fn decode<T: Decodable<Decoder, Error>>
-                 (self) -> Result<T, Error> {
+    pub fn decode<T: Decodable>(self) -> Result<T, Error> {
         Decodable::decode(&mut Decoder { vals: self, stack: vec!() })
     }
 
@@ -875,8 +868,8 @@ impl Value {
 /// use docopt::Docopt;
 /// use rustc_serialize::Decodable;
 ///
-/// fn decode<D>(usage: &str, argv: &[&str]) -> Result<D, docopt::Error>
-///          where D: Decodable<docopt::Decoder, docopt::Error> {
+/// fn decode<D: Decodable>(usage: &str, argv: &[&str])
+///                         -> Result<D, docopt::Error> {
 ///     Docopt::new(usage)
 ///            .and_then(|d| d.argv(argv.iter().map(|&v|v)).decode())
 /// }
@@ -944,7 +937,9 @@ impl Decoder {
     }
 }
 
-impl rustc_serialize::Decoder<Error> for Decoder {
+impl rustc_serialize::Decoder for Decoder {
+    type Error = Error;
+
     fn error(&mut self, err: &str) -> Error {
         Decode(err.to_string())
     }
