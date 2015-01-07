@@ -178,12 +178,12 @@
 //! The example above using type based decoding can be simplified to this:
 //!
 //! ```ignore
-//! #![feature(phase)]
+//! #![feature(plugin)]
 //!
 //! extern crate "rustc-serialize" as rustc_serialize;
 //!
 //! extern crate docopt;
-//! #[phase(plugin)] extern crate docopt_macros;
+//! #[plugin] extern crate docopt_macros;
 //!
 //! // Write the Docopt usage string with the `docopt!` macro.
 //! docopt!(Args, "

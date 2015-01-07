@@ -1,10 +1,9 @@
-#![feature(phase)]
-#![feature(old_orphan_check)]
+#![feature(plugin)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
+#[plugin] extern crate docopt_macros;
 
 docopt!(pub Args derive Show, "
 Naval Fate.

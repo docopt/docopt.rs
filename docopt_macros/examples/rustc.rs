@@ -1,9 +1,9 @@
-#![feature(phase)]
+#![feature(plugin)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[phase(plugin)] extern crate docopt_macros;
+#[plugin] extern crate docopt_macros;
 
 docopt!(Args derive Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
