@@ -1,6 +1,6 @@
 #![crate_name = "docopt_macros"]
 #![crate_type = "dylib"]
-#![feature(plugin_registrar, macro_rules, quote)]
+#![feature(plugin_registrar, quote)]
 
 //! This crate defines the `docopt!` macro. It is documented in the
 //! documentation of the `docopt` crate.

@@ -178,12 +178,12 @@
 //! The example above using type based decoding can be simplified to this:
 //!
 //! ```ignore
-//! #![feature(phase)]
+//! #![feature(plugin)]
 //!
 //! extern crate "rustc-serialize" as rustc_serialize;
 //!
 //! extern crate docopt;
-//! #[phase(plugin)] extern crate docopt_macros;
+//! #[plugin] extern crate docopt_macros;
 //!
 //! // Write the Docopt usage string with the `docopt!` macro.
 //! docopt!(Args, "
@@ -215,7 +215,6 @@
 
 #![experimental]
 #![deny(missing_docs)]
-#![feature(macro_rules, associated_types)]
 
 extern crate libc;
 extern crate regex;
@@ -224,7 +223,6 @@ extern crate "rustc-serialize" as rustc_serialize;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::error::Error as StdError;
-use std::error::FromError;
 use std::fmt;
 use std::str::FromStr;
 use std::num;
@@ -391,12 +389,6 @@ impl StdError for Error {
             WithProgramUsage(ref cause, _) => Some(&**cause as &StdError),
             _ => None,
         }
-    }
-}
-
-impl FromError<Error> for Box<StdError> {
-    fn from_error(err: Error) -> Box<StdError> {
-        box err
     }
 }
 
