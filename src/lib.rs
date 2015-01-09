@@ -218,8 +218,8 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
 #![experimental]
+#![allow(unstable)]
 #![deny(missing_docs)]
-#![feature(box_syntax)]
 
 extern crate libc;
 extern crate regex;
@@ -574,11 +574,13 @@ impl Docopt {
     }
 
     fn err_with_usage(&self, e: Error) -> Error {
-        WithProgramUsage(box e, self.p.usage.as_slice().trim().to_string())
+        WithProgramUsage(
+            Box::new(e), self.p.usage.as_slice().trim().to_string())
     }
 
     fn err_with_full_doc(&self, e: Error) -> Error {
-        WithProgramUsage(box e, self.p.full_doc.as_slice().trim().to_string())
+        WithProgramUsage(
+            Box::new(e), self.p.full_doc.as_slice().trim().to_string())
     }
 
     fn get_argv() -> Vec<String> {

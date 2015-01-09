@@ -477,7 +477,7 @@ impl<'a> PatParser<'a> {
         // here to group a short stack.
         if self.atis(0, "...") {
             self.next();
-            seq = seq.into_iter().map(|p| Repeat(box p)).collect();
+            seq = seq.into_iter().map(|p| Repeat(Box::new(p))).collect();
         }
         Ok(seq)
     }
@@ -554,7 +554,7 @@ impl<'a> PatParser<'a> {
     fn maybe_repeat(&mut self, pat: Pattern) -> Pattern {
         if self.atis(0, "...") {
             self.next();
-            Repeat(box pat)
+            Repeat(Box::new(pat))
         } else {
             pat
         }
@@ -634,7 +634,7 @@ impl Pattern {
                 Alternates(ref mut ps) | Sequence(ref mut ps) => {
                     for p in ps.iter_mut() { add(p, all_atoms, par) }
                 }
-                Repeat(box ref mut p) => add(p, all_atoms, par),
+                Repeat(ref mut p) => add(&mut **p, all_atoms, par),
                 PatAtom(_) => {}
                 Optional(ref mut ps) => {
                     if !ps.is_empty() {
@@ -659,7 +659,7 @@ impl Pattern {
                 Alternates(ref ps) | Sequence(ref ps) | Optional(ref ps) => {
                     for p in ps.iter() { all_atoms(p, set) }
                 }
-                Repeat(box ref p) => all_atoms(p, set),
+                Repeat(ref p) => all_atoms(&**p, set),
                 PatAtom(ref a) => { set.insert(a.clone()); }
             }
         }
@@ -699,7 +699,7 @@ impl Pattern {
                         dotag(p, rep, map, seen)
                     }
                 }
-                Repeat(box ref p) => dotag(p, true, map, seen),
+                Repeat(ref p) => dotag(&**p, true, map, seen),
                 PatAtom(ref atom) => {
                     let opt = map.find_mut(atom).expect("bug: no atom found");
                     opt.repeats = opt.repeats || rep || seen.contains(atom);
@@ -1223,13 +1223,13 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 self.all_option_states(&base, &mut states, noflags.as_slice());
                 states
             }
-            Repeat(box ref p) => {
-                let mut grouped_states = vec!(self.states(p, init));
+            Repeat(ref p) => {
+                let mut grouped_states = vec!(self.states(&**p, init));
                 loop {
                     let mut nextss = vec!();
                     for s in grouped_states.last().unwrap().iter() {
                         nextss.extend(
-                            self.states(p, s)
+                            self.states(&**p, s)
                                 .into_iter()
                                 .filter(|snext| snext != s));
                     }
