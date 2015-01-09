@@ -761,18 +761,7 @@ impl PartialOrd for Atom {
 
 impl fmt::Show for Atom {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Short(c) => write!(f, "-{}", c),
-            Long(ref s) => write!(f, "--{}", s),
-            Command(ref s) => write!(f, "{}", s),
-            Positional(ref s) => {
-                if s.as_slice().chars().all(|c| c.is_uppercase()) {
-                    write!(f, "{}", s)
-                } else {
-                    write!(f, "<{}>", s)
-                }
-            }
-        }
+        fmt::String::fmt(self, f)
     }
 }
 
