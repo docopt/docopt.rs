@@ -357,21 +357,7 @@ impl Error {
 
 impl fmt::Show for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            WithProgramUsage(ref other, ref usage) => {
-                let other = other.to_string();
-                if other.is_empty() {
-                    write!(f, "{}", usage)
-                } else {
-                    write!(f, "{:?}\n\n{}", other, usage)
-                }
-            }
-            Help => write!(f, ""),
-            NoMatch => write!(f, "Invalid arguments."),
-            Usage(ref s) | Argv(ref s) | Decode(ref s) | Version(ref s) => {
-                write!(f, "{}", s)
-            }
-        }
+        fmt::String::fmt(self, f)
     }
 }
 
