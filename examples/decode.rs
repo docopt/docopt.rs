@@ -24,21 +24,21 @@ Options:
 
 #[derive(RustcDecodable, Show)]
 struct Args {
-    flag_speed: int,
+    flag_speed: isize,
     flag_drifting: bool,
     arg_name: Vec<String>,
-    arg_x: Option<int>,
-    arg_y: Option<int>,
+    arg_x: Option<isize>,
+    arg_y: Option<isize>,
 }
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
                             .unwrap_or_else(|e| e.exit());
-    println!("{}", args);
+    println!("{:?}", args);
 
     println!("\nSome values:");
     println!("  Speed: {}", args.flag_speed);
     println!("  Drifting? {}", args.flag_drifting);
-    println!("  Names: {}", args.arg_name);
+    println!("  Names: {:?}", args.arg_name);
 }
