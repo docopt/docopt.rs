@@ -9,6 +9,7 @@
 //! usage string. Here's a simple example:
 //!
 //! ```rust
+//! #![allow(unstable)]
 //! use docopt::Docopt;
 //!
 //! // Write the Docopt usage string.
@@ -46,6 +47,7 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
+//! #![allow(unstable)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -88,6 +90,7 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
+//! #![allow(unstable)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -135,7 +138,7 @@
 //! impl rustc_serialize::Decodable for OptLevel {
 //!     fn decode<D: rustc_serialize::Decoder>(d: &mut D)
 //!                                            -> Result<OptLevel, D::Error> {
-//!         Ok(match try!(d.read_uint()) {
+//!         Ok(match try!(d.read_usize()) {
 //!             0 => OptLevel::Zero, 1 => OptLevel::One,
 //!             2 => OptLevel::Two, 3 => OptLevel::Three,
 //!             n => {
@@ -178,6 +181,7 @@
 //! The example above using type based decoding can be simplified to this:
 //!
 //! ```ignore
+//! #![allow(unstable)]
 //! #![feature(plugin)]
 //!
 //! extern crate "rustc-serialize" as rustc_serialize;
@@ -215,6 +219,7 @@
 
 #![experimental]
 #![deny(missing_docs)]
+#![feature(box_syntax)]
 
 extern crate libc;
 extern crate regex;
@@ -358,7 +363,27 @@ impl fmt::Show for Error {
                 if other.is_empty() {
                     write!(f, "{}", usage)
                 } else {
-                    write!(f, "{}\n\n{}", other, usage)
+                    write!(f, "{:?}\n\n{}", other, usage)
+                }
+            }
+            Help => write!(f, ""),
+            NoMatch => write!(f, "Invalid arguments."),
+            Usage(ref s) | Argv(ref s) | Decode(ref s) | Version(ref s) => {
+                write!(f, "{}", s)
+            }
+        }
+    }
+}
+
+impl fmt::String for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            WithProgramUsage(ref other, ref usage) => {
+                let other = other.to_string();
+                if other.is_empty() {
+                    write!(f, "{}", usage)
+                } else {
+                    write!(f, "{:?}\n\n{}", other, usage)
                 }
             }
             Help => write!(f, ""),
@@ -634,7 +659,7 @@ impl ArgvMap {
 
     /// Finds the value corresponding to `key` and calls `as_count()` on it.
     /// If the key does not exist, `0` is returned.
-    pub fn get_count(&self, key: &str) -> uint {
+    pub fn get_count(&self, key: &str) -> usize {
         self.find(key).map(|v| v.as_count()).unwrap_or(0)
     }
 
@@ -659,7 +684,7 @@ impl ArgvMap {
     }
 
     /// Return the number of values, not including synonyms.
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> usize {
         self.map.len()
     }
 
@@ -750,10 +775,10 @@ impl fmt::Show for ArgvMap {
             if !first { try!(write!(f, "\n")); } else { first = false; }
             match reverse.get(&k) {
                 None => {
-                    try!(write!(f, "{} => {}", k, self.map.get(k)))
+                    try!(write!(f, "{} => {:?}", k, self.map.get(k)))
                 }
                 Some(s) => {
-                    try!(write!(f, "{}, {} => {}", s, k, self.map.get(k)))
+                    try!(write!(f, "{}, {} => {:?}", s, k, self.map.get(k)))
                 }
             }
         }
@@ -777,7 +802,7 @@ pub enum Value {
     Switch(bool),
 
     /// The number of occurrences of a repeated flag.
-    Counted(uint),
+    Counted(usize),
 
     /// A positional or flag argument.
     ///
@@ -813,7 +838,7 @@ impl Value {
     /// Booleans are `1` if `true` and `0` otherwise.
     /// Plain strings are `1` if present and `0` otherwise.
     /// Lists correspond to its length.
-    pub fn as_count(&self) -> uint {
+    pub fn as_count(&self) -> usize {
         match *self {
             Switch(b) => if b { 1 } else { 0 },
             Counted(n) => n,
@@ -939,8 +964,8 @@ impl rustc_serialize::Decoder for Decoder {
         // I don't know what the right thing is here, so just fail for now.
         panic!("I don't know how to read into a nil value.")
     }
-    fn read_uint(&mut self) -> Result<uint, Error> {
-        self.to_number("uint")
+    fn read_usize(&mut self) -> Result<usize, Error> {
+        self.to_number("usize")
     }
     fn read_u64(&mut self) -> Result<u64, Error> {
         self.to_number("u64")
@@ -954,8 +979,8 @@ impl rustc_serialize::Decoder for Decoder {
     fn read_u8(&mut self) -> Result<u8, Error> {
         self.to_number("u8")
     }
-    fn read_int(&mut self) -> Result<int, Error> {
-        self.to_number("int")
+    fn read_isize(&mut self) -> Result<isize, Error> {
+        self.to_number("isize")
     }
     fn read_i64(&mut self) -> Result<i64, Error> {
         self.to_number("i64")
@@ -995,7 +1020,7 @@ impl rustc_serialize::Decoder for Decoder {
     }
     fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F)
                               -> Result<T, Error>
-            where F: FnMut(&mut Decoder, uint) -> Result<T, Error> {
+            where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
         fn to_lower(s: &str) -> String {
             s.chars().map(|c| c.to_lowercase()).collect()
         }
@@ -1007,50 +1032,50 @@ impl rustc_serialize::Decoder for Decoder {
                 Some(i) => i,
                 None => {
                     derr!("Could not match '{}' with any of \
-                           the allowed variants: {}", vstr, names)
+                           the allowed variants: {:?}", vstr, names)
                 }
             };
         f(self, i)
     }
-    fn read_enum_variant_arg<T, F>(&mut self, _: uint, _: F)
+    fn read_enum_variant_arg<T, F>(&mut self, _: usize, _: F)
                                   -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
     fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F)
                                      -> Result<T, Error>
-            where F: FnMut(&mut Decoder, uint) -> Result<T, Error> {
+            where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_enum_struct_variant_field<T, F>(&mut self, _: &str, _: uint, _: F)
+    fn read_enum_struct_variant_field<T, F>(&mut self, _: &str, _: usize, _: F)
                                            -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_struct<T, F>(&mut self, _: &str, _: uint, f: F) -> Result<T, Error>
+    fn read_struct<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
-    fn read_struct_field<T, F>(&mut self, f_name: &str, _: uint, f: F)
+    fn read_struct_field<T, F>(&mut self, f_name: &str, _: usize, f: F)
                               -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         self.push(f_name);
         f(self)
     }
-    fn read_tuple<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
+    fn read_tuple<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_arg<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
+    fn read_tuple_arg<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct<T, F>(&mut self, _: &str, _: uint, _: F)
+    fn read_tuple_struct<T, F>(&mut self, _: &str, _: usize, _: F)
                               -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_tuple_struct_arg<T, F>(&mut self, _: uint, _: F)
+    fn read_tuple_struct_arg<T, F>(&mut self, _: usize, _: F)
                                   -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
@@ -1067,7 +1092,7 @@ impl rustc_serialize::Decoder for Decoder {
         f(self, option)
     }
     fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error>
-            where F: FnOnce(&mut Decoder, uint) -> Result<T, Error> {
+            where F: FnOnce(&mut Decoder, usize) -> Result<T, Error> {
         let it = try!(self.pop());
         let list = it.val.unwrap_or(List(vec!()));
         let vals = list.as_vec();
@@ -1080,19 +1105,19 @@ impl rustc_serialize::Decoder for Decoder {
         }
         f(self, vals.len())
     }
-    fn read_seq_elt<T, F>(&mut self, _: uint, f: F) -> Result<T, Error>
+    fn read_seq_elt<T, F>(&mut self, _: usize, f: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
     fn read_map<T, F>(&mut self, _: F) -> Result<T, Error>
-            where F: FnOnce(&mut Decoder, uint) -> Result<T, Error> {
+            where F: FnOnce(&mut Decoder, usize) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_map_elt_key<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
+    fn read_map_elt_key<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
-    fn read_map_elt_val<T, F>(&mut self, _: uint, _: F) -> Result<T, Error>
+    fn read_map_elt_val<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
@@ -1101,7 +1126,7 @@ impl rustc_serialize::Decoder for Decoder {
 // I've been warned that this is wildly unsafe.
 // Unless there's a reasonable alternative, I'm inclined to say that this is
 // the price you pay for convenience.
-fn exit(code: uint) -> ! {
+fn exit(code: usize) -> ! {
     unsafe { libc::exit(code as libc::c_int) }
 }
 

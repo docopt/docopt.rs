@@ -25,12 +25,12 @@ struct Args {
     arg_dest: String,
     arg_dir: String,
     flag_archive: bool,
-    flag_verbose: uint,
+    flag_verbose: usize,
 }
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
                             .unwrap_or_else(|e| e.exit());
-    println!("{}", args);
+    println!("{:?}", args);
 }

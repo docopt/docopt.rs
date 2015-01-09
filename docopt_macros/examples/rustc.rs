@@ -27,7 +27,7 @@ enum OptLevel { Zero, One, Two, Three }
 
 impl rustc_serialize::Decodable for OptLevel {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OptLevel, D::Error> {
-        Ok(match try!(d.read_uint()) {
+        Ok(match try!(d.read_usize()) {
             0 => OptLevel::Zero, 1 => OptLevel::One,
             2 => OptLevel::Two, 3 => OptLevel::Three,
             n => {
@@ -40,5 +40,5 @@ impl rustc_serialize::Decodable for OptLevel {
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    println!("{}", args);
+    println!("{:?}", args);
 }

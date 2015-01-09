@@ -5,7 +5,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 #[plugin] extern crate docopt_macros;
 
-docopt!(Args, "Usage: add <x> <y>", arg_x: int, arg_y: int);
+docopt!(Args, "Usage: add <x> <y>", arg_x: usize, arg_y: usize);
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());

@@ -1,4 +1,5 @@
 #![experimental]
+#![feature(box_syntax)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;

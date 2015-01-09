@@ -25,7 +25,7 @@ fn main() {
     let args = Docopt::new(USAGE)
                       .and_then(|dopt| dopt.parse())
                       .unwrap_or_else(|e| e.exit());
-    println!("{}", args);
+    println!("{:?}", args);
 
     // You can conveniently access values with `get_{bool,count,str,vec}`
     // functions. If the key doesn't exist (or if, e.g., you use `get_str` on
@@ -33,5 +33,5 @@ fn main() {
     println!("\nSome values:");
     println!("  Speed: {}", args.get_str("--speed"));
     println!("  Drifting? {}", args.get_bool("--drifting"));
-    println!("  Names: {}", args.get_vec("<name>"));
+    println!("  Names: {:?}", args.get_vec("<name>"));
 }

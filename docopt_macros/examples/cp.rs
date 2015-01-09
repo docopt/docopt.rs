@@ -17,5 +17,5 @@ Options:
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    println!("{}", args);
+    println!("{:?}", args);
 }

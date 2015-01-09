@@ -37,6 +37,7 @@
 // Long term:
 //
 //   - Write a specification for Docopt.
+
 pub use self::Argument::{Zero, One};
 pub use self::Atom::{Short,Long,Command,Positional};
 use self::Pattern::{Alternates,Sequence,Optional,Repeat,PatAtom};
@@ -242,15 +243,15 @@ impl Parser {
             };
         let opts =
             self.descs.find_mut(last_atom)
-            .expect(format!("BUG: last opt desc key ('{}') is invalid.",
+            .expect(format!("BUG: last opt desc key ('{:?}') is invalid.",
                             last_atom).as_slice());
         match opts.arg {
             One(None) => {}, // OK
             Zero =>
-                err!("Cannot assign default value '{}' to flag '{}' \
+                err!("Cannot assign default value '{}' to flag '{:?}' \
                       that has no arguments.", defval, last_atom),
             One(Some(ref curval)) =>
-                err!("Flag '{}' already has a default value \
+                err!("Flag '{:?}' already has a default value \
                       of '{}' (second default value: '{}').",
                      last_atom, curval, defval),
         }
@@ -301,19 +302,19 @@ impl fmt::Show for Parser {
         try!(writeln!(f, "Option descriptions:"));
         let keys = sorted(self.descs.keys().collect());
         for &k in keys.iter() {
-            try!(writeln!(f, "  '{}' => {}", k, self.descs.get(k)));
+            try!(writeln!(f, "  '{}' => {:?}", k, self.descs.get(k)));
         }
 
         try!(writeln!(f, "Synonyms:"));
         let keys: Vec<(&Atom, &Atom)> =
             sorted(self.descs.synonyms().collect());
         for &(from, to) in keys.iter() {
-            try!(writeln!(f, "  {} => {}", from, to));
+            try!(writeln!(f, "  {:?} => {:?}", from, to));
         }
 
         try!(writeln!(f, "Usages:"));
         for pat in self.usages.iter() {
-            try!(writeln!(f, "  {}", pat));
+            try!(writeln!(f, "  {:?}", pat));
         }
         writeln!(f, "=====")
     }
@@ -322,7 +323,7 @@ impl fmt::Show for Parser {
 struct PatParser<'a> {
     dopt: &'a mut Parser,
     tokens: Vec<String>, // used while parsing a single usage pattern
-    curi: uint, // ^^ index into pattern chars
+    curi: usize, // ^^ index into pattern chars
     expecting: Vec<char>, // stack of expected ']' or ')'
 }
 
@@ -491,7 +492,7 @@ impl<'a> PatParser<'a> {
             if arg.has_arg() && !has_arg {
                 // Found `=` in usage, but previous usage of this flag
                 // didn't specify an argument.
-                err!("Flag '{}' does not take any arguments.", atom)
+                err!("Flag '{:?}' does not take any arguments.", atom)
             } else if !arg.has_arg() && has_arg {
                 // Didn't find any `=` in usage for this flag, but previous
                 // usage of this flag specifies an argument.
@@ -509,14 +510,14 @@ impl<'a> PatParser<'a> {
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
         try!(self.next_noeof(format!(
-             "argument for flag '{}'", atom).as_slice()));
+             "argument for flag '{:?}'", atom).as_slice()));
         self.errif_invalid_flag_arg(atom, self.cur())
     }
 
     fn errif_invalid_flag_arg(&self, atom: &Atom, arg: &str)
                              -> Result<(), String> {
         if !Atom::is_arg(arg) {
-            err!("Expected argument for flag '{}', but found \
+            err!("Expected argument for flag '{:?}', but found \
                   malformed argument '{}'.", atom, arg)
         }
         Ok(())
@@ -578,9 +579,9 @@ impl<'a> PatParser<'a> {
     fn cur<'r>(&'r self) -> &'r str {
         self.tokens[self.curi].as_slice()
     }
-    fn atis(&self, offset: int, is: &str) -> bool {
-        let i = (self.curi as int) + offset;
-        let iu = i as uint;
+    fn atis(&self, offset: isize, is: &str) -> bool {
+        let i = (self.curi as isize) + offset;
+        let iu = i as usize;
         i >= 0 && iu < self.tokens.len() && self.tokens[iu].as_slice() == is
     }
 }
@@ -736,7 +737,7 @@ impl Atom {
     fn is_cmd(s: &str) -> bool { regex!(r"^(-|--|[^-]\S*)$").is_match(s) }
 
     // Assigns an integer to each variant of Atom. (For easier sorting.)
-    fn type_as_uint(&self) -> uint {
+    fn type_as_usize(&self) -> usize {
         match *self {
             Short(_) => 0,
             Long(_) => 1,
@@ -753,7 +754,7 @@ impl PartialOrd for Atom {
             (&Long(ref s1), &Long(ref s2)) => s1.partial_cmp(s2),
             (&Command(ref s1), &Command(ref s2)) => s1.partial_cmp(s2),
             (&Positional(ref s1), &Positional(ref s2)) => s1.partial_cmp(s2),
-            (a1, a2) => a1.type_as_uint().partial_cmp(&a2.type_as_uint()),
+            (a1, a2) => a1.type_as_usize().partial_cmp(&a2.type_as_usize()),
         }
     }
 }
@@ -774,6 +775,24 @@ impl fmt::Show for Atom {
         }
     }
 }
+
+impl fmt::String for Atom {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Short(c) => write!(f, "-{}", c),
+            Long(ref s) => write!(f, "--{}", s),
+            Command(ref s) => write!(f, "{}", s),
+            Positional(ref s) => {
+                if s.as_slice().chars().all(|c| c.is_uppercase()) {
+                    write!(f, "{}", s)
+                } else {
+                    write!(f, "<{}>", s)
+                }
+            }
+        }
+    }
+}
+
 
 impl Options {
     fn new(rep: bool, arg: Argument) -> Options {
@@ -799,12 +818,12 @@ pub struct Argv<'a> {
     /// Each flag may have an argument string.
     flags: Vec<ArgvToken>,
     /// Counts the number of times each flag appears.
-    counts: HashMap<Atom, uint>,
+    counts: HashMap<Atom, usize>,
 
     // State for parser.
     dopt: &'a Parser,
     argv: Vec<String>,
-    curi: uint,
+    curi: usize,
     options_first: bool,
 }
 
@@ -828,7 +847,7 @@ impl<'a> Argv<'a> {
         };
         try!(a.parse());
         for flag in a.flags.iter() {
-            match a.counts.entry(&flag.atom) {
+            match a.counts.entry(flag.atom.clone()) {
                 Vacant(v) => { v.insert(1); }
                 Occupied(mut v) => { *v.get_mut() += 1; }
             }
@@ -851,7 +870,7 @@ impl<'a> Argv<'a> {
                         arg: None,
                     };
                     if !self.dopt.descs.contains_key(&tok.atom) {
-                        err!("Unknown flag: '{}'", &tok.atom)
+                        err!("Unknown flag: '{:?}'", &tok.atom)
                     }
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
@@ -875,14 +894,14 @@ impl<'a> Argv<'a> {
                 let (atom, mut arg) = parse_long_equal_argv(self.cur());
                 let atom = self.dopt.descs.resolve(&atom);
                 if !self.dopt.descs.contains_key(&atom) {
-                    err!("Unknown flag: '{}'", &atom)
+                    err!("Unknown flag: '{:?}'", &atom)
                 }
                 if arg.is_some() && !self.dopt.has_arg(&atom) {
-                    err!("Flag '{}' cannot have an argument, but found '{}'.",
+                    err!("Flag '{:?}' cannot have an argument, but found '{:?}'.",
                          &atom, &arg)
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
                     try!(self.next_noeof(
-                        format!("argument for flag '{}'", &atom).as_slice()));
+                        format!("argument for flag '{:?}'", &atom).as_slice()));
                     arg = Some(self.cur().to_string());
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
@@ -906,8 +925,8 @@ impl<'a> Argv<'a> {
     }
 
     fn cur<'b>(&'b self) -> &'b str { self.at(0) }
-    fn at<'b>(&'b self, i: int) -> &'b str {
-        self.argv[(self.curi as int + i) as uint].as_slice()
+    fn at<'b>(&'b self, i: isize) -> &'b str {
+        self.argv[(self.curi as isize + i) as usize].as_slice()
     }
     fn next(&mut self) {
         if self.curi < self.argv.len() {
@@ -915,7 +934,7 @@ impl<'a> Argv<'a> {
         }
     }
     fn next_arg<'b>(&'b mut self, atom: &Atom) -> Result<&'b str, String> {
-        let expected = format!("argument for flag '{}'", atom);
+        let expected = format!("argument for flag '{:?}'", atom);
         try!(self.next_noeof(expected.as_slice()));
         Ok(self.cur())
     }
@@ -930,9 +949,9 @@ impl<'a> Argv<'a> {
 
 impl<'a> fmt::Show for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        try!(writeln!(f, "Positional: {}", self.positional));
-        try!(writeln!(f, "Flags: {}", self.flags));
-        try!(writeln!(f, "Counts: {}", self.counts));
+        try!(writeln!(f, "Positional: {:?}", self.positional));
+        try!(writeln!(f, "Flags: {:?}", self.flags));
+        try!(writeln!(f, "Counts: {:?}", self.counts));
         Ok(())
     }
 }
@@ -943,9 +962,9 @@ struct Matcher<'a, 'b:'a> {
 
 #[derive(Clone, PartialEq, Show)]
 struct MState {
-    argvi: uint, // index into Argv.positional
-    counts: HashMap<Atom, uint>, // flags remaining for pattern consumption
-    max_counts: HashMap<Atom, uint>, // optional flag appearances
+    argvi: usize, // index into Argv.positional
+    counts: HashMap<Atom, usize>, // flags remaining for pattern consumption
+    max_counts: HashMap<Atom, usize>, // optional flag appearances
     vals: HashMap<Atom, Value>,
 }
 
@@ -960,7 +979,7 @@ impl MState {
                 self.vals.insert(key, Plain(Some(arg)));
             }
             (None, true) => {
-                match self.vals.entry(&key) {
+                match self.vals.entry(key) {
                     Vacant(v) => { v.insert(Counted(1)); }
                     Occupied(mut v) => {
                         match *v.get_mut() {
@@ -971,7 +990,7 @@ impl MState {
                 }
             }
             (Some(arg), true) => {
-                match self.vals.entry(&key) {
+                match self.vals.entry(key) {
                     Vacant(v) => { v.insert(List(vec!(arg))); }
                     Occupied(mut v) => {
                         match *v.get_mut() {
@@ -988,7 +1007,7 @@ impl MState {
     fn add_value(&mut self, opts: &Options,
                  spec: &Atom, atom: &Atom, arg: &Option<String>) -> bool {
         assert!(opts.arg.has_arg() == arg.is_some(),
-                "'{}' should have an argument but doesn't", atom);
+                "'{:?}' should have an argument but doesn't", atom);
         match *atom {
             Short(_) | Long(_) => {
                 self.fill_value(spec.clone(), opts.repeats, arg.clone())
@@ -1005,11 +1024,11 @@ impl MState {
     }
 
     fn use_flag(&mut self, flag: &Atom) -> bool {
-        match self.max_counts.entry(flag) {
+        match self.max_counts.entry(flag.clone()) {
             Vacant(v) => { v.insert(0); }
             Occupied(_) => {}
         }
-        match self.counts.entry(flag) {
+        match self.counts.entry(flag.clone()) {
             Vacant(_) => { false }
             Occupied(mut v) => {
                 let c = v.get_mut();
@@ -1024,7 +1043,7 @@ impl MState {
     }
 
     fn use_optional_flag(&mut self, flag: &Atom) {
-        match self.max_counts.entry(flag) {
+        match self.max_counts.entry(flag.clone()) {
             Vacant(v) => { v.insert(1); }
             Occupied(mut v) => { *v.get_mut() += 1; }
         }

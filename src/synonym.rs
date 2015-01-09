@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::collections::hash_map::{Iter, Keys};
+use std::collections::hash_map::{Hasher, Iter, Keys};
 use std::fmt::Show;
 use std::hash::Hash;
 use std::iter::FromIterator;
@@ -11,7 +11,7 @@ pub struct SynonymMap<K, V> {
     syns: HashMap<K, K>,
 }
 
-impl<K: Eq + Hash, V> SynonymMap<K, V> {
+impl<K: Eq + Hash<Hasher>, V> SynonymMap<K, V> {
     pub fn new() -> SynonymMap<K, V> {
         SynonymMap {
             vals: HashMap::new(),
@@ -44,7 +44,7 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.with_key(k, |k| self.vals.contains_key(k))
     }
 
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> usize {
         self.vals.len()
     }
 
@@ -57,7 +57,7 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
+impl<K: Eq + Hash<Hasher> + Clone, V> SynonymMap<K, V> {
     pub fn resolve(&self, k: &K) -> K {
         self.with_key(k, |k| k.clone())
     }
@@ -89,7 +89,7 @@ impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
+impl<K: Eq + Hash<Hasher> + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
     fn from_iter<T: Iterator<Item=(K, V)>>(mut iter: T) -> SynonymMap<K, V> {
         let mut map = SynonymMap::new();
         for (k, v) in iter {
@@ -99,9 +99,9 @@ impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Show, V: Show> Show for SynonymMap<K, V> {
+impl<K: Eq + Hash<Hasher> + Show, V: Show> Show for SynonymMap<K, V> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         try!(self.vals.fmt(f));
-        write!(f, " (synomyns: {})", self.syns.to_string())
+        write!(f, " (synomyns: {:?})", self.syns)
     }
 }
