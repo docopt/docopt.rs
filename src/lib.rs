@@ -364,7 +364,7 @@ impl fmt::String for Error {
                 if other.is_empty() {
                     write!(f, "{}", usage)
                 } else {
-                    write!(f, "{:?}\n\n{}", other, usage)
+                    write!(f, "{}\n\n{}", other, usage)
                 }
             }
             Help => write!(f, ""),

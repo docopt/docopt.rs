@@ -249,10 +249,10 @@ impl Parser {
         match opts.arg {
             One(None) => {}, // OK
             Zero =>
-                err!("Cannot assign default value '{}' to flag '{:?}' \
+                err!("Cannot assign default value '{}' to flag '{}' \
                       that has no arguments.", defval, last_atom),
             One(Some(ref curval)) =>
-                err!("Flag '{:?}' already has a default value \
+                err!("Flag '{}' already has a default value \
                       of '{}' (second default value: '{}').",
                      last_atom, curval, defval),
         }
@@ -493,7 +493,7 @@ impl<'a> PatParser<'a> {
             if arg.has_arg() && !has_arg {
                 // Found `=` in usage, but previous usage of this flag
                 // didn't specify an argument.
-                err!("Flag '{:?}' does not take any arguments.", atom)
+                err!("Flag '{}' does not take any arguments.", atom)
             } else if !arg.has_arg() && has_arg {
                 // Didn't find any `=` in usage for this flag, but previous
                 // usage of this flag specifies an argument.
@@ -517,7 +517,7 @@ impl<'a> PatParser<'a> {
     fn errif_invalid_flag_arg(&self, atom: &Atom, arg: &str)
                              -> Result<(), String> {
         if !Atom::is_arg(arg) {
-            err!("Expected argument for flag '{:?}', but found \
+            err!("Expected argument for flag '{}', but found \
                   malformed argument '{}'.", atom, arg)
         }
         Ok(())
@@ -852,7 +852,7 @@ impl<'a> Argv<'a> {
                         arg: None,
                     };
                     if !self.dopt.descs.contains_key(&tok.atom) {
-                        err!("Unknown flag: '{:?}'", &tok.atom)
+                        err!("Unknown flag: '{}'", &tok.atom)
                     }
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
@@ -876,10 +876,10 @@ impl<'a> Argv<'a> {
                 let (atom, mut arg) = parse_long_equal_argv(self.cur());
                 let atom = self.dopt.descs.resolve(&atom);
                 if !self.dopt.descs.contains_key(&atom) {
-                    err!("Unknown flag: '{:?}'", &atom)
+                    err!("Unknown flag: '{}'", &atom)
                 }
                 if arg.is_some() && !self.dopt.has_arg(&atom) {
-                    err!("Flag '{:?}' cannot have an argument, but found '{:?}'.",
+                    err!("Flag '{}' cannot have an argument, but found '{:?}'.",
                          &atom, &arg)
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
                     try!(self.next_noeof(&*format!("argument for flag '{:?}'",
