@@ -24,12 +24,13 @@ feedback**.
 This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 
 ```toml
-[dependencies.docopt_macros]
-git = "git://github.com/docopt/docopt.rs"
+[dependencies]
+docopt = "*"
 ```
 
-If you don't want to use the macro, then you can change your entry to
-`dependencies.docopt`.
+If you want to use the macro (which won't work when Rust 1.0 stable is
+released, but will continue to work on the nightlies), then use `docopt_macros
+= "*"` instead.
 
 
 ### Quick example
