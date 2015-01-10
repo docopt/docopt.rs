@@ -3,7 +3,7 @@
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] extern crate docopt_macros;
+#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(Args, "Usage: add <x> <y>", arg_x: usize, arg_y: usize);
 

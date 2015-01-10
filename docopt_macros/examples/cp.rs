@@ -3,7 +3,7 @@
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] extern crate docopt_macros;
+#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(Args derive Show, "
 Usage: cp [options] <src> <dst>

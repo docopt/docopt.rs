@@ -18,3 +18,6 @@ plugin = true
 [dependencies.docopt]
 path = ".."
 version = "*"
+
+[dev-dependencies]
+rustc-serialize = "*"

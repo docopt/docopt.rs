@@ -187,7 +187,7 @@
 //! extern crate "rustc-serialize" as rustc_serialize;
 //!
 //! extern crate docopt;
-//! #[plugin] extern crate docopt_macros;
+//! #[plugin] #[no_link] extern crate docopt_macros;
 //!
 //! // Write the Docopt usage string with the `docopt!` macro.
 //! docopt!(Args, "
