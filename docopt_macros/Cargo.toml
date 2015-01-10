@@ -17,4 +17,4 @@ plugin = true
 
 [dependencies.docopt]
 path = ".."
-version = "0.6.19"
+version = "*"

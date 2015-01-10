@@ -32,7 +32,7 @@ impl rustc_serialize::Decodable for OptLevel {
             2 => OptLevel::Two, 3 => OptLevel::Three,
             n => {
                 let err = format!("Could not decode '{}' as opt-level.", n);
-                return Err(d.error(err.as_slice()));
+                return Err(d.error(&*err));
             }
         })
     }

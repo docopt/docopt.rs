@@ -144,7 +144,7 @@
 //!             n => {
 //!                 let err = format!(
 //!                     "Could not decode '{}' as opt-level.", n);
-//!                 return Err(d.error(err.as_slice()));
+//!                 return Err(d.error(&*err));
 //!             }
 //!         })
 //!     }
@@ -243,7 +243,7 @@ use Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
 
 macro_rules! werr(
     ($($arg:tt)*) => (
-        match std::io::stderr().write_str(format!($($arg)*).as_slice()) {
+        match std::io::stderr().write_str(&*format!($($arg)*)) {
             Ok(_) => (),
             Err(err) => panic!("{}", err),
         }
@@ -281,6 +281,7 @@ macro_rules! regex(
 ///                   .and_then(|d| d.parse())
 ///                   .unwrap_or_else(|e| e.exit());
 /// ```
+#[derive(Show)]
 pub enum Error {
     /// Parsing the usage string failed.
     ///
@@ -352,12 +353,6 @@ impl Error {
             println!("{}", self);
             exit(0)
         }
-    }
-}
-
-impl fmt::Show for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::String::fmt(self, f)
     }
 }
 
@@ -561,16 +556,16 @@ impl Docopt {
 
     fn err_with_usage(&self, e: Error) -> Error {
         WithProgramUsage(
-            Box::new(e), self.p.usage.as_slice().trim().to_string())
+            Box::new(e), self.p.usage.trim().to_string())
     }
 
     fn err_with_full_doc(&self, e: Error) -> Error {
         WithProgramUsage(
-            Box::new(e), self.p.full_doc.as_slice().trim().to_string())
+            Box::new(e), self.p.full_doc.trim().to_string())
     }
 
     fn get_argv() -> Vec<String> {
-        ::std::os::args().as_slice().slice_from(1).to_vec()
+        ::std::os::args()[1..].to_vec()
     }
 }
 
@@ -725,7 +720,7 @@ impl ArgvMap {
                 let name = regex!(r"^flag_").replace(field, "");
                 let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
                                    .to_string();
-                pre_name.push_str(name.as_slice());
+                pre_name.push_str(&*name);
                 pre_name
             } else if field.starts_with("arg_") {
                 let name = regex!(r"^arg_").replace(field, "");
@@ -733,7 +728,7 @@ impl ArgvMap {
                     name
                 } else {
                     let mut pre_name = "<".to_string();
-                    pre_name.push_str(name.as_slice());
+                    pre_name.push_str(&*name);
                     pre_name.push('>');
                     pre_name
                 }
@@ -742,7 +737,7 @@ impl ArgvMap {
             } else {
                 panic!("Unrecognized struct field: '{}'", field)
             };
-        desanitize(name.as_slice())
+        desanitize(&*name)
     }
 }
 
@@ -842,7 +837,7 @@ impl Value {
     pub fn as_str<'a>(&'a self) -> &'a str {
         match *self {
             Switch(_) | Counted(_) | Plain(None) | List(_) => "",
-            Plain(Some(ref s)) => s.as_slice(),
+            Plain(Some(ref s)) => &**s,
         }
     }
 
@@ -852,9 +847,9 @@ impl Value {
     /// Plain strings correspond to a list of length `1`.
     pub fn as_vec<'a>(&'a self) -> Vec<&'a str> {
         match *self {
-            Switch(_) | Counted(_) | Plain(None) => vec!(),
-            Plain(Some(ref s)) => vec!(s.as_slice()),
-            List(ref vs) => vs.iter().map(|s| s.as_slice()).collect(),
+            Switch(_) | Counted(_) | Plain(None) => vec![],
+            Plain(Some(ref s)) => vec![&**s],
+            List(ref vs) => vs.iter().map(|s| &**s).collect(),
         }
     }
 }
@@ -901,7 +896,7 @@ impl Decoder {
         self.stack.push(DecoderItem {
             key: key.clone(),
             struct_field: struct_field.to_string(),
-            val: self.vals.find(key.as_slice()).map(|v| v.clone()),
+            val: self.vals.find(&*key).map(|v| v.clone()),
         });
     }
 

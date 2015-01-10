@@ -137,7 +137,7 @@ impl Parser {
         // includes `Options: -a ...`, which means some lines not beginning
         // with `-` can actually have options.
         let (pstart, pend) = caps.pos(0).unwrap();
-        let (before, after) = (doc.slice_to(pstart), doc.slice_from(pend));
+        let (before, after) = (&doc[..pstart], &doc[pend..]);
         // We process every line here (instead of restricting to lines starting
         // with "-") because we need to check every line for a default value.
         // The default value always belongs to the most recently defined desc.
@@ -147,7 +147,7 @@ impl Parser {
 
         let mprog = format!(
             "^(?:{})?\\s*(.*?)\\s*$", regex::quote(caps.name("prog").unwrap_or("")));
-        let pats = Regex::new(mprog.as_slice()).unwrap();
+        let pats = Regex::new(&*mprog).unwrap();
 
         if caps.name("pats").unwrap_or("") == "" {
             let pattern = try!(
@@ -168,7 +168,7 @@ impl Parser {
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
         let desc =
             regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
-        let desc = desc.as_slice();
+        let desc = &*desc;
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
             try!(self.parse_default(full_desc));
             return Ok(())
@@ -178,8 +178,8 @@ impl Parser {
         // after the flag or argument.
         let desc = regex!("  .*$").replace(desc, "");
         // Normalize `-x, --xyz` to `-x --xyz`.
-        let desc = regex!(r"([^-\s]), -").replace(desc.as_slice(), "$1 -");
-        let desc = desc.as_slice().trim();
+        let desc = regex!(r"([^-\s]), -").replace(&*desc, "$1 -");
+        let desc = desc.trim();
 
         let rflags = regex!("(?:(?P<long>--[^ \t=]+)|(?P<short>-[^ \t=]+))\
                              (?:(?: |=)(?P<arg>[^-]\\S*))?");
@@ -219,9 +219,9 @@ impl Parser {
         assert!(last_end <= desc.len());
         if last_end < desc.len() {
             err!("Extraneous text '{}' in option description '{}'.",
-                 desc.slice_from(last_end), desc)
+                 &desc[last_end..], desc)
         }
-        try!(self.add_desc(short.as_slice(), long.as_slice(), has_arg));
+        try!(self.add_desc(&*short, &*long, has_arg));
         // Looking for default in this line must come after adding the
         // description, otherwise `parse_default` won't know which option
         // to assign it to.
@@ -242,9 +242,10 @@ impl Parser {
                 Some(ref atom) => atom,
             };
         let opts =
-            self.descs.find_mut(last_atom)
-            .expect(format!("BUG: last opt desc key ('{:?}') is invalid.",
-                            last_atom).as_slice());
+            self.descs
+            .find_mut(last_atom)
+            .expect(&*format!("BUG: last opt desc key ('{:?}') is invalid.",
+                              last_atom));
         match opts.arg {
             One(None) => {}, // OK
             Zero =>
@@ -444,8 +445,8 @@ impl<'a> PatParser<'a> {
 
     fn flag_short(&mut self) -> Result<Vec<Pattern>, String> {
         let mut seq = vec!();
-        let stacked: String = self.cur().slice_from(1).to_string();
-        for (i, c) in stacked.as_slice().chars().enumerate() {
+        let stacked: String = self.cur()[1..].to_string();
+        for (i, c) in stacked.chars().enumerate() {
             let atom = self.dopt.descs.resolve(&Short(c));
             seq.push(PatAtom(atom.clone()));
 
@@ -458,7 +459,7 @@ impl<'a> PatParser<'a> {
                 // we interpret the "rest" of the characters as the argument.
                 // If the "rest" is empty, then we peek to find and make sure
                 // there is an argument.
-                let rest = stacked.as_slice().slice_from(i+1);
+                let rest = &stacked[i+1..];
                 if rest.is_empty() {
                     try!(self.next_flag_arg(&atom));
                 } else {
@@ -509,8 +510,7 @@ impl<'a> PatParser<'a> {
     }
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
-        try!(self.next_noeof(format!(
-             "argument for flag '{:?}'", atom).as_slice()));
+        try!(self.next_noeof(&*format!("argument for flag '{:?}'", atom)));
         self.errif_invalid_flag_arg(atom, self.cur())
     }
 
@@ -577,12 +577,11 @@ impl<'a> PatParser<'a> {
         Ok(())
     }
     fn cur<'r>(&'r self) -> &'r str {
-        self.tokens[self.curi].as_slice()
+        &*self.tokens[self.curi]
     }
-    fn atis(&self, offset: isize, is: &str) -> bool {
-        let i = (self.curi as isize) + offset;
-        let iu = i as usize;
-        i >= 0 && iu < self.tokens.len() && self.tokens[iu].as_slice() == is
+    fn atis(&self, offset: usize, is: &str) -> bool {
+        let i = self.curi + offset;
+        i < self.tokens.len() && self.tokens[i] == is
     }
 }
 
@@ -595,7 +594,7 @@ enum Pattern {
     PatAtom(Atom),
 }
 
-#[derive(PartialEq, Eq, Ord, Hash, Clone)]
+#[derive(PartialEq, Eq, Ord, Hash, Clone, Show)]
 pub enum Atom {
     Short(char),
     Long(String),
@@ -715,12 +714,12 @@ impl Pattern {
 impl Atom {
     pub fn new(s: &str) -> Atom {
         if Atom::is_short(s) {
-            Short(s.as_slice().char_at(1))
+            Short(s.char_at(1))
         } else if Atom::is_long(s) {
-            Long(s.as_slice().slice_from(2).to_string())
+            Long(s[2..].to_string())
         } else if Atom::is_arg(s) {
             if s.starts_with("<") && s.ends_with(">") {
-                Positional(s.slice(1, s.len()-1).to_string())
+                Positional(s[1..s.len()-1].to_string())
             } else {
                 Positional(s.to_string())
             }
@@ -759,12 +758,6 @@ impl PartialOrd for Atom {
     }
 }
 
-impl fmt::Show for Atom {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::String::fmt(self, f)
-    }
-}
-
 impl fmt::String for Atom {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -772,7 +765,7 @@ impl fmt::String for Atom {
             Long(ref s) => write!(f, "--{}", s),
             Command(ref s) => write!(f, "{}", s),
             Positional(ref s) => {
-                if s.as_slice().chars().all(|c| c.is_uppercase()) {
+                if s.chars().all(|c| c.is_uppercase()) {
                     write!(f, "{}", s)
                 } else {
                     write!(f, "<{}>", s)
@@ -852,8 +845,8 @@ impl<'a> Argv<'a> {
                 && (!self.options_first || self.positional.is_empty());
 
             if do_flags && Atom::is_short(self.cur()) {
-                let stacked: String = self.cur().slice_from(1).to_string();
-                for (i, c) in stacked.as_slice().chars().enumerate() {
+                let stacked: String = self.cur()[1..].to_string();
+                for (i, c) in stacked.chars().enumerate() {
                     let mut tok = ArgvToken {
                         atom: self.dopt.descs.resolve(&Short(c)),
                         arg: None,
@@ -864,7 +857,7 @@ impl<'a> Argv<'a> {
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
                     } else {
-                        let rest = stacked.as_slice().slice_from(i+1);
+                        let rest = &stacked[i+1..];
                         tok.arg = Some(
                             if rest.is_empty() {
                                 let arg = try!(self.next_arg(&tok.atom));
@@ -889,8 +882,8 @@ impl<'a> Argv<'a> {
                     err!("Flag '{:?}' cannot have an argument, but found '{:?}'.",
                          &atom, &arg)
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
-                    try!(self.next_noeof(
-                        format!("argument for flag '{:?}'", &atom).as_slice()));
+                    try!(self.next_noeof(&*format!("argument for flag '{:?}'",
+                                                   &atom)));
                     arg = Some(self.cur().to_string());
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
@@ -914,8 +907,8 @@ impl<'a> Argv<'a> {
     }
 
     fn cur<'b>(&'b self) -> &'b str { self.at(0) }
-    fn at<'b>(&'b self, i: isize) -> &'b str {
-        self.argv[(self.curi as isize + i) as usize].as_slice()
+    fn at<'b>(&'b self, i: usize) -> &'b str {
+        &*self.argv[self.curi + i]
     }
     fn next(&mut self) {
         if self.curi < self.argv.len() {
@@ -924,7 +917,7 @@ impl<'a> Argv<'a> {
     }
     fn next_arg<'b>(&'b mut self, atom: &Atom) -> Result<&'b str, String> {
         let expected = format!("argument for flag '{:?}'", atom);
-        try!(self.next_noeof(expected.as_slice()));
+        try!(self.next_noeof(&*expected));
         Ok(self.cur())
     }
     fn next_noeof(&mut self, expected: &str) -> Result<(), String> {
@@ -1099,7 +1092,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn token_from(&'a self, state: &MState) -> Option<&'a ArgvToken> {
-        self.argv.positional.as_slice().get(state.argvi)
+        self.argv.positional.get(state.argvi)
     }
 
     fn add_value(&self, state: &mut MState,
@@ -1141,8 +1134,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     vs.insert(atom, Plain(Some(v.clone())));
                 }
                 (true, &One(Some(ref v))) => {
-                    let words =
-                        v.as_slice().words().map(|s| s.to_string()).collect();
+                    let words = v.words().map(|s| s.to_string()).collect();
                     vs.insert(atom, List(words));
                 }
             }
@@ -1209,7 +1201,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     }
                 }
                 let mut states = vec!();
-                self.all_option_states(&base, &mut states, noflags.as_slice());
+                self.all_option_states(&base, &mut states, &*noflags);
                 states
             }
             Repeat(ref p) => {
@@ -1287,7 +1279,7 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
             let arg = cap.name("arg").unwrap_or("").to_string();
-            if !Atom::is_arg(arg.as_slice()) {
+            if !Atom::is_arg(&*arg) {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
@@ -1319,7 +1311,7 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
 
     let pat = rpat.replace_all(pat.trim(), " $0 ");
     let mut words = vec!();
-    for cap in rwords.captures_iter(pat.as_slice()) {
+    for cap in rwords.captures_iter(&*pat) {
         words.push(cap.at(0).unwrap_or("").to_string());
     }
     words

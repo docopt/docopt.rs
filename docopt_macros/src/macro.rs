@@ -2,6 +2,8 @@
 #![crate_type = "dylib"]
 #![feature(plugin_registrar, quote)]
 
+#![allow(unstable)]
+
 //! This crate defines the `docopt!` macro. It is documented in the
 //! documentation of the `docopt` crate.
 
@@ -61,7 +63,7 @@ impl Parsed {
         its.push(self.struct_decl(cx));
 
         let struct_name = self.struct_info.name;
-        let full_doc = self.doc.parser().full_doc.as_slice();
+        let full_doc = &*self.doc.parser().full_doc;
         its.push(quote_item!(cx,
             impl $struct_name {
                 #[allow(dead_code)]
@@ -86,7 +88,7 @@ impl Parsed {
         };
 
         let mut traits = vec!["RustcDecodable".to_string()];
-        traits.push_all(self.struct_info.deriving.as_slice());
+        traits.push_all(&*self.struct_info.deriving);
         let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
                          attribute(cx, "derive", traits)];
 
@@ -102,12 +104,12 @@ impl Parsed {
     fn struct_fields(&self, cx: &ExtCtxt) -> Vec<ast::StructField> {
         let mut fields: Vec<ast::StructField> = vec!();
         for (atom, opts) in self.doc.parser().descs.iter() {
-            let name = ArgvMap::key_to_struct_field(atom.to_string().as_slice());
+            let name = ArgvMap::key_to_struct_field(&*atom.to_string());
             let ty = match self.types.get(atom) {
                 None => self.pat_type(cx, atom, opts),
                 Some(ty) => ty.clone(),
             };
-            fields.push(self.mk_struct_field(name.as_slice(), ty));
+            fields.push(self.mk_struct_field(&*name, ty));
         }
         fields
     }
@@ -178,8 +180,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
         ).into_iter()
          .map(|(ident, ty)| {
              let field_name = token::get_ident(ident).to_string();
-             let key = ArgvMap::struct_field_to_key(field_name.as_slice());
-             (Atom::new(key.as_slice()), ty)
+             let key = ArgvMap::struct_field_to_key(&*field_name);
+             (Atom::new(&*key), ty)
           })
          .collect::<HashMap<Atom, P<ast::Ty>>>();
         self.p.expect(&token::Eof);
@@ -191,8 +193,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             Ok(doc) => doc,
             Err(err) => {
                 self.cx.span_err(self.cx.call_site(),
-                                 format!("Invalid Docopt usage: {}",
-                                         err).as_slice());
+                                 &*format!("Invalid Docopt usage: {}", err));
                 return Err(());
             }
         };
@@ -226,7 +227,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             _ => {
                 let err = format!("Expected string literal but got {}",
                                   pprust::expr_to_string(&*exp));
-                self.cx.span_err(exp.span, err.as_slice());
+                self.cx.span_err(exp.span, &*err);
                 return Err(());
             }
         };
@@ -257,7 +258,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         if deriving.as_str() != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
-            self.cx.span_err(self.cx.call_site(), err.as_slice());
+            self.cx.span_err(self.cx.call_site(), &*err);
             return Err(());
         }
         while !self.p.eat(&token::Comma) {

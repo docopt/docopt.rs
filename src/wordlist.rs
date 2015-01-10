@@ -59,21 +59,21 @@ fn main() {
         Ok(_) => {},
         Err(err) => {
             os::set_exit_status(1);
-            io::stderr().write_str(err.as_slice()).unwrap();
+            io::stderr().write_str(&*err).unwrap();
         }
     }
 }
 
 fn run(args: Args) -> Result<(), String> {
     let usage = try!(io::stdin().read_to_string().map_err(|e| e.to_string()));
-    let parsed = try!(Parser::new(usage.as_slice())
+    let parsed = try!(Parser::new(&*usage)
                              .map_err(|e| e.to_string()));
     let arg_possibles: HashMap<String, Vec<String>> =
         args.arg_name.iter()
                      .zip(args.arg_possibles.iter())
                      .map(|(name, possibles)| {
                          let choices =
-                             regex!(r"[ \t]+").split(possibles.as_slice())
+                             regex!(r"[ \t]+").split(&**possibles)
                                               .map(|s| s.to_string())
                                               .collect::<Vec<String>>();
                          (name.clone(), choices)
