@@ -291,7 +291,7 @@ impl Parser {
     }
 }
 
-impl fmt::Show for Parser {
+impl fmt::Debug for Parser {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fn sorted<T: Ord>(mut xs: Vec<T>) -> Vec<T> {
             xs.sort(); xs
@@ -585,7 +585,7 @@ impl<'a> PatParser<'a> {
     }
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 enum Pattern {
     Alternates(Vec<Pattern>),
     Sequence(Vec<Pattern>),
@@ -594,7 +594,7 @@ enum Pattern {
     PatAtom(Atom),
 }
 
-#[derive(PartialEq, Eq, Ord, Hash, Clone, Show)]
+#[derive(PartialEq, Eq, Ord, Hash, Clone, Debug)]
 pub enum Atom {
     Short(char),
     Long(String),
@@ -602,7 +602,7 @@ pub enum Atom {
     Positional(String),
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct Options {
     /// Set to true if this atom is ever repeated in any context.
     /// For positional arguments, non-argument flags and commands, repetition
@@ -620,7 +620,7 @@ pub struct Options {
     pub is_desc: bool,
 }
 
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Argument {
     Zero,
     One(Option<String>), // optional default value
@@ -758,7 +758,7 @@ impl PartialOrd for Atom {
     }
 }
 
-impl fmt::String for Atom {
+impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Short(c) => write!(f, "-{}", c),
@@ -809,7 +809,7 @@ pub struct Argv<'a> {
     options_first: bool,
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 struct ArgvToken {
     atom: Atom,
     arg: Option<String>,
@@ -929,7 +929,7 @@ impl<'a> Argv<'a> {
     }
 }
 
-impl<'a> fmt::Show for Argv<'a> {
+impl<'a> fmt::Debug for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         try!(writeln!(f, "Positional: {:?}", self.positional));
         try!(writeln!(f, "Flags: {:?}", self.flags));
@@ -942,7 +942,7 @@ struct Matcher<'a, 'b:'a> {
     argv: &'a Argv<'b>,
 }
 
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, Debug, PartialEq)]
 struct MState {
     argvi: usize, // index into Argv.positional
     counts: HashMap<Atom, usize>, // flags remaining for pattern consumption
