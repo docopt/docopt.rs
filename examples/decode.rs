@@ -22,7 +22,7 @@ Options:
   --drifting    Drifting mine.
 ";
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 struct Args {
     flag_speed: isize,
     flag_drifting: bool,
