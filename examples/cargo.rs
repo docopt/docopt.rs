@@ -30,7 +30,7 @@ Some common cargo commands are:
 See 'cargo help <command>' for more information on a specific command.
 ";
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 struct Args {
     arg_command: Command,
     arg_args: Vec<String>,
@@ -38,7 +38,7 @@ struct Args {
     flag_verbose: bool,
 }
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 enum Command {
     Build, Clean, Doc, New, Run, Test, Bench, Update,
 }

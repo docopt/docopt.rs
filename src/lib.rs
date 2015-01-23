@@ -126,13 +126,13 @@
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
 //! #[derive(RustcDecodable)]
-//! # #[derive(PartialEq, Show)]
+//! # #[derive(Debug, PartialEq)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
 //!
 //! // This one is harder because we want the user to specify an integer,
 //! // but restrict it to a specific range. So we implement `Decodable`
 //! // ourselves.
-//! # #[derive(PartialEq, Show)]
+//! # #[derive(Debug, PartialEq)]
 //! enum OptLevel { Zero, One, Two, Three }
 //!
 //! impl rustc_serialize::Decodable for OptLevel {
@@ -281,7 +281,7 @@ macro_rules! regex(
 ///                   .and_then(|d| d.parse())
 ///                   .unwrap_or_else(|e| e.exit());
 /// ```
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     /// Parsing the usage string failed.
     ///
@@ -356,7 +356,7 @@ impl Error {
     }
 }
 
-impl fmt::String for Error {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             WithProgramUsage(ref other, ref usage) => {
@@ -389,7 +389,6 @@ impl StdError for Error {
         }
     }
 
-    fn detail(&self) -> Option<String> { Some(self.to_string()) }
     fn cause(&self) -> Option<&StdError> {
         match *self {
             WithProgramUsage(ref cause, _) => Some(&**cause as &StdError),
@@ -418,7 +417,7 @@ impl<'a> StrAllocating for &'a str {
 /// The main Docopt type, which is constructed with a Docopt usage string.
 ///
 /// This can be used to match command line arguments to produce a `ArgvMap`.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct Docopt {
     p: Parser,
     argv: Option<Vec<String>>,
@@ -741,7 +740,7 @@ impl ArgvMap {
     }
 }
 
-impl fmt::Show for ArgvMap {
+impl fmt::Debug for ArgvMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.len() == 0 {
             return write!(f, "{{EMPTY}}");
@@ -776,7 +775,7 @@ impl fmt::Show for ArgvMap {
 ///
 /// The various `as_{bool,count,str,vec}` methods provide convenient access
 /// to values without destructuring manually.
-#[derive(Clone, PartialEq, Show)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     /// A boolean value from a flag that has no argument.
     ///
@@ -879,7 +878,7 @@ pub struct Decoder {
     stack: Vec<DecoderItem>,
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 struct DecoderItem {
     key: String,
     struct_field: String,

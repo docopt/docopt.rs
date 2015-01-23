@@ -19,7 +19,7 @@ Options:
     -v, --verbose  Show extra log output.
 ";
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 struct Args {
     arg_source: Vec<String>,
     arg_dest: String,

@@ -5,7 +5,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 #[plugin] #[no_link] extern crate docopt_macros;
 
-docopt!(Args derive Show, "
+docopt!(Args derive Debug, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
        rustc (--help | --version)
 
@@ -19,10 +19,10 @@ Options:
     --opt-level LEVEL  Optimize with possible levels 0-3.
 ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>);
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 enum Emit { Asm, Ir, Bc, Obj, Link }
 
-#[derive(Show)]
+#[derive(Debug)]
 enum OptLevel { Zero, One, Two, Three }
 
 impl rustc_serialize::Decodable for OptLevel {

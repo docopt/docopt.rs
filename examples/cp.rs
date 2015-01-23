@@ -12,7 +12,7 @@ Options:
     -a, --archive  Copy everything.
 ";
 
-#[derive(RustcDecodable, Show)]
+#[derive(Debug, RustcDecodable)]
 struct Args {
     arg_source: Vec<String>,
     arg_dest: String,

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map::{Hasher, Iter, Keys};
-use std::fmt::Show;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std::mem;
@@ -99,7 +99,7 @@ impl<K: Eq + Hash<Hasher> + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> 
     }
 }
 
-impl<K: Eq + Hash<Hasher> + Show, V: Show> Show for SynonymMap<K, V> {
+impl<K: Eq + Hash<Hasher> + Debug, V: Debug> Debug for SynonymMap<K, V> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         try!(self.vals.fmt(f));
         write!(f, " (synomyns: {:?})", self.syns)
