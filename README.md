@@ -99,11 +99,12 @@ fn main() {
 The field names of the struct map like this:
 
 ```
--g       => flag_g
---group  => flag_group
-FILE     => arg_FILE
-<file>   => arg_file
-build    => cmd_build
+-g            => flag_g
+--group       => flag_group
+--group <arg> => flag_group
+FILE          => arg_FILE
+<file>        => arg_file
+build         => cmd_build
 ```
 
 The `Args` struct has one static method defined for it: `docopt`. The method
