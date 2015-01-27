@@ -205,7 +205,7 @@ expanding all macros. Say you wrote the above example for `Usage: add <x> <y>`
 into a file called `add.rs`. Then running:
 
 ```bash
-rustc -L path/containing/docopt/lib --pretty expanded add.rs
+rustc -L path/containing/docopt/lib -Z unstable-options --pretty=expanded add.rs
 ```
 
 Will show all macros expanded. In the generated code, you should be able to
