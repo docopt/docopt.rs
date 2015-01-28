@@ -243,7 +243,7 @@ use Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
 
 macro_rules! werr(
     ($($arg:tt)*) => (
-        match std::io::stderr().write_str(&*format!($($arg)*)) {
+        match std::old_io::stderr().write_str(&*format!($($arg)*)) {
             Ok(_) => (),
             Err(err) => panic!("{}", err),
         }

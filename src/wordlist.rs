@@ -8,7 +8,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
 use std::collections::HashMap;
-use std::io;
+use std::old_io as io;
 use std::os;
 
 pub use docopt::{Docopt, Value};
