@@ -1,6 +1,4 @@
-#![experimental]
-#![feature(box_syntax)]
-#![allow(unstable)]
+#![feature(collections, core, hash, io, os, std_misc)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;

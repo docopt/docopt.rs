@@ -1,3 +1,5 @@
+#![feature(core)]
+
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 

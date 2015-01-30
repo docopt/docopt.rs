@@ -1,8 +1,7 @@
 #![crate_name = "docopt_macros"]
 #![crate_type = "dylib"]
-#![feature(plugin_registrar, quote)]
 
-#![allow(unstable)]
+#![feature(collections, core, plugin_registrar, quote, rustc_private)]
 
 //! This crate defines the `docopt!` macro. It is documented in the
 //! documentation of the `docopt` crate.

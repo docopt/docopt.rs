@@ -9,7 +9,6 @@
 //! usage string. Here's a simple example:
 //!
 //! ```rust
-//! #![allow(unstable)]
 //! use docopt::Docopt;
 //!
 //! // Write the Docopt usage string.
@@ -47,7 +46,6 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
-//! #![allow(unstable)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -90,7 +88,6 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
-//! #![allow(unstable)]
 //! # extern crate docopt;
 //! # extern crate "rustc-serialize" as rustc_serialize;
 //! # fn main() {
@@ -181,7 +178,6 @@
 //! The example above using type based decoding can be simplified to this:
 //!
 //! ```ignore
-//! #![allow(unstable)]
 //! #![feature(plugin)]
 //!
 //! extern crate "rustc-serialize" as rustc_serialize;
@@ -217,9 +213,10 @@
 #![crate_name = "docopt"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 
-#![experimental]
-#![allow(unstable)]
 #![deny(missing_docs)]
+
+// These MUST be removed for Rust 1.0 stable.
+#![feature(collections, core, hash, libc, os, std_misc, unicode)]
 
 extern crate libc;
 extern crate regex;

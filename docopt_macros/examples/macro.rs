@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(core, plugin)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
