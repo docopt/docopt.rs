@@ -90,7 +90,7 @@ impl<K: Eq + Hash<Hasher> + Clone, V> SynonymMap<K, V> {
 }
 
 impl<K: Eq + Hash<Hasher> + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
-    fn from_iter<T: Iterator<Item=(K, V)>>(mut iter: T) -> SynonymMap<K, V> {
+    fn from_iter<T: Iterator<Item=(K, V)>>(iter: T) -> SynonymMap<K, V> {
         let mut map = SynonymMap::new();
         for (k, v) in iter {
             map.insert(k, v);
