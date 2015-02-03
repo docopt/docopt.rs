@@ -924,9 +924,9 @@ impl Decoder {
             Counted(n) => Ok(num::cast(n).unwrap()),
             _ => {
                 match v.as_str().parse() {
-                    None => derr!("Could not decode '{}' to {} for '{}'.",
+                    Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
                                   v.as_str(), expect, k),
-                    Some(v) => Ok(v),
+                    Ok(v) => Ok(v),
                 }
             }
         }
