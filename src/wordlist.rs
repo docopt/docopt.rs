@@ -1,4 +1,4 @@
-#![feature(collections, core, hash, io, os, std_misc)]
+#![feature(collections, core, env, hash, io, std_misc)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
@@ -6,8 +6,8 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate docopt;
 
 use std::collections::HashMap;
+use std::env;
 use std::old_io as io;
-use std::os;
 
 pub use docopt::{Docopt, Value};
 
@@ -56,7 +56,7 @@ fn main() {
     match run(args) {
         Ok(_) => {},
         Err(err) => {
-            os::set_exit_status(1);
+            env::set_exit_status(1);
             io::stderr().write_str(&*err).unwrap();
         }
     }

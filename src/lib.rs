@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, hash, libc, os, std_misc, unicode)]
+#![feature(collections, core, env, hash, libc, os, std_misc, unicode)]
 
 extern crate libc;
 extern crate regex;
@@ -561,7 +561,8 @@ impl Docopt {
     }
 
     fn get_argv() -> Vec<String> {
-        ::std::os::args()[1..].to_vec()
+        // Hmm, we should probably handle a Unicode decode error here... ---AG
+        ::std::env::args().skip(1).map(|v| v.into_string().unwrap()).collect()
     }
 }
 
