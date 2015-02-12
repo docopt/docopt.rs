@@ -179,11 +179,11 @@
 //!
 //! ```ignore
 //! #![feature(plugin)]
+//! #![plugin(docopt_macros)]
 //!
 //! extern crate "rustc-serialize" as rustc_serialize;
 //!
 //! extern crate docopt;
-//! #[plugin] #[no_link] extern crate docopt_macros;
 //!
 //! // Write the Docopt usage string with the `docopt!` macro.
 //! docopt!(Args, "
@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, env, hash, libc, os, unicode)]
+#![feature(collections, core, env, hash, io, libc, std_misc, unicode)]
 
 extern crate libc;
 extern crate regex;

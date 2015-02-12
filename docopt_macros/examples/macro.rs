@@ -1,9 +1,9 @@
 #![feature(plugin)]
+#![plugin(docopt_macros)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(pub Args derive Debug, "
 Naval Fate.
