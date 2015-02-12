@@ -562,7 +562,7 @@ impl Docopt {
 
     fn get_argv() -> Vec<String> {
         // Hmm, we should probably handle a Unicode decode error here... ---AG
-        ::std::env::args().skip(1).map(|v| v.into_string().unwrap()).collect()
+        ::std::env::args().skip(1).map(|v| v.to_string()).collect()
     }
 }
 
