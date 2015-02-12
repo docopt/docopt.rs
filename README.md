@@ -118,11 +118,11 @@ Here's another example that shows how to specify the types of your arguments:
 
 ```rust
 #![feature(plugin)]
+#![plugin(docopt_macros)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(Args, "Usage: add <x> <y>", arg_x: usize, arg_y: usize);
 
@@ -153,11 +153,11 @@ Docopt features.
 
 ```rust
 #![feature(plugin)]
+#![plugin(docopt_macros)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(Args derive Show, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
