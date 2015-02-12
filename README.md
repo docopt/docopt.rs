@@ -74,11 +74,11 @@ Here is the same example, but with the use of the `docopt!` macro, which will
 
 ```rust
 #![feature(plugin)]
+#![plugin(docopt_macros)]
 
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
-#[plugin] #[no_link] extern crate docopt_macros;
 
 docopt!(Args derive Show, "
 Usage: cp [options] <src> <dst>
