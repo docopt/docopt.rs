@@ -32,7 +32,7 @@ See 'cargo help <command>' for more information on a specific command.
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
-    arg_command: Command,
+    arg_command: Option<Command>,
     arg_args: Vec<String>,
     flag_list: bool,
     flag_verbose: bool,
