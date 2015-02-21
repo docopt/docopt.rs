@@ -53,7 +53,7 @@ Options:
     -a, --archive  Copy everything.
 ";
 
-#[derive(RustcDecodable, Show)]
+#[derive(RustcDecodable, Debug)]
 struct Args {
     arg_source: Vec<String>,
     arg_dest: String,
@@ -80,7 +80,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
 
-docopt!(Args derive Show, "
+docopt!(Args derive Debug, "
 Usage: cp [options] <src> <dst>
        cp [options] <src>... <dir>
        cp --help
@@ -159,7 +159,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate docopt;
 
-docopt!(Args derive Show, "
+docopt!(Args derive Debug, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
        rustc (--help | --version)
 
@@ -173,10 +173,10 @@ Options:
     --opt-level LEVEL  Optimize with possible levels 0-3.
 ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>);
 
-#[derive(RustcDecodable, Show)]
+#[derive(RustcDecodable, Debug)]
 enum Emit { Asm, Ir, Bc, Obj, Link }
 
-#[derive(Show)]
+#[derive(Debug)]
 enum OptLevel { Zero, One, Two, Three }
 
 impl rustc_serialize::Decodable for OptLevel {
