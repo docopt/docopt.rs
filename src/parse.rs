@@ -853,7 +853,7 @@ impl<'a> Argv<'a> {
                         arg: None,
                     };
                     if !self.dopt.descs.contains_key(&tok.atom) {
-                        err!("Unknown flag: '{}'", &tok.atom)
+                        return self.err_unknown_flag(&tok.atom)
                     }
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
@@ -877,7 +877,7 @@ impl<'a> Argv<'a> {
                 let (atom, mut arg) = parse_long_equal_argv(self.cur());
                 let atom = self.dopt.descs.resolve(&atom);
                 if !self.dopt.descs.contains_key(&atom) {
-                    err!("Unknown flag: '{}'", &atom)
+                    return self.err_unknown_flag(&atom)
                 }
                 if arg.is_some() && !self.dopt.has_arg(&atom) {
                     err!("Flag '{}' cannot have an argument, but found '{:?}'.",
@@ -906,6 +906,42 @@ impl<'a> Argv<'a> {
             self.next()
         }
         Ok(())
+    }
+
+    fn err_unknown_flag(&self, atom: &Atom) -> Result<(), String> {
+        use std::usize::MAX;
+        let mut best: String = "".to_string();
+        let flag = atom.to_string();
+        let mut min = MAX;
+    
+        let mut possibles = Vec::new();
+
+        for (key, _) in self.dopt.descs.synonyms() {
+            possibles.push(key);
+        }
+
+        for key in self.dopt.descs.keys() {
+            possibles.push(key);
+        }
+
+        for key in possibles.iter() {
+            match *key {
+                &Short(_) | &Long(_) | &Command(_) => {
+                    let name = key.to_string();
+                    let dist = levenshtein(&flag, &name);
+                    if dist < 3 && dist < min {
+                        min = dist;
+                        best = name;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if best.is_empty() {
+            err!("Unknown flag: '{}'", &atom);
+        } else {
+            err!("Unknown flag: '{}'. Did you mean '{}'?", &atom, &best)
+        }
     }
 
     fn cur<'b>(&'b self) -> &'b str { self.at(0) }
@@ -1320,4 +1356,37 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
         words.push(cap.at(0).unwrap_or("").to_string());
     }
     words
+}
+
+fn levenshtein(this: &str, that: &str) -> usize {
+    use std::cmp;
+    if this.is_empty() { 
+        return that.chars().count(); 
+    }
+    if that.is_empty() {
+        return this.chars().count();
+    }
+    
+    let mut d = range(0, that.len() + 1).collect::<Vec<_>>();
+    let mut last = 0;
+
+    for (i, c1) in this.chars().enumerate() {
+        let mut current = i;
+        d[0] = i+1;
+
+        for (j, c2) in that.chars().enumerate() {
+            let next = d[j+1];
+
+            if c1 == c2 {
+                d[j+1] = current;
+            } else {
+                d[j+1] = cmp::min(cmp::min(current, next), d[j]) + 1;
+            }
+
+            current = next;
+            last = j;
+        }
+    }
+
+    d[last+1]
 }
