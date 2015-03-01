@@ -22,7 +22,7 @@
 //!
 //! // The argv. Normally you'd just use `parse` which will automatically
 //! // use `std::os::args()`.
-//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //! // Parse argv and exit the program with an error message if it fails.
 //! let args = Docopt::new(USAGE)
@@ -68,7 +68,7 @@
 //!     flag_archive: bool,
 //! }
 //!
-//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
 //!                         .unwrap_or_else(|e| e.exit());
@@ -147,7 +147,7 @@
 //!     }
 //! }
 //!
-//! let argv = |&:| vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
+//! let argv = || vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
 //!                             "--opt-level", "2", "--emit=ir", "docopt.rs"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
@@ -195,7 +195,7 @@
 //! ")
 //!
 //! fn main() {
-//!     let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//!     let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //!     // Your `Args` struct has a single static method defined on it,
 //!     // `docopt`, which will return a normal `Docopt` value.
@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, env, libc, old_io, std_misc, str_words, unicode)]
+#![feature(collections, core, libc, old_io, std_misc, str_words, unicode)]
 
 extern crate libc;
 extern crate regex;
@@ -613,7 +613,7 @@ impl ArgvMap {
     ///   flag_h: bool,
     /// }
     ///
-    /// let argv = |&:| vec!["cargo", "build", "-v"].into_iter();
+    /// let argv = || vec!["cargo", "build", "-v"].into_iter();
     /// let args: Args = Docopt::new(USAGE)
     ///                         .and_then(|d| d.argv(argv()).decode())
     ///                         .unwrap_or_else(|e| e.exit());
@@ -679,7 +679,7 @@ impl ArgvMap {
         }
 
         let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
-        r.replace(name, |&: cap: &regex::Captures| {
+        r.replace(name, |cap: &regex::Captures| {
             let (flag, cmd) = (
                 cap.name("flag").unwrap_or(""),
                 cap.name("cmd").unwrap_or(""),
