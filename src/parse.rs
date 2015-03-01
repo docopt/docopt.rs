@@ -39,9 +39,10 @@
 //   - Write a specification for Docopt.
 
 pub use self::Argument::{Zero, One};
-pub use self::Atom::{Short,Long,Command,Positional};
-use self::Pattern::{Alternates,Sequence,Optional,Repeat,PatAtom};
+pub use self::Atom::{Short, Long, Command, Positional};
+use self::Pattern::{Alternates, Sequence, Optional, Repeat, PatAtom};
 
+use std::borrow::ToOwned;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::cmp::Ordering;
@@ -1134,7 +1135,10 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     vs.insert(atom, Plain(Some(v.clone())));
                 }
                 (true, &One(Some(ref v))) => {
-                    let words = v.words().map(|s| s.to_string()).collect();
+                    let words = regex!(r"\s+")
+                                .split(v)
+                                .map(|s| s.to_owned())
+                                .collect();
                     vs.insert(atom, List(words));
                 }
             }

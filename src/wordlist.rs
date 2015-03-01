@@ -1,4 +1,4 @@
-#![feature(collections, core, old_io, std_misc, str_words)]
+#![feature(collections, core, exit_status, old_io, std_misc)]
 
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;

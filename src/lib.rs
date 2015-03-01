@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, libc, old_io, std_misc, str_words, unicode)]
+#![feature(collections, core, old_io, std_misc, unicode)]
 
 extern crate libc;
 extern crate regex;
@@ -431,8 +431,9 @@ impl Docopt {
     ///
     /// If there was a problem parsing the usage string, a `Usage` error
     /// is returned.
-    pub fn new<S: Str>(usage: S) -> Result<Docopt, Error> {
-        Parser::new(usage.as_slice())
+    pub fn new<S>(usage: S) -> Result<Docopt, Error>
+            where S: ::std::ops::Deref<Target=str> {
+        Parser::new(usage.deref())
                .map_err(Usage)
                .map(|p| Docopt {
                    p: p,
@@ -701,7 +702,7 @@ impl ArgvMap {
                     panic!("Unknown ArgvMap key: '{}'", name)
                 };
             let mut prefix = prefix.to_string();
-            prefix.push_str(sanitize(name).as_slice());
+            prefix.push_str(&sanitize(name));
             prefix
         })
     }
@@ -721,7 +722,7 @@ impl ArgvMap {
                 pre_name
             } else if field.starts_with("arg_") {
                 let name = regex!(r"^arg_").replace(field, "");
-                if regex!(r"^\p{Lu}+$").is_match(name.as_slice()) {
+                if regex!(r"^\p{Lu}+$").is_match(&name) {
                     name
                 } else {
                     let mut pre_name = "<".to_string();

@@ -20,5 +20,6 @@ doc = false
 test = false
 
 [dependencies]
-rustc-serialize = "*"
+libc = "*"
 regex = "*"
+rustc-serialize = "*"
