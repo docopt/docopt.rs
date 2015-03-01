@@ -13,9 +13,8 @@ extern crate docopt;
 use std::collections::HashMap;
 
 use rustc::plugin::Registry;
-use syntax::ast;
-use syntax::codemap;
-use syntax::ext::base::{ExtCtxt, MacResult, MacItems, DummyResult};
+use syntax::{ast, codemap};
+use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
 use syntax::owned_slice::OwnedSlice;
@@ -24,6 +23,7 @@ use syntax::parse::parser::Parser;
 use syntax::parse::token;
 use syntax::print::pprust;
 use syntax::ptr::P;
+use syntax::util::small_vector::SmallVector;
 
 use docopt::{Docopt, ArgvMap};
 use docopt::parse::{Options, Atom, Positional, Zero, One};
@@ -73,7 +73,7 @@ impl Parsed {
                 }
             }
         ).unwrap());
-        MacItems::new(its.into_iter())
+        MacEager::items(SmallVector::many(its))
     }
 
     /// Returns an item for the struct definition.
