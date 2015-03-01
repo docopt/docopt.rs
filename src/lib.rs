@@ -22,7 +22,7 @@
 //!
 //! // The argv. Normally you'd just use `parse` which will automatically
 //! // use `std::os::args()`.
-//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //! // Parse argv and exit the program with an error message if it fails.
 //! let args = Docopt::new(USAGE)
@@ -68,7 +68,7 @@
 //!     flag_archive: bool,
 //! }
 //!
-//! let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
 //!                         .unwrap_or_else(|e| e.exit());
@@ -147,7 +147,7 @@
 //!     }
 //! }
 //!
-//! let argv = |&:| vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
+//! let argv = || vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
 //!                             "--opt-level", "2", "--emit=ir", "docopt.rs"];
 //! let args: Args = Docopt::new(USAGE)
 //!                         .and_then(|d| d.argv(argv().into_iter()).decode())
@@ -195,7 +195,7 @@
 //! ")
 //!
 //! fn main() {
-//!     let argv = |&:| vec!["cp", "-a", "file1", "file2", "dest/"];
+//!     let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //!     // Your `Args` struct has a single static method defined on it,
 //!     // `docopt`, which will return a normal `Docopt` value.
@@ -613,7 +613,7 @@ impl ArgvMap {
     ///   flag_h: bool,
     /// }
     ///
-    /// let argv = |&:| vec!["cargo", "build", "-v"].into_iter();
+    /// let argv = || vec!["cargo", "build", "-v"].into_iter();
     /// let args: Args = Docopt::new(USAGE)
     ///                         .and_then(|d| d.argv(argv()).decode())
     ///                         .unwrap_or_else(|e| e.exit());
