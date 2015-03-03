@@ -22,4 +22,4 @@ test = false
 [dependencies]
 libc = "*"
 regex = "*"
-rustc-serialize = "0.2.0"
+rustc-serialize = "0.3"

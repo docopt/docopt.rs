@@ -216,12 +216,13 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, old_io, std_misc, unicode)]
+#![feature(collections, core, std_misc, unicode, io)]
 
 extern crate libc;
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
 
+use std::io::{self, Write};
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::error::Error as StdError;
@@ -240,7 +241,7 @@ use Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
 
 macro_rules! werr(
     ($($arg:tt)*) => (
-        match std::old_io::stderr().write_str(&*format!($($arg)*)) {
+        match write!(&mut io::stderr(), $($arg)*) {
             Ok(_) => (),
             Err(err) => panic!("{}", err),
         }
