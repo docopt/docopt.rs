@@ -222,11 +222,11 @@ extern crate libc;
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
 
-use std::io::{self, Write};
-use std::borrow::ToOwned;
+use std::borrow::IntoCow;
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt;
+use std::io::{self, Write};
 use std::str::FromStr;
 use std::num;
 use std::num::NumCast;
@@ -395,23 +395,6 @@ impl StdError for Error {
     }
 }
 
-/// Encapsulate allocating of strings.
-///
-/// This is a temporary measure until the standard library provides more
-/// impls for `std::string::IntoString`.
-pub trait StrAllocating {
-    /// Provide an owned String.
-    fn into_str(self) -> String;
-}
-
-impl StrAllocating for String {
-    fn into_str(self) -> String { self }
-}
-
-impl<'a> StrAllocating for &'a str {
-    fn into_str(self) -> String { self.to_owned() }
-}
-
 /// The main Docopt type, which is constructed with a Docopt usage string.
 ///
 /// This can be used to match command line arguments to produce a `ArgvMap`.
@@ -500,9 +483,11 @@ impl Docopt {
     /// The `argv` given *must* be the full set of `argv` passed to the
     /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
     /// is wrong.
-    pub fn argv<I, S>(mut self, argv: I) -> Docopt
-               where I: Iterator<Item=S>, S: StrAllocating {
-        self.argv = Some(argv.skip(1).map(|s| s.into_str()).collect());
+    pub fn argv<'a, I, S>(mut self, argv: I) -> Docopt
+               where I: Iterator<Item=S>, S: IntoCow<'a, str> {
+        self.argv = Some(
+            argv.skip(1).map(|s| s.into_cow().into_owned()).collect()
+        );
         self
     }
 
