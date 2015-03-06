@@ -959,20 +959,32 @@ $ prog --bar --egg
 
 r"""Usage: prog [-a] [--] [<arg>...]"""
 $ program -a
-{"-a": true, "<arg>": [], "--": false}
+{"-a": true, "<arg>": []}
 
 r"""Usage: prog [-a] [--] [<arg>...]"""
 $ program --
-{"-a": false, "<arg>": [], "--": true}
+{"-a": false, "<arg>": []}
 
 r"""Usage: prog [-a] [--] [<arg>...]"""
 $ program -a -- -b
-{"-a": true, "<arg>": ["-b"], "--": true}
+{"-a": true, "<arg>": ["-b"]}
 
 r"""Usage: prog [-a] [--] [<arg>...]"""
 $ program -a -- -a
-{"-a": true, "<arg>": ["-a"], "--": true}
+{"-a": true, "<arg>": ["-a"]}
 
 r"""Usage: prog [-a] [--] [<arg>...]"""
 $ program -- -a
-{"-a": false, "<arg>": ["-a"], "--": true}
+{"-a": false, "<arg>": ["-a"]}
+
+r"""Usage: prog test [options] [--] [<args>...]"""
+$ program test a -- -b
+{"<args>": ["a", "-b"]}
+
+r"""Usage: prog test [options] [--] [<args>...]"""
+$ program test -- -b
+{"<args>": ["-b"]}
+
+r"""Usage: prog test [options] [--] [<args>...]"""
+$ program test a -b
+"user-error"

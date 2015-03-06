@@ -633,17 +633,19 @@ other options:
  --spam
 -not-an-option-", &["--bar", "--egg"], vec!(("--bar", Switch(true)), ("--egg", Switch(true)), ("--spam", Switch(false))));
 
-test_expect!(test_175_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a"], vec!(("--", Switch(false)), ("<arg>", List(vec!())), ("-a", Switch(true))));
+test_expect!(test_175_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a"], vec!(("<arg>", List(vec!())), ("-a", Switch(true))));
 
-test_expect!(test_176_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--"], vec!(("--", Switch(true)), ("<arg>", List(vec!())), ("-a", Switch(false))));
+test_expect!(test_176_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--"], vec!(("<arg>", List(vec!())), ("-a", Switch(false))));
 
-test_expect!(test_177_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-b"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-b".to_string()))), ("-a", Switch(true))));
+test_expect!(test_177_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-b"], vec!(("<arg>", List(vec!("-b".to_string()))), ("-a", Switch(true))));
 
-test_expect!(test_178_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-a"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(true))));
+test_expect!(test_178_testcases, "Usage: prog [-a] [--] [<arg>...]", &["-a", "--", "-a"], vec!(("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(true))));
 
-test_expect!(test_179_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--", "-a"], vec!(("--", Switch(true)), ("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(false))));
+test_expect!(test_179_testcases, "Usage: prog [-a] [--] [<arg>...]", &["--", "-a"], vec!(("<arg>", List(vec!("-a".to_string()))), ("-a", Switch(false))));
 
-test_expect!(test_180_testcases, "Usage: prog arg-prog", &["arg-prog"], vec!(("arg-prog", Switch(true))));
+test_expect!(test_180_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "a", "--", "-b"], vec!(("<args>", List(vec!("a".to_string(), "-b".to_string())))));
 
-test_expect!(test_181_testcases, "Usage: prog --opt-prog", &["--opt-prog"], vec!(("--opt-prog", Switch(true))));
+test_expect!(test_181_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "--", "-b"], vec!(("<args>", List(vec!("-b".to_string())))));
+
+test_user_error!(test_182_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "a", "-b"]);
 

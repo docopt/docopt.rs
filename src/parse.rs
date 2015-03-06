@@ -891,16 +891,17 @@ impl<'a> Argv<'a> {
             } else {
                 if self.cur() == "--" {
                     seen_double_dash = true;
+                } else {
+                    // Yup, we *always* insert a positional argument, which
+                    // means we completely neglect `Command` here.
+                    // This is because we can't tell whether something is a
+                    // `command` or not until we start pattern matching.
+                    let tok = ArgvToken {
+                        atom: Positional(self.cur().to_string()),
+                        arg: None,
+                    };
+                    self.positional.push(tok);
                 }
-                // Yup, we *always* insert a positional argument, which
-                // means we completely neglect `Command` here.
-                // This is because we can't tell whether something is a
-                // `command` or not until we start pattern matching.
-                let tok = ArgvToken {
-                    atom: Positional(self.cur().to_string()),
-                    arg: None,
-                };
-                self.positional.push(tok);
             }
             self.next()
         }
