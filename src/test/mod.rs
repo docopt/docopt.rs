@@ -51,7 +51,7 @@ macro_rules! test_expect(
 macro_rules! test_user_error(
     ($name:ident, $doc:expr, $args:expr) => (
         #[test]
-        #[should_fail]
+        #[should_panic]
         fn $name() { get_args($doc, $args); }
     );
 );

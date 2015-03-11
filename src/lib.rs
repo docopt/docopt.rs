@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, std_misc, unicode, io)]
+#![feature(collections, core, std_misc, io)]
 
 extern crate libc;
 extern crate regex;
@@ -988,18 +988,13 @@ impl rustc_serialize::Decoder for Decoder {
     fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F)
                               -> Result<T, Error>
             where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
-        fn to_lower(s: &str) -> String {
-            s.chars().map(|c| c.to_lowercase()).collect()
-        }
-
-        let v = try!(self.pop_val());
-        let vstr = to_lower(v.as_str());
+        let v = try!(self.pop_val()).as_str().to_lowercase();
         let i =
-            match names.iter().map(|&n| to_lower(n)).position(|n| n == vstr) {
+            match names.iter().map(|n| n.to_lowercase()).position(|n| n == v) {
                 Some(i) => i,
                 None => {
                     derr!("Could not match '{}' with any of \
-                           the allowed variants: {:?}", vstr, names)
+                           the allowed variants: {:?}", v, names)
                 }
             };
         f(self, i)
