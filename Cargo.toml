@@ -13,11 +13,11 @@ license = "Unlicense"
 [lib]
 name = "docopt"
 
-# [[bin]]
-# name = "docopt-wordlist"
-# path = "src/wordlist.rs"
-# doc = false
-# test = false
+[[bin]]
+name = "docopt-wordlist"
+path = "src/wordlist.rs"
+doc = false
+test = false
 
 [dependencies]
 libc = "*"
