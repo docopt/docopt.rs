@@ -715,7 +715,7 @@ impl Pattern {
 impl Atom {
     pub fn new(s: &str) -> Atom {
         if Atom::is_short(s) {
-            Short(s.chars().next().unwrap())
+            Short(s[1..].chars().next().unwrap())
         } else if Atom::is_long(s) {
             Long(s[2..].to_string())
         } else if Atom::is_arg(s) {
