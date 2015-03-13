@@ -50,7 +50,7 @@ use std::fmt;
 use regex;
 use regex::Regex;
 
-use Value::{self, Switch, Counted, Plain, List};
+use dopt::Value::{self, Switch, Counted, Plain, List};
 use synonym::SynonymMap;
 
 macro_rules! err(
@@ -382,7 +382,7 @@ impl<'a> PatParser<'a> {
                         None => err!("Unexpected '{}'. No open bracket found.",
                                      self.cur()),
                         Some(c) => {
-                            if c != self.cur().char_at(0) {
+                            if c != self.cur().chars().next().unwrap() {
                                 err!("Expected '{}' but got '{}'.",
                                      c, self.cur())
                             }
@@ -715,7 +715,7 @@ impl Pattern {
 impl Atom {
     pub fn new(s: &str) -> Atom {
         if Atom::is_short(s) {
-            Short(s.char_at(1))
+            Short(s.chars().next().unwrap())
         } else if Atom::is_long(s) {
             Long(s[2..].to_string())
         } else if Atom::is_arg(s) {
@@ -1264,13 +1264,13 @@ impl<'a, 'b> Matcher<'a, 'b> {
         if pats.is_empty() {
             states.push(base.clone());
         } else {
-            let (pat, rest) = (*pats.first().unwrap(), pats.tail());
+            let (pat, rest) = (*pats.first().unwrap(), &pats[1..]);
             for s in self.states(pat, base).into_iter() {
                 self.all_option_states(&s, states, rest);
             }
             // Order is important here! This must come after the loop above
             // because we prefer presence over absence. The first state wins.
-            self.all_option_states(base, states, pats.tail());
+            self.all_option_states(base, states, &pats[1..]);
         }
     }
 }

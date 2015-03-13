@@ -1,23 +1,32 @@
-#![feature(collections, core, exit_status, old_io, std_misc)]
+#![feature(collections, core, exit_status, io, std_misc)]
 
+extern crate libc;
 extern crate regex;
 extern crate "rustc-serialize" as rustc_serialize;
 
-extern crate docopt;
-
 use std::collections::HashMap;
 use std::env;
-use std::old_io as io;
+use std::io::{self, Read, Write};
 
-pub use docopt::{Docopt, Value};
-
+use dopt::Docopt;
 use parse::{Atom, Parser};
 
 // cheat until we get syntax extensions back :-(
 macro_rules! regex(
-    ($s:expr) => (regex::Regex::new($s).unwrap());
+    ($s:expr) => (::regex::Regex::new($s).unwrap());
 );
 
+macro_rules! werr(
+    ($($arg:tt)*) => (
+        match write!(&mut io::stderr(), $($arg)*) {
+            Ok(_) => (),
+            Err(err) => panic!("{}", err),
+        }
+    )
+);
+
+#[allow(dead_code)]
+mod dopt;
 #[allow(dead_code)]
 mod parse;
 #[allow(dead_code)]
@@ -57,15 +66,15 @@ fn main() {
         Ok(_) => {},
         Err(err) => {
             env::set_exit_status(1);
-            io::stderr().write_str(&*err).unwrap();
+            write!(&mut io::stderr(), "{}", err).unwrap();
         }
     }
 }
 
 fn run(args: Args) -> Result<(), String> {
-    let usage = try!(io::stdin().read_to_string().map_err(|e| e.to_string()));
-    let parsed = try!(Parser::new(&*usage)
-                             .map_err(|e| e.to_string()));
+    let mut usage = String::new();
+    try!(io::stdin().read_to_string(&mut usage).map_err(|e| e.to_string()));
+    let parsed = try!(Parser::new(&usage).map_err(|e| e.to_string()));
     let arg_possibles: HashMap<String, Vec<String>> =
         args.arg_name.iter()
                      .zip(args.arg_possibles.iter())
