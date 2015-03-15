@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, std_misc, io)]
+#![feature(collections, core, std_misc)]
 
 extern crate libc;
 extern crate regex;
@@ -225,12 +225,10 @@ extern crate "rustc-serialize" as rustc_serialize;
 pub use dopt::{ArgvMap, Decoder, Docopt, Error, Value};
 
 macro_rules! werr(
-    ($($arg:tt)*) => (
-        match write!(&mut io::stderr(), $($arg)*) {
-            Ok(_) => (),
-            Err(err) => panic!("{}", err),
-        }
-    )
+    ($($arg:tt)*) => ({
+        use std::io::{Write, stderr};
+        write!(&mut stderr(), $($arg)*).unwrap();
+    })
 );
 
 // cheat until we get syntax extensions back :-(

@@ -2,7 +2,6 @@ use std::borrow::IntoCow;
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt;
-use std::io::{self, Write};
 use std::str::FromStr;
 use std::num;
 use std::num::NumCast;

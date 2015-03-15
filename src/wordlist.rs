@@ -1,4 +1,4 @@
-#![feature(collections, core, exit_status, io, std_misc)]
+#![feature(collections, core, exit_status, std_misc)]
 
 extern crate libc;
 extern crate regex;
@@ -17,12 +17,10 @@ macro_rules! regex(
 );
 
 macro_rules! werr(
-    ($($arg:tt)*) => (
-        match write!(&mut io::stderr(), $($arg)*) {
-            Ok(_) => (),
-            Err(err) => panic!("{}", err),
-        }
-    )
+    ($($arg:tt)*) => ({
+        use std::io::{Write, stderr};
+        write!(&mut stderr(), $($arg)*).unwrap();
+    })
 );
 
 #[allow(dead_code)]
