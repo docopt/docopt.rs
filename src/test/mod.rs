@@ -61,3 +61,4 @@ test_expect!(test_issue_13, "Usage: prog file <file>", &["file", "file"],
                   ("<file>", Plain(Some("file".to_string())))]);
 
 mod testcases;
+mod suggestions;
