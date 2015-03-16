@@ -1,4 +1,4 @@
-#![feature(collections, core, exit_status, std_misc)]
+#![feature(core, exit_status, std_misc)]
 
 extern crate libc;
 extern crate regex;

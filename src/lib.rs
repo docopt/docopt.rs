@@ -216,7 +216,7 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(collections, core, std_misc)]
+#![feature(core, std_misc)]
 
 extern crate libc;
 extern crate regex;

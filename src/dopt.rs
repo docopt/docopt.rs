@@ -750,9 +750,9 @@ impl ::rustc_serialize::Decoder for Decoder {
     fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F)
                               -> Result<T, Error>
             where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
-        let v = try!(self.pop_val()).as_str().to_lowercase();
+        let v = to_lowercase(try!(self.pop_val()).as_str());
         let i =
-            match names.iter().map(|n| n.to_lowercase()).position(|n| n == v) {
+            match names.iter().map(|&n| to_lowercase(n)).position(|n| n == v) {
                 Some(i) => i,
                 None => {
                     derr!("Could not match '{}' with any of \
@@ -845,6 +845,10 @@ impl ::rustc_serialize::Decoder for Decoder {
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+}
+
+fn to_lowercase<'a, S: IntoCow<'a, str>>(s: S) -> String {
+    s.into_cow().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
 }
 
 // I've been warned that this is wildly unsafe.
