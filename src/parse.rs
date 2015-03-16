@@ -853,7 +853,7 @@ impl<'a> Argv<'a> {
                         arg: None,
                     };
                     if !self.dopt.descs.contains_key(&tok.atom) {
-                        return self.err_unknown_flag(&tok.atom)
+                        err!("Unknown flag: '{}'", &tok.atom);
                     }
                     if !self.dopt.has_arg(&tok.atom) {
                         self.flags.push(tok);
@@ -926,7 +926,7 @@ impl<'a> Argv<'a> {
 
         for key in possibles.iter() {
             match *key {
-                &Short(_) | &Long(_) | &Command(_) => {
+                &Long(_) | &Command(_) => {
                     let name = key.to_string();
                     let dist = levenshtein(&flag, &name);
                     if dist < 3 && dist < min {
