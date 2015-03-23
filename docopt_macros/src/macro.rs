@@ -49,7 +49,7 @@ struct Parsed {
     doc: Docopt,
     /// Overrided type annotations for struct members. May be empty.
     /// When a type annotation for an atom doesn't exist, then one is
-    /// inferred automatically. It is one of: `bool`, `uint`, `String` or
+    /// inferred automatically. It is one of: `bool`, `usize`, `String` or
     /// `Vec<String>`.
     types: HashMap<Atom, P<ast::Ty>>,
 }
@@ -127,7 +127,7 @@ impl Parsed {
             (true, &Zero) => {
                 match atom {
                     &Positional(_) => ty_vec_string(cx),
-                    _ => cx.ty_ident(sp, ident("uint")),
+                    _ => cx.ty_ident(sp, ident("usize")),
                 }
             }
             (false, &One(_)) => cx.ty_ident(sp, ident("String")),
