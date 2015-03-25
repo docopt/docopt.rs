@@ -1,8 +1,8 @@
-#![feature(core, exit_status, std_misc)]
+#![feature(core, exit_status, into_cow)]
 
 extern crate libc;
 extern crate regex;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 use std::collections::HashMap;
 use std::env;
