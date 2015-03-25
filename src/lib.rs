@@ -216,11 +216,11 @@
 #![deny(missing_docs)]
 
 // These MUST be removed for Rust 1.0 stable.
-#![feature(core, std_misc)]
+#![feature(core, into_cow)]
 
 extern crate libc;
 extern crate regex;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 pub use dopt::{ArgvMap, Decoder, Docopt, Error, Value};
 
