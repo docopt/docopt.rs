@@ -1156,7 +1156,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
 
     fn state_valid_num_flags(&self, state: &MState) -> bool {
         state.counts.iter().all(
-            |(flag, count)| count <= &state.max_counts[*flag])
+            |(flag, count)| count <= &state.max_counts[flag])
     }
 
     fn states(&self, pat: &Pattern, init: &MState) -> Vec<MState> {

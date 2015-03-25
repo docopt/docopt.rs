@@ -50,7 +50,7 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
 
     fn with_key<T, F>(&self, k: &K, with: F) -> T where F: FnOnce(&K) -> T {
         if self.syns.contains_key(k) {
-            with(&self.syns[*k])
+            with(&self.syns[k])
         } else {
             with(k)
         }
@@ -68,7 +68,7 @@ impl<K: Eq + Hash + Clone, V> SynonymMap<K, V> {
 
     pub fn find_mut<'a>(&'a mut self, k: &K) -> Option<&'a mut V> {
         if self.syns.contains_key(k) {
-            self.vals.get_mut(&self.syns[*k])
+            self.vals.get_mut(&self.syns[k])
         } else {
             self.vals.get_mut(k)
         }
