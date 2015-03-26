@@ -1,7 +1,7 @@
 #![crate_name = "docopt_macros"]
 #![crate_type = "dylib"]
 
-#![feature(collections, core, plugin_registrar, quote, rustc_private)]
+#![feature(collections, plugin_registrar, quote, rustc_private)]
 
 //! This crate defines the `docopt!` macro. It is documented in the
 //! documentation of the `docopt` crate.
@@ -10,6 +10,7 @@ extern crate syntax;
 extern crate rustc;
 extern crate docopt;
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
 
 use rustc::plugin::Registry;
@@ -280,10 +281,10 @@ fn ident(s: &str) -> ast::Ident {
 }
 
 fn attribute<S, T>(cx: &ExtCtxt, name: S, items: Vec<T>) -> ast::Attribute
-            where S: Str, T: Str {
+            where S: Borrow<str>, T: Borrow<str> {
     let sp = codemap::DUMMY_SP;
-    let its = items.into_iter().map(|s| meta_item(cx, s.as_slice())).collect();
-    let mi = cx.meta_list(sp, intern(name.as_slice()), its);
+    let its = items.into_iter().map(|s| meta_item(cx, s.borrow())).collect();
+    let mi = cx.meta_list(sp, intern(name.borrow()), its);
     cx.attribute(sp, mi)
 }
 
