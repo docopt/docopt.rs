@@ -4,7 +4,7 @@
 // decoder uses `Option<T>` to mean "T may not be present" rather than
 // "T may be present but incorrect."
 
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate docopt;
 
 use docopt::Docopt;

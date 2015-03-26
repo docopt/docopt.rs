@@ -1,4 +1,4 @@
-#![feature(core, exit_status, into_cow)]
+#![feature(convert, core, exit_status)]
 
 extern crate libc;
 extern crate regex;

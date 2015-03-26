@@ -1,5 +1,5 @@
-use std::borrow::IntoCow;
 use std::collections::HashMap;
+use std::convert::Into;
 use std::error::Error as StdError;
 use std::fmt;
 use std::str::FromStr;
@@ -244,10 +244,10 @@ impl Docopt {
     /// The `argv` given *must* be the full set of `argv` passed to the
     /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
     /// is wrong.
-    pub fn argv<'a, I, S>(mut self, argv: I) -> Docopt
-               where I: Iterator<Item=S>, S: IntoCow<'a, str> {
+    pub fn argv<I, S>(mut self, argv: I) -> Docopt
+               where I: Iterator<Item=S>, S: Into<String> {
         self.argv = Some(
-            argv.skip(1).map(|s| s.into_cow().into_owned()).collect()
+            argv.skip(1).map(|s| s.into()).collect()
         );
         self
     }
@@ -847,8 +847,8 @@ impl ::rustc_serialize::Decoder for Decoder {
     }
 }
 
-fn to_lowercase<'a, S: IntoCow<'a, str>>(s: S) -> String {
-    s.into_cow().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
+fn to_lowercase<S: Into<String>>(s: S) -> String {
+    s.into().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
 }
 
 // I've been warned that this is wildly unsafe.

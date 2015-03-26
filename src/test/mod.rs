@@ -3,14 +3,11 @@ use {Docopt, ArgvMap};
 use Value::{self, Switch, Plain};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
-    let dopt =
-        match Docopt::new(doc) {
-            Err(err) => panic!("Invalid usage: {}", err),
-            Ok(dopt) => dopt,
-        };
-    let mut argv: Vec<_> = argv.iter().map(|x| x.to_string()).collect();
-    argv.insert(0, "prog".to_string());
-    match dopt.argv(argv.into_iter()).parse() {
+    let dopt = match Docopt::new(doc) {
+        Err(err) => panic!("Invalid usage: {}", err),
+        Ok(dopt) => dopt,
+    };
+    match dopt.argv(vec!["cmd"].iter().chain(argv.iter()).map(|&x|x)).parse() {
         Err(err) => panic!("{}", err),
         Ok(vals) => vals,
     }
