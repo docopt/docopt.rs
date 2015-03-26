@@ -1,7 +1,7 @@
 #![crate_name = "docopt_macros"]
 #![crate_type = "dylib"]
 
-#![feature(collections, plugin_registrar, quote, rustc_private)]
+#![feature(plugin_registrar, quote, rustc_private)]
 
 //! This crate defines the `docopt!` macro. It is documented in the
 //! documentation of the `docopt` crate.
@@ -88,7 +88,7 @@ impl Parsed {
         };
 
         let mut traits = vec!["RustcDecodable".to_string()];
-        traits.push_all(&*self.struct_info.deriving);
+        traits.extend(self.struct_info.deriving.iter().cloned());
         let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
                          attribute(cx, "derive", traits)];
 

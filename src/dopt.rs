@@ -2,9 +2,6 @@ use std::collections::HashMap;
 use std::convert::Into;
 use std::error::Error as StdError;
 use std::fmt;
-use std::str::FromStr;
-use std::num;
-use std::num::NumCast;
 
 use rustc_serialize::Decodable;
 
@@ -150,7 +147,7 @@ impl StdError for Error {
 
     fn cause(&self) -> Option<&StdError> {
         match *self {
-            WithProgramUsage(ref cause, _) => Some(&**cause as &StdError),
+            WithProgramUsage(ref cause, _) => Some(&**cause),
             _ => None,
         }
     }
@@ -388,7 +385,7 @@ impl ArgvMap {
 
     /// Finds the value corresponding to `key` and calls `as_count()` on it.
     /// If the key does not exist, `0` is returned.
-    pub fn get_count(&self, key: &str) -> usize {
+    pub fn get_count(&self, key: &str) -> u64 {
         self.find(key).map(|v| v.as_count()).unwrap_or(0)
     }
 
@@ -531,7 +528,7 @@ pub enum Value {
     Switch(bool),
 
     /// The number of occurrences of a repeated flag.
-    Counted(usize),
+    Counted(u64),
 
     /// A positional or flag argument.
     ///
@@ -567,13 +564,13 @@ impl Value {
     /// Booleans are `1` if `true` and `0` otherwise.
     /// Plain strings are `1` if present and `0` otherwise.
     /// Lists correspond to its length.
-    pub fn as_count(&self) -> usize {
+    pub fn as_count(&self) -> u64 {
         match *self {
             Switch(b) => if b { 1 } else { 0 },
             Counted(n) => n,
             Plain(None) => 0,
             Plain(Some(_)) => 1,
-            List(ref vs) => vs.len(),
+            List(ref vs) => vs.len() as u64,
         }
     }
 
@@ -667,11 +664,24 @@ impl Decoder {
         Ok(v)
     }
 
-    fn to_number<T: FromStr + NumCast>
-                (&mut self, expect: &str) -> Result<T, Error> {
+    fn to_number(&mut self, expect: &str) -> Result<u64, Error> {
         let (k, v) = try!(self.pop_key_val());
         match v {
-            Counted(n) => Ok(num::cast(n).unwrap()),
+            Counted(n) => Ok(n),
+            _ => {
+                match v.as_str().parse() {
+                    Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
+                                  v.as_str(), expect, k),
+                    Ok(v) => Ok(v),
+                }
+            }
+        }
+    }
+
+    fn to_float(&mut self, expect: &str) -> Result<f64, Error> {
+        let (k, v) = try!(self.pop_key_val());
+        match v {
+            Counted(n) => Ok(n as f64),
             _ => {
                 match v.as_str().parse() {
                     Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
@@ -694,43 +704,43 @@ impl ::rustc_serialize::Decoder for Decoder {
         panic!("I don't know how to read into a nil value.")
     }
     fn read_usize(&mut self) -> Result<usize, Error> {
-        self.to_number("usize")
+        self.to_number("usize").map(|n| n as usize)
     }
     fn read_u64(&mut self) -> Result<u64, Error> {
         self.to_number("u64")
     }
     fn read_u32(&mut self) -> Result<u32, Error> {
-        self.to_number("u32")
+        self.to_number("u32").map(|n| n as u32)
     }
     fn read_u16(&mut self) -> Result<u16, Error> {
-        self.to_number("u16")
+        self.to_number("u16").map(|n| n as u16)
     }
     fn read_u8(&mut self) -> Result<u8, Error> {
-        self.to_number("u8")
+        self.to_number("u8").map(|n| n as u8)
     }
     fn read_isize(&mut self) -> Result<isize, Error> {
-        self.to_number("isize")
+        self.to_number("isize").map(|n| n as isize)
     }
     fn read_i64(&mut self) -> Result<i64, Error> {
-        self.to_number("i64")
+        self.to_number("i64").map(|n| n as i64)
     }
     fn read_i32(&mut self) -> Result<i32, Error> {
-        self.to_number("i32")
+        self.to_number("i32").map(|n| n as i32)
     }
     fn read_i16(&mut self) -> Result<i16, Error> {
-        self.to_number("i16")
+        self.to_number("i16").map(|n| n as i16)
     }
     fn read_i8(&mut self) -> Result<i8, Error> {
-        self.to_number("i8")
+        self.to_number("i8").map(|n| n as i8)
     }
     fn read_bool(&mut self) -> Result<bool, Error> {
         self.pop_val().map(|v| v.as_bool())
     }
     fn read_f64(&mut self) -> Result<f64, Error> {
-        self.to_number("f64")
+        self.to_float("f64")
     }
     fn read_f32(&mut self) -> Result<f32, Error> {
-        self.to_number("f32")
+        self.to_float("f32").map(|n| n as f32)
     }
     fn read_char(&mut self) -> Result<char, Error> {
         let (k, v) = try!(self.pop_key_val());

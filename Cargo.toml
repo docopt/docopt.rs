@@ -14,9 +14,7 @@ license = "Unlicense"
 name = "docopt"
 
 [[bin]]
-#name = "docopt-wordlist"
-# Temporary, see https://github.com/rust-lang/cargo/issues/1450
-name = "docopt_wordlist"
+name = "docopt-wordlist"
 path = "src/wordlist.rs"
 doc = false
 test = false

@@ -388,11 +388,8 @@ impl<'a> PatParser<'a> {
                             }
                         }
                     }
-                    let mk = if self.cur() == "]" {
-                        Optional as fn(Vec<Pattern>) -> Pattern
-                    } else {
-                        Sequence as fn(Vec<Pattern>) -> Pattern
-                    };
+                    let mk: fn(Vec<Pattern>) -> Pattern =
+                        if self.cur() == "]" { Optional } else { Sequence };
                     self.next();
                     return
                         if alts.is_empty() {
@@ -1192,10 +1189,10 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     match p {
                         &PatAtom(ref a @ Short(_))
                         | &PatAtom(ref a @ Long(_)) => {
-                            let argv_count =
-                                self.argv.counts.get(a).cloned().unwrap_or(0);
-                            let max_count =
-                                base.max_counts.get(a).cloned().unwrap_or(0);
+                            let argv_count = self.argv.counts.get(a)
+                                                 .map(|&x|x).unwrap_or(0);
+                            let max_count = base.max_counts.get(a)
+                                                .map(|&x|x).unwrap_or(0);
                             if argv_count > max_count {
                                 base.use_optional_flag(a);
                             }

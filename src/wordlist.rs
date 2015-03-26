@@ -1,11 +1,10 @@
-#![feature(convert, core, exit_status)]
+#![feature(convert)]
 
 extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;
 
 use std::collections::HashMap;
-use std::env;
 use std::io::{self, Read, Write};
 
 use dopt::Docopt;
@@ -63,8 +62,8 @@ fn main() {
     match run(args) {
         Ok(_) => {},
         Err(err) => {
-            env::set_exit_status(1);
             write!(&mut io::stderr(), "{}", err).unwrap();
+            unsafe { ::libc::exit(1) }
         }
     }
 }
