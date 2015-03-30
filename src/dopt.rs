@@ -339,7 +339,7 @@ impl ArgvMap {
     ///
     /// ```rust
     /// # extern crate docopt;
-    /// # extern crate "rustc-serialize" as rustc_serialize;
+    /// # extern crate rustc_serialize;
     /// # fn main() {
     /// use docopt::Docopt;
     ///
@@ -606,7 +606,7 @@ impl Value {
 ///
 /// ```rust
 /// # extern crate docopt;
-/// # extern crate "rustc-serialize" as rustc_serialize;
+/// # extern crate rustc_serialize;
 /// # fn main() {
 /// use docopt::Docopt;
 /// use rustc_serialize::Decodable;

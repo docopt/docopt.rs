@@ -47,7 +47,7 @@
 //!
 //! ```rust
 //! # extern crate docopt;
-//! # extern crate "rustc-serialize" as rustc_serialize;
+//! # extern crate rustc_serialize;
 //! # fn main() {
 //! use docopt::Docopt;
 //!
@@ -89,7 +89,7 @@
 //!
 //! ```rust
 //! # extern crate docopt;
-//! # extern crate "rustc-serialize" as rustc_serialize;
+//! # extern crate rustc_serialize;
 //! # fn main() {
 //! # #![allow(non_snake_case)]
 //! use docopt::Docopt;
@@ -181,7 +181,7 @@
 //! #![feature(plugin)]
 //! #![plugin(docopt_macros)]
 //!
-//! extern crate "rustc-serialize" as rustc_serialize;
+//! extern crate rustc_serialize;
 //!
 //! extern crate docopt;
 //!
