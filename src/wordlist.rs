@@ -1,5 +1,3 @@
-#![feature(convert)]
-
 extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;

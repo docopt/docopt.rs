@@ -1,5 +1,5 @@
+use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::convert::Into;
 use std::error::Error as StdError;
 use std::fmt;
 
@@ -10,6 +10,24 @@ use synonym::SynonymMap;
 
 use self::Value::{Switch, Counted, Plain, List};
 use self::Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
+
+/// Temporary trait until `std::convert::Into` is stabilized.
+pub trait IntoString {
+    /// Get an owned `String` as efficiently as possible.
+    fn into_string(self) -> String;
+}
+
+impl<'a> IntoString for &'a str {
+    fn into_string(self) -> String { self.to_owned() }
+}
+
+impl IntoString for String {
+    fn into_string(self) -> String { self }
+}
+
+impl<'a> IntoString for &'a String {
+    fn into_string(self) -> String { self.clone() }
+}
 
 /// Represents the different types of Docopt errors.
 ///
@@ -242,9 +260,9 @@ impl Docopt {
     /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
     /// is wrong.
     pub fn argv<I, S>(mut self, argv: I) -> Docopt
-               where I: Iterator<Item=S>, S: Into<String> {
+               where I: Iterator<Item=S>, S: IntoString {
         self.argv = Some(
-            argv.skip(1).map(|s| s.into()).collect()
+            argv.skip(1).map(|s| s.into_string()).collect()
         );
         self
     }
@@ -857,8 +875,8 @@ impl ::rustc_serialize::Decoder for Decoder {
     }
 }
 
-fn to_lowercase<S: Into<String>>(s: S) -> String {
-    s.into().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
+fn to_lowercase<S: IntoString>(s: S) -> String {
+    s.into_string().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
 }
 
 // I've been warned that this is wildly unsafe.

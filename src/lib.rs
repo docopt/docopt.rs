@@ -215,9 +215,6 @@
 
 #![deny(missing_docs)]
 
-// These MUST be removed for Rust 1.0 stable.
-#![feature(convert)]
-
 extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;
