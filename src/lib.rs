@@ -215,7 +215,6 @@
 
 #![deny(missing_docs)]
 
-extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;
 

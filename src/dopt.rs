@@ -103,10 +103,10 @@ impl Error {
     pub fn exit(&self) -> ! {
         if self.fatal() {
             werr!("{}\n", self);
-            exit(1)
+            ::std::process::exit(1)
         } else {
             println!("{}", self);
-            exit(0)
+            ::std::process::exit(0)
         }
     }
 }
@@ -858,11 +858,4 @@ impl ::rustc_serialize::Decoder for Decoder {
 
 fn to_lowercase<S: Into<String>>(s: S) -> String {
     s.into().chars().map(|c| c.to_lowercase().next().unwrap()).collect()
-}
-
-// I've been warned that this is wildly unsafe.
-// Unless there's a reasonable alternative, I'm inclined to say that this is
-// the price you pay for convenience.
-fn exit(code: usize) -> ! {
-    unsafe { ::libc::exit(code as ::libc::c_int) }
 }

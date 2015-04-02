@@ -1,4 +1,3 @@
-extern crate libc;
 extern crate regex;
 extern crate rustc_serialize;
 
@@ -61,7 +60,7 @@ fn main() {
         Ok(_) => {},
         Err(err) => {
             write!(&mut io::stderr(), "{}", err).unwrap();
-            unsafe { ::libc::exit(1) }
+            ::std::process::exit(1)
         }
     }
 }
