@@ -7,7 +7,7 @@ fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
         Err(err) => panic!("Invalid usage: {}", err),
         Ok(dopt) => dopt,
     };
-    match dopt.argv(vec!["cmd"].iter().chain(argv.iter()).map(|&x|x)).parse() {
+    match dopt.argv(vec!["cmd"].iter().chain(argv.iter()).cloned()).parse() {
         Err(err) => panic!("{}", err),
         Ok(vals) => vals,
     }
