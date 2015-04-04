@@ -39,7 +39,7 @@ released, but will continue to work on the nightlies), then use `docopt_macros
 Here is a full working example:
 
 ```rust
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -76,7 +76,7 @@ Here is the same example, but with the use of the `docopt!` macro, which will
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 extern crate docopt;
 
@@ -120,7 +120,7 @@ Here's another example that shows how to specify the types of your arguments:
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 extern crate docopt;
 
@@ -155,7 +155,7 @@ Docopt features.
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 extern crate docopt;
 
