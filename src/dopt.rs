@@ -670,7 +670,7 @@ impl Decoder {
             _ => {
                 match v.as_str().parse() {
                     Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
-                                  v.as_str(), expect, k),
+                                    v.as_str(), expect, k),
                     Ok(v) => Ok(v),
                 }
             }
@@ -684,12 +684,20 @@ impl Decoder {
             _ => {
                 match v.as_str().parse() {
                     Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
-                                  v.as_str(), expect, k),
+                                    v.as_str(), expect, k),
                     Ok(v) => Ok(v),
                 }
             }
         }
     }
+}
+
+macro_rules! read_num {
+    ($name:ident, $ty:ty) => (
+        fn $name(&mut self) -> Result<$ty, Error> {
+            self.to_number(stringify!($ty)).map(|n| n as $ty)
+        }
+    );
 }
 
 impl ::rustc_serialize::Decoder for Decoder {
@@ -698,49 +706,35 @@ impl ::rustc_serialize::Decoder for Decoder {
     fn error(&mut self, err: &str) -> Error {
         Decode(err.to_string())
     }
+
     fn read_nil(&mut self) -> Result<(), Error> {
         // I don't know what the right thing is here, so just fail for now.
         panic!("I don't know how to read into a nil value.")
     }
-    fn read_usize(&mut self) -> Result<usize, Error> {
-        self.to_number("usize").map(|n| n as usize)
-    }
-    fn read_u64(&mut self) -> Result<u64, Error> {
-        self.to_number("u64")
-    }
-    fn read_u32(&mut self) -> Result<u32, Error> {
-        self.to_number("u32").map(|n| n as u32)
-    }
-    fn read_u16(&mut self) -> Result<u16, Error> {
-        self.to_number("u16").map(|n| n as u16)
-    }
-    fn read_u8(&mut self) -> Result<u8, Error> {
-        self.to_number("u8").map(|n| n as u8)
-    }
-    fn read_isize(&mut self) -> Result<isize, Error> {
-        self.to_number("isize").map(|n| n as isize)
-    }
-    fn read_i64(&mut self) -> Result<i64, Error> {
-        self.to_number("i64").map(|n| n as i64)
-    }
-    fn read_i32(&mut self) -> Result<i32, Error> {
-        self.to_number("i32").map(|n| n as i32)
-    }
-    fn read_i16(&mut self) -> Result<i16, Error> {
-        self.to_number("i16").map(|n| n as i16)
-    }
-    fn read_i8(&mut self) -> Result<i8, Error> {
-        self.to_number("i8").map(|n| n as i8)
-    }
+
+    read_num!(read_usize, usize);
+    read_num!(read_u64, u64);
+    read_num!(read_u32, u32);
+    read_num!(read_u16, u16);
+    read_num!(read_u8, u8);
+    read_num!(read_isize, isize);
+    read_num!(read_i64, i64);
+    read_num!(read_i32, i32);
+    read_num!(read_i16, i16);
+    read_num!(read_i8, i8);
+
     fn read_bool(&mut self) -> Result<bool, Error> {
         self.pop_val().map(|v| v.as_bool())
     }
+
     fn read_f64(&mut self) -> Result<f64, Error> {
         self.to_float("f64")
     }
+
     fn read_f32(&mut self) -> Result<f32, Error> {
         self.to_float("f32").map(|n| n as f32)
     }
+
     fn read_char(&mut self) -> Result<char, Error> {
         let (k, v) = try!(self.pop_key_val());
         let vstr = v.as_str();
@@ -749,13 +743,16 @@ impl ::rustc_serialize::Decoder for Decoder {
             _ => derr!("Could not decode '{}' into char for '{}'.", vstr, k),
         }
     }
+
     fn read_str(&mut self) -> Result<String, Error> {
         self.pop_val().map(|v| v.as_str().to_string())
     }
+
     fn read_enum<T, F>(&mut self, _: &str, f: F) -> Result<T, Error>
-        where F: FnOnce(&mut Decoder) -> Result<T, Error> {
+            where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
+
     fn read_enum_variant<T, F>(&mut self, names: &[&str], mut f: F)
                               -> Result<T, Error>
             where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
@@ -770,49 +767,59 @@ impl ::rustc_serialize::Decoder for Decoder {
             };
         f(self, i)
     }
+
     fn read_enum_variant_arg<T, F>(&mut self, _: usize, _: F)
                                   -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], _: F)
                                      -> Result<T, Error>
             where F: FnMut(&mut Decoder, usize) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_enum_struct_variant_field<T, F>(&mut self, _: &str, _: usize, _: F)
                                            -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_struct<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
+
     fn read_struct_field<T, F>(&mut self, f_name: &str, _: usize, f: F)
                               -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         self.push(f_name);
         f(self)
     }
+
     fn read_tuple<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_tuple_arg<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_tuple_struct<T, F>(&mut self, _: &str, _: usize, _: F)
                               -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_tuple_struct_arg<T, F>(&mut self, _: usize, _: F)
                                   -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Error>
             where F: FnMut(&mut Decoder, bool) -> Result<T, Error> {
         let option =
@@ -824,6 +831,7 @@ impl ::rustc_serialize::Decoder for Decoder {
             };
         f(self, option)
     }
+
     fn read_seq<T, F>(&mut self, f: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder, usize) -> Result<T, Error> {
         let it = try!(self.pop());
@@ -838,18 +846,22 @@ impl ::rustc_serialize::Decoder for Decoder {
         }
         f(self, vals.len())
     }
+
     fn read_seq_elt<T, F>(&mut self, _: usize, f: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         f(self)
     }
+
     fn read_map<T, F>(&mut self, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder, usize) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_map_elt_key<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
     }
+
     fn read_map_elt_val<T, F>(&mut self, _: usize, _: F) -> Result<T, Error>
             where F: FnOnce(&mut Decoder) -> Result<T, Error> {
         unimplemented!()
