@@ -15,6 +15,7 @@ use std::collections::HashMap;
 
 use rustc::plugin::Registry;
 use syntax::{ast, codemap};
+use syntax::diagnostic::FatalError;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
@@ -28,6 +29,8 @@ use syntax::util::small_vector::SmallVector;
 
 use docopt::{Docopt, ArgvMap};
 use docopt::parse::{Options, Atom, Positional, Zero, One};
+
+type PResult<T> = Result<T, FatalError>;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
@@ -163,10 +166,10 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// First looks for an identifier for the struct name.
     /// Second, a string containing the docopt usage patterns.
     /// Third, an optional list of type annotations.
-    fn parse(&mut self) -> Result<Parsed, ()> {
+    fn parse(&mut self) -> PResult<Parsed> {
         if self.p.token == token::Eof {
             self.cx.span_err(self.cx.call_site(), "macro expects arguments");
-            return Err(());
+            return Err(FatalError);
         }
         let struct_info = try!(self.parse_struct_info());
         let docstr = try!(self.parse_str());
@@ -175,16 +178,16 @@ impl<'a, 'b> MacParser<'a, 'b> {
             sep: Some(token::Comma),
             trailing_sep_allowed: true,
         };
-        let types = self.p.parse_seq_to_end(
+        let types = try!(self.p.parse_seq_to_end(
             &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
-        ).into_iter()
-         .map(|(ident, ty)| {
-             let field_name = token::get_ident(ident).to_string();
-             let key = ArgvMap::struct_field_to_key(&*field_name);
-             (Atom::new(&*key), ty)
-          })
-         .collect::<HashMap<Atom, P<ast::Ty>>>();
-        self.p.expect(&token::Eof);
+        )).into_iter()
+          .map(|(ident, ty)| {
+              let field_name = token::get_ident(ident).to_string();
+              let key = ArgvMap::struct_field_to_key(&*field_name);
+              (Atom::new(&*key), ty)
+           })
+          .collect::<HashMap<Atom, P<ast::Ty>>>();
+        try!(self.p.expect(&token::Eof));
 
         // This config does not matter because we're only asking for the
         // usage patterns in the Docopt string. The configuration does not
@@ -194,7 +197,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             Err(err) => {
                 self.cx.span_err(self.cx.call_site(),
                                  &*format!("Invalid Docopt usage: {}", err));
-                return Err(());
+                return Err(FatalError);
             }
         };
         Ok(Parsed {
@@ -206,7 +209,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
 
     /// Parses a single string literal. On failure, an error is logged and
     /// unit is returned.
-    fn parse_str(&mut self) -> Result<String, ()> {
+    fn parse_str(&mut self) -> PResult<String> {
         fn lit_is_str(lit: &ast::Lit) -> bool {
             match lit.node {
                 ast::LitStr(_, _) => true,
@@ -228,41 +231,43 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 let err = format!("Expected string literal but got {}",
                                   pprust::expr_to_string(&*exp));
                 self.cx.span_err(exp.span, &*err);
-                return Err(());
+                return Err(FatalError);
             }
         };
-        self.p.bump();
+        try!(self.p.bump());
         Ok(s)
     }
 
     /// Parses a type annotation in a `docopt` invocation of the form
     /// `ident: Ty`.
     /// Note that this is a static method as it is used as a HOF.
-    fn parse_type_annotation(p: &mut Parser) -> (ast::Ident, P<ast::Ty>) {
-        let ident = p.parse_ident();
-        p.expect(&token::Colon);
+    fn parse_type_annotation(p: &mut Parser)
+                            -> PResult<(ast::Ident, P<ast::Ty>)> {
+        let ident = try!(p.parse_ident());
+        try!(p.expect(&token::Colon));
         let ty = p.parse_ty();
-        (ident, ty)
+        Ok((ident, ty))
     }
 
     /// Parses struct information, like visibility, name and deriving.
-    fn parse_struct_info(&mut self) -> Result<StructInfo, ()> {
-        let public = self.p.eat_keyword(token::keywords::Pub);
+    fn parse_struct_info(&mut self) -> PResult<StructInfo> {
+        let public = try!(self.p.eat_keyword(token::keywords::Pub));
         let mut info = StructInfo {
-            name: self.p.parse_ident(),
+            name: try!(self.p.parse_ident()),
             public: public,
             deriving: vec![],
         };
-        if self.p.eat(&token::Comma) { return Ok(info); }
-        let deriving = self.p.parse_ident();
+        if try!(self.p.eat(&token::Comma)) { return Ok(info); }
+        let deriving = try!(self.p.parse_ident());
         if deriving.as_str() != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
             self.cx.span_err(self.cx.call_site(), &*err);
-            return Err(());
+            return Err(FatalError);
         }
-        while !self.p.eat(&token::Comma) {
-            info.deriving.push(self.p.parse_ident().as_str().to_string());
+        while !try!(self.p.eat(&token::Comma)) {
+            info.deriving.push(
+                try!(self.p.parse_ident()).as_str().to_string());
         }
         Ok(info)
     }
