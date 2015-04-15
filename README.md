@@ -5,7 +5,7 @@ This implementation conforms to the
 
 [![Build status](https://api.travis-ci.org/docopt/docopt.rs.svg)](https://travis-ci.org/docopt/docopt.rs)
 
-Licensed under the [UNLICENSE](http://unlicense.org).
+Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 
 ### Current status

@@ -8,7 +8,7 @@ homepage = "https://github.com/docopt/docopt.rs"
 repository = "https://github.com/docopt/docopt.rs"
 readme = "README.md"
 keywords = ["docopt", "argument", "command", "argv"]
-license = "Unlicense"
+license = "Unlicense/MIT"
 
 [lib]
 name = "docopt"
