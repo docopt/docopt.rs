@@ -4,6 +4,7 @@ This implementation conforms to the
 [passes its test suite](https://github.com/docopt/docopt/pull/201).
 
 [![Build status](https://api.travis-ci.org/docopt/docopt.rs.svg)](https://travis-ci.org/docopt/docopt.rs)
+[![](http://meritbadge.herokuapp.com/docopt)](https://crates.io/crates/docopt)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
