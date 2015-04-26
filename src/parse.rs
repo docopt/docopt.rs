@@ -49,6 +49,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use regex;
 use regex::Regex;
+use strsim::levenshtein;
 
 use dopt::Value::{self, Switch, Counted, Plain, List};
 use synonym::SynonymMap;
@@ -1353,37 +1354,4 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
         words.push(cap.at(0).unwrap_or("").to_string());
     }
     words
-}
-
-fn levenshtein(this: &str, that: &str) -> usize {
-    use std::cmp;
-    if this.is_empty() {
-        return that.chars().count();
-    }
-    if that.is_empty() {
-        return this.chars().count();
-    }
-
-    let mut d = (0..that.len() + 1).collect::<Vec<_>>();
-    let mut last = 0;
-
-    for (i, c1) in this.chars().enumerate() {
-        let mut current = i;
-        d[0] = i+1;
-
-        for (j, c2) in that.chars().enumerate() {
-            let next = d[j+1];
-
-            if c1 == c2 {
-                d[j+1] = current;
-            } else {
-                d[j+1] = cmp::min(cmp::min(current, next), d[j]) + 1;
-            }
-
-            current = next;
-            last = j;
-        }
-    }
-
-    d[last+1]
 }

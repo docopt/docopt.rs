@@ -1,5 +1,6 @@
 extern crate regex;
 extern crate rustc_serialize;
+extern crate strsim;
 
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
