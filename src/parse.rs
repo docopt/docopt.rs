@@ -910,7 +910,7 @@ impl<'a> Argv<'a> {
         let mut best: String = "".to_string();
         let flag = atom.to_string();
         let mut min = MAX;
-    
+
         let mut possibles = Vec::new();
 
         for (key, _) in self.dopt.descs.synonyms() {
@@ -1357,14 +1357,14 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
 
 fn levenshtein(this: &str, that: &str) -> usize {
     use std::cmp;
-    if this.is_empty() { 
-        return that.chars().count(); 
+    if this.is_empty() {
+        return that.chars().count();
     }
     if that.is_empty() {
         return this.chars().count();
     }
-    
-    let mut d = range(0, that.len() + 1).collect::<Vec<_>>();
+
+    let mut d = (0..that.len() + 1).collect::<Vec<_>>();
     let mut last = 0;
 
     for (i, c1) in this.chars().enumerate() {
