@@ -22,4 +22,3 @@ test = false
 [dependencies]
 regex = "*"
 rustc-serialize = "0.3"
-strsim = "0.2"

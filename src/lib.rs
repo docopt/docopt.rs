@@ -217,7 +217,6 @@
 
 extern crate regex;
 extern crate rustc_serialize;
-extern crate strsim;
 
 pub use dopt::{ArgvMap, Decoder, Docopt, Error, Value};
 
