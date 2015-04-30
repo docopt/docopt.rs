@@ -1,5 +1,9 @@
 language: rust
 
+rust:
+ - nightly
+ - beta
+
 script:
  - cargo build --verbose
  - cargo test --verbose
