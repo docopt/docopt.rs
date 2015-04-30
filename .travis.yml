@@ -1,9 +1,5 @@
 language: rust
 
-rust:
-  - nightly
-  - beta
-
 matrix:
   include:
     - rust: "nightly"
