@@ -21,7 +21,7 @@
 //! ";
 //!
 //! // The argv. Normally you'd just use `parse` which will automatically
-//! // use `std::os::args()`.
+//! // use `std::env::args()`.
 //! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //!
 //! // Parse argv and exit the program with an error message if it fails.
