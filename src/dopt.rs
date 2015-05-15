@@ -235,7 +235,7 @@ impl Docopt {
     /// Set the argv to be used for Docopt parsing.
     ///
     /// By default, when no argv is set, and it is automatically taken from
-    /// `std::os::args()`.
+    /// `std::env::args()`.
     ///
     /// The `argv` given *must* be the full set of `argv` passed to the
     /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
