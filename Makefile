@@ -14,5 +14,5 @@ ctags:
 	ctags --recurse --options=ctags.rust --languages=Rust
 
 push:
-	git push origin master
 	git push github master
+	git push origin master
