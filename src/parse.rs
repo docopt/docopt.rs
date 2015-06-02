@@ -115,7 +115,7 @@ impl Parser {
     }
 
     fn parse(&mut self, doc: &str) -> Result<(), String> {
-        let musage = regex!(r"(?is)usage:\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
+        let musage = regex!(r"(?s)(?i:usage):\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
         let caps = match musage.captures(doc) {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
@@ -169,7 +169,7 @@ impl Parser {
 
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
         let desc =
-            regex!(r"(?i)^\s*options:\s*").replace(full_desc.trim(), "");
+            regex!(r"^\s*(?i:options:)\s*").replace(full_desc.trim(), "");
         let desc = &*desc;
         if !regex!(r"^(-\S|--\S)").is_match(desc) {
             try!(self.parse_default(full_desc));
@@ -231,7 +231,7 @@ impl Parser {
     }
 
     fn parse_default(&mut self, desc: &str) -> Result<(), String> {
-        let rdefault = regex!(r"(?i)\[default:(?P<val>[^]]*)\]");
+        let rdefault = regex!(r"\[(?i:default):(?P<val>[^]]*)\]");
         let defval =
             match rdefault.captures(desc) {
                 None => return Ok(()),
