@@ -57,5 +57,12 @@ test_expect!(test_issue_13, "Usage: prog file <file>", &["file", "file"],
              vec![("file", Switch(true)),
                   ("<file>", Plain(Some("file".to_string())))]);
 
+test_expect!(test_issue_129, "Usage: prog [options]
+
+Options:
+    --foo ARG   Foo foo.",
+             &["--foo=a b"],
+             vec![("--foo", Plain(Some("a b".into())))]);
+
 mod testcases;
 mod suggestions;

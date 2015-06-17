@@ -731,6 +731,7 @@ impl Atom {
 
     fn is_short(s: &str) -> bool { regex!(r"^-[^-]+$").is_match(s) }
     fn is_long(s: &str) -> bool { regex!(r"^--\S+(?:<[^>]+>)?$").is_match(s) }
+    fn is_long_argv(s: &str) -> bool { regex!(r"^--\S+(=.+)?$").is_match(s) }
     fn is_arg(s: &str) -> bool { regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s) }
     fn is_cmd(s: &str) -> bool { regex!(r"^(-|--|[^-]\S*)$").is_match(s) }
 
@@ -871,7 +872,7 @@ impl<'a> Argv<'a> {
                         break
                     }
                 }
-            } else if do_flags && Atom::is_long(self.cur()) {
+            } else if do_flags && Atom::is_long_argv(self.cur()) {
                 let (atom, mut arg) = parse_long_equal_argv(self.cur());
                 let atom = self.dopt.descs.resolve(&atom);
                 if !self.dopt.descs.contains_key(&atom) {
