@@ -26,13 +26,13 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-docopt = "*"
-rustc-serialize = "*"  # if you're using `derive(RustcDecodable)`
+docopt = "0.6.*"
+rustc-serialize = "0.3"  # if you're using `derive(RustcDecodable)`
 ```
 
-If you want to use the macro (which won't work when Rust 1.0 stable is
-released, but will continue to work on the nightlies), then use `docopt_macros
-= "*"` instead.
+If you want to use the macro, then add `docopt_macros = "0.6"` instead.
+Note that the **`docopt!` macro only works on a nightly Rust compiler** because
+it is a compiler plugin.
 
 
 ### Quick example

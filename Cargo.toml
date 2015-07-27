@@ -20,6 +20,6 @@ doc = false
 test = false
 
 [dependencies]
-regex = "*"
+regex = "0.1"
 rustc-serialize = "0.3"
 strsim = "0.3"
