@@ -668,10 +668,16 @@ impl Decoder {
         match v {
             Counted(n) => Ok(n),
             _ => {
-                match v.as_str().parse() {
-                    Err(_) => derr!("Could not decode '{}' to {} for '{}'.",
-                                    v.as_str(), expect, k),
-                    Ok(v) => Ok(v),
+                if v.as_str().trim().is_empty() {
+                    Ok(0)
+                } else {
+                    match v.as_str().parse() {
+                        Err(_) => {
+                            derr!("Could not decode '{}' to {} for '{}'.",
+                                  v.as_str(), expect, k)
+                        }
+                        Ok(v) => Ok(v),
+                    }
                 }
             }
         }

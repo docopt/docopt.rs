@@ -34,6 +34,7 @@ fn same_args(expected: &HashMap<String, Value>, got: &ArgvMap) {
             Some(ve) => {
                 assert!(vg == ve,
                         "{}: GOT = '{:?}' != '{:?}' = EXPECTED", k, vg, ve)
+            }
         }
     }
 }
@@ -67,6 +68,30 @@ Options:
     --foo ARG   Foo foo.",
              &["--foo=a b"],
              vec![("--foo", Plain(Some("a b".into())))]);
+
+#[test]
+fn regression_issue_12() {
+    static USAGE: &'static str = "
+    Usage:
+        whisper info <file>
+        whisper update <file> <timestamp> <value>
+        whisper mark <file> <value>
+    ";
+
+    #[derive(RustcDecodable, Debug)]
+    struct Args {
+        arg_file: String,
+        cmd_info: bool,
+        cmd_update: bool,
+        arg_timestamp: u64,
+        arg_value: f64
+    }
+
+    let dopt: Args = Docopt::new(USAGE).unwrap()
+                            .argv(&["whisper", "mark", "./p/blah", "100"])
+                            .decode().unwrap();
+    assert_eq!(dopt.arg_timestamp, 0);
+}
 
 mod testcases;
 mod suggestions;
