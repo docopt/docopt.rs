@@ -241,9 +241,9 @@ impl Docopt {
     /// program. e.g., `["cp", "src", "dest"]` is right while `["src", "dest"]`
     /// is wrong.
     pub fn argv<I, S>(mut self, argv: I) -> Docopt
-               where I: Iterator<Item=S>, S: Into<String> {
+               where I: IntoIterator<Item=S>, S: AsRef<str> {
         self.argv = Some(
-            argv.skip(1).map(|s| s.into()).collect()
+            argv.into_iter().skip(1).map(|s| s.as_ref().to_owned()).collect()
         );
         self
     }
