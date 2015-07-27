@@ -29,6 +29,8 @@ struct Args {
     arg_name: Vec<String>,
     arg_x: Option<isize>,
     arg_y: Option<isize>,
+    cmd_ship: bool,
+    cmd_mine: bool,
 }
 
 fn main() {
@@ -41,4 +43,5 @@ fn main() {
     println!("  Speed: {}", args.flag_speed);
     println!("  Drifting? {}", args.flag_drifting);
     println!("  Names: {:?}", args.arg_name);
+    println!("  Command 'ship' invoked? {:?}", args.cmd_ship);
 }

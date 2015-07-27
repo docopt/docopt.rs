@@ -37,7 +37,9 @@ released, but will continue to work on the nightlies), then use `docopt_macros
 
 ### Quick example
 
-Here is a full working example:
+Here is a full working example. Notice that you can specify the types of each
+of the named values in the Docopt usage string. Values will be automatically
+converted to those types (or an error will be reported).
 
 ```rust
 extern crate rustc_serialize;
@@ -45,21 +47,34 @@ extern crate docopt;
 
 use docopt::Docopt;
 
-// Write the Docopt usage string.
 static USAGE: &'static str = "
-Usage: cp [-a] <source> <dest>
-       cp [-a] <source>... <dir>
+Naval Fate.
+
+Usage:
+  naval_fate.py ship new <name>...
+  naval_fate.py ship <name> move <x> <y> [--speed=<kn>]
+  naval_fate.py ship shoot <x> <y>
+  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+  naval_fate.py (-h | --help)
+  naval_fate.py --version
 
 Options:
-    -a, --archive  Copy everything.
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored (anchored) mine.
+  --drifting    Drifting mine.
 ";
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Debug, RustcDecodable)]
 struct Args {
-    arg_source: Vec<String>,
-    arg_dest: String,
-    arg_dir: String,
-    flag_archive: bool,
+    flag_speed: isize,
+    flag_drifting: bool,
+    arg_name: Vec<String>,
+    arg_x: Option<i32>,
+    arg_y: Option<i32>,
+    cmd_ship: bool,
+    cmd_mine: bool,
 }
 
 fn main() {
@@ -71,24 +86,35 @@ fn main() {
 ```
 
 Here is the same example, but with the use of the `docopt!` macro, which will
-*generate a struct for you*:
+*generate a struct for you*. Note that this uses a compiler plugin, so it only
+works on a **nightly Rust compiler**:
 
 ```rust
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
 extern crate rustc_serialize;
-
 extern crate docopt;
 
+use docopt::Docopt;
+
 docopt!(Args derive Debug, "
-Usage: cp [options] <src> <dst>
-       cp [options] <src>... <dir>
-       cp --help
+Naval Fate.
+
+Usage:
+  naval_fate.py ship new <name>...
+  naval_fate.py ship <name> move <x> <y> [--speed=<kn>]
+  naval_fate.py ship shoot <x> <y>
+  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+  naval_fate.py (-h | --help)
+  naval_fate.py --version
 
 Options:
-  -h, --help       Show this message.
-  -a, --archive    Copy everything.
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored (anchored) mine.
+  --drifting    Drifting mine.
 ");
 
 fn main() {
@@ -96,6 +122,13 @@ fn main() {
     println!("{:?}", args);
 }
 ```
+
+The `Args` struct has one static method defined for it: `docopt`. The method
+returns a normal `Docopt` value, which can be used to set configuration
+options, `argv` and parse or decode command line arguments.
+
+
+### Struct field name mapping
 
 The field names of the struct map like this:
 
@@ -107,10 +140,6 @@ FILE          => arg_FILE
 <file>        => arg_file
 build         => cmd_build
 ```
-
-The `Args` struct has one static method defined for it: `docopt`. The method
-returns a normal `Docopt` value, which can be used to set configuration
-options, `argv` and parse or decode command line arguments.
 
 
 ### Data validation example
@@ -125,7 +154,7 @@ extern crate rustc_serialize;
 
 extern crate docopt;
 
-docopt!(Args, "Usage: add <x> <y>", arg_x: usize, arg_y: usize);
+docopt!(Args, "Usage: add <x> <y>", arg_x: i32, arg_y: i32);
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
@@ -136,7 +165,7 @@ fn main() {
 In this example, specific type annotations were added. They will be
 automatically inserted into the generated struct. You can override as many (or
 as few) fields as you want. If you don't specify a type, then one of `bool`,
-`uint`, `String` or `Vec<String>` will be chosen depending on the type of
+`u64`, `String` or `Vec<String>` will be chosen depending on the type of
 argument. In this case, both `arg_x` and `arg_y` would have been `String`.
 
 If any value cannot be decoded into a value with the right type, then an error

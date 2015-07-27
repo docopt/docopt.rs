@@ -34,4 +34,5 @@ fn main() {
     println!("  Speed: {}", args.get_str("--speed"));
     println!("  Drifting? {}", args.get_bool("--drifting"));
     println!("  Names: {:?}", args.get_vec("<name>"));
+    println!("  Command 'ship' invoked? {:?}", args.get_bool("ship"));
 }
