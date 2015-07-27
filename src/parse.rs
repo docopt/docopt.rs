@@ -148,12 +148,12 @@ impl Parser {
         }
 
         let mprog = format!(
-            "^(?:{})?\\s*(.*?)\\s*$", regex::quote(caps.name("prog").unwrap_or("")));
+            "^(?:{})?\\s*(.*?)\\s*$",
+            regex::quote(caps.name("prog").unwrap_or("")));
         let pats = Regex::new(&*mprog).unwrap();
 
         if caps.name("pats").unwrap_or("") == "" {
-            let pattern = try!(
-                PatParser::new(self, "").parse());
+            let pattern = try!(PatParser::new(self, "").parse());
             self.usages.push(pattern);
         } else {
             for line in caps.name("pats").unwrap_or("").lines() {
@@ -183,8 +183,10 @@ impl Parser {
         let desc = regex!(r"([^-\s]), -").replace(&*desc, "$1 -");
         let desc = desc.trim();
 
-        let rflags = regex!("(?:(?P<long>--[^ \t=]+)|(?P<short>-[^ \t=]+))\
-                             (?:(?: |=)(?P<arg>[^-]\\S*))?");
+        let rflags = regex!(r"(?x)
+            (?:(?P<long>--[^\x20\t=]+)|(?P<short>-[^\x20\t=]+))
+            (?:(?:\x20|=)(?P<arg>[^-]\S*))?
+        ");
         let (mut short, mut long) = ("".to_string(), "".to_string());
         let mut has_arg = false;
         let mut last_end = 0;
