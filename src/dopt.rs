@@ -652,8 +652,11 @@ impl Decoder {
     fn pop_key_val(&mut self) -> Result<(String, Value), Error> {
         let it = try!(self.pop());
         match it.val {
-            None => derr!("Could not find argument '{}' (from struct \
-                           field '{}').", it.key, it.struct_field),
+            None => derr!(
+                "Could not find argument '{}' (from struct field '{}').
+Note that each struct field must have the right key prefix, which must
+be one of `cmd_`, `flag_` or `arg_`.",
+                it.key, it.struct_field),
             Some(v) => Ok((it.key, v)),
         }
     }
