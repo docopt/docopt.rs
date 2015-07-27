@@ -888,7 +888,7 @@ impl<'a> Argv<'a> {
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
             } else {
-                if self.cur() == "--" {
+                if !seen_double_dash && self.cur() == "--" {
                     seen_double_dash = true;
                 } else {
                     // Yup, we *always* insert a positional argument, which

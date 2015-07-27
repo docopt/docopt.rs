@@ -988,3 +988,7 @@ $ program test -- -b
 r"""Usage: prog test [options] [--] [<args>...]"""
 $ program test a -b
 "user-error"
+
+r"""Usage: prog test [options] [--] [<args>...]"""
+$ program test -- -b --
+{"<args>": ["-b", "--"]}

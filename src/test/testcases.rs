@@ -649,3 +649,5 @@ test_expect!(test_181_testcases, "Usage: prog test [options] [--] [<args>...]", 
 
 test_user_error!(test_182_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "a", "-b"]);
 
+test_expect!(test_183_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "--", "-b", "--"], vec!(("<args>", List(vec!("-b".to_string(), "--".to_string())))));
+
