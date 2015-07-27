@@ -7,13 +7,14 @@ fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
         Err(err) => panic!("Invalid usage: {}", err),
         Ok(dopt) => dopt,
     };
-    match dopt.argv(vec!["cmd"].iter().chain(argv.iter()).cloned()).parse() {
+    match dopt.argv(vec!["cmd"].iter().chain(argv.iter())).parse() {
         Err(err) => panic!("{}", err),
         Ok(vals) => vals,
     }
 }
 
-fn map_from_alist(alist: Vec<(&'static str, Value)>) -> HashMap<String, Value> {
+fn map_from_alist(alist: Vec<(&'static str, Value)>)
+                 -> HashMap<String, Value> {
     alist.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
 }
 
@@ -21,15 +22,18 @@ fn same_args(expected: &HashMap<String, Value>, got: &ArgvMap) {
     for (k, ve) in expected.iter() {
         match got.map.find(k) {
             None => panic!("EXPECTED has '{}' but GOT does not.", k),
-            Some(vg) => assert!(ve == vg,
-                                "{}: EXPECTED = '{:?}' != '{:?}' = GOT", k, ve, vg),
+            Some(vg) => {
+                assert!(ve == vg,
+                        "{}: EXPECTED = '{:?}' != '{:?}' = GOT", k, ve, vg)
+            }
         }
     }
     for (k, vg) in got.map.iter() {
         match got.map.find(k) {
             None => panic!("GOT has '{}' but EXPECTED does not.", k),
-            Some(ve) => assert!(vg == ve,
-                                "{}: GOT = '{:?}' != '{:?}' = EXPECTED", k, vg, ve),
+            Some(ve) => {
+                assert!(vg == ve,
+                        "{}: GOT = '{:?}' != '{:?}' = EXPECTED", k, vg, ve)
         }
     }
 }
