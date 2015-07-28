@@ -992,3 +992,97 @@ $ program test a -b
 r"""Usage: prog test [options] [--] [<args>...]"""
 $ program test -- -b --
 {"<args>": ["-b", "--"]}
+
+r"""Usage: prog [options]
+
+Options:
+  -a ...  Foo
+"""
+$ program
+{"-a": 0}
+$ program -a
+{"-a": 1}
+$ program -a -a
+{"-a": 2}
+$ program -aa
+{"-a": 2}
+$ program -a -a -a
+{"-a": 3}
+$ program -aaa
+{"-a": 3}
+
+r"""Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo
+"""
+$ program
+{"-a": 0}
+$ program -a
+{"-a": 1}
+$ program -a --all
+{"-a": 2}
+$ program -aa --all
+{"-a": 3}
+$ program --all
+{"-a": 1}
+$ program --all --all
+{"-a": 2}
+
+r"""Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo
+"""
+$ program
+{"-a": []}
+$ program -a 1
+{"-a": ["1"]}
+$ program -a 2 --all 3
+{"-a": ["2", "3"]}
+$ program -a4 -a5 --all 6
+{"-a": ["4", "5", "6"]}
+$ program --all 7
+{"-a": ["7"]}
+$ program --all 8 --all 9
+{"-a": ["8", "9"]}
+
+r"""Usage: prog [options]
+
+Options:
+  --all ...  Foo
+"""
+$ program
+{"--all": 0}
+$ program --all
+{"--all": 1}
+$ program --all --all
+{"--all": 2}
+
+r"""Usage: prog [options]
+
+Options:
+  --all=ARG ...  Foo
+"""
+$ program
+{"--all": []}
+$ program --all 1
+{"--all": ["1"]}
+$ program --all 2 --all 3
+{"--all": ["2", "3"]}
+
+r"""Usage: prog [options]
+
+Options:
+  --all  ...  Foo
+"""
+$ program --all --all
+"user-error"
+
+r"""Usage: prog [options]
+
+Options:
+  --all ARG  ...  Foo
+"""
+$ program --all foo --all bar
+"user-error"

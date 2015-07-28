@@ -114,6 +114,13 @@ impl Parser {
         }
     }
 
+    fn has_repeat(&self, atom: &Atom) -> bool {
+        match self.descs.find(atom) {
+            None => false,
+            Some(opts) => opts.repeats,
+        }
+    }
+
     fn parse(&mut self, doc: &str) -> Result<(), String> {
         let musage = regex!(r"(?s)(?i:usage):\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
         let caps = match musage.captures(doc) {
@@ -180,18 +187,25 @@ impl Parser {
         // after the flag or argument.
         let desc = regex!("  .*$").replace(desc, "");
         // Normalize `-x, --xyz` to `-x --xyz`.
-        let desc = regex!(r"([^-\s]), -").replace(&*desc, "$1 -");
+        let desc = regex!(r"([^-\s]), -").replace(&desc, "$1 -");
         let desc = desc.trim();
 
         let rflags = regex!(r"(?x)
             (?:(?P<long>--[^\x20\t=]+)|(?P<short>-[^\x20\t=]+))
-            (?:(?:\x20|=)(?P<arg>[^-]\S*))?
+            (?:(?:\x20|=)(?P<arg>[^.-]\S*))?
+            (?P<repeated>\x20\.\.\.)?
         ");
         let (mut short, mut long) = ("".to_string(), "".to_string());
         let mut has_arg = false;
         let mut last_end = 0;
+        let mut repeated = false;
         for flags in rflags.captures_iter(desc) {
             last_end = flags.pos(0).unwrap().1;
+            if !flags.name("repeated").unwrap_or("").is_empty() {
+                // If the "repeated" subcapture is not empty, then we have
+                // a valid repeated option.
+                repeated = true;
+            }
             let (s, l) = (
                 flags.name("short").unwrap_or(""),
                 flags.name("long").unwrap_or(""),
@@ -225,7 +239,7 @@ impl Parser {
             err!("Extraneous text '{}' in option description '{}'.",
                  &desc[last_end..], desc)
         }
-        try!(self.add_desc(&*short, &*long, has_arg));
+        try!(self.add_desc(&short, &long, has_arg, repeated));
         // Looking for default in this line must come after adding the
         // description, otherwise `parse_default` won't know which option
         // to assign it to.
@@ -264,17 +278,21 @@ impl Parser {
         Ok(())
     }
 
-    fn add_desc(&mut self, short: &str, long: &str, has_arg: bool)
-               -> Result<(), String> {
+    fn add_desc(
+        &mut self,
+        short: &str,
+        long: &str,
+        has_arg: bool,
+        repeated: bool,
+    ) -> Result<(), String> {
         assert!(!short.is_empty() || !long.is_empty());
         if !short.is_empty() && short.chars().count() != 2 {
             // It looks like the reference implementation just ignores
             // these lines.
             return Ok(());
-            // err!("Short flag '{}' is not of the form '-x'.", short);
         }
-        let mut opts = Options::new(false,
-                                    if has_arg { One(None) } else { Zero });
+        let mut opts = Options::new(
+            repeated, if has_arg { One(None) } else { Zero });
         opts.is_desc = true;
 
         if !short.is_empty() && !long.is_empty() {
@@ -449,7 +467,11 @@ impl<'a> PatParser<'a> {
         let stacked: String = self.cur()[1..].to_string();
         for (i, c) in stacked.chars().enumerate() {
             let atom = self.dopt.descs.resolve(&Short(c));
-            seq.push(PatAtom(atom.clone()));
+            let mut pat = PatAtom(atom.clone());
+            if self.dopt.has_repeat(&atom) {
+                pat = Pattern::repeat(pat);
+            }
+            seq.push(pat);
 
             // The only way for a short option to have an argument is if
             // it's specified in an option description.
@@ -479,7 +501,7 @@ impl<'a> PatParser<'a> {
         // here to group a short stack.
         if self.atis(0, "...") {
             self.next();
-            seq = seq.into_iter().map(|p| Repeat(Box::new(p))).collect();
+            seq = seq.into_iter().map(|p| Pattern::repeat(p)).collect();
         }
         Ok(seq)
     }
@@ -507,7 +529,12 @@ impl<'a> PatParser<'a> {
         }
         self.add_atom_ifnotexists(arg, &atom);
         self.next();
-        Ok(self.maybe_repeat(PatAtom(atom)))
+        let pat = if self.dopt.has_repeat(&atom) {
+            Pattern::repeat(PatAtom(atom))
+        } else {
+            PatAtom(atom)
+        };
+        Ok(self.maybe_repeat(pat))
     }
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
@@ -555,7 +582,7 @@ impl<'a> PatParser<'a> {
     fn maybe_repeat(&mut self, pat: Pattern) -> Pattern {
         if self.atis(0, "...") {
             self.next();
-            Repeat(Box::new(pat))
+            Pattern::repeat(pat)
         } else {
             pat
         }
@@ -642,7 +669,11 @@ impl Pattern {
                     } else {
                         for atom in par.options_atoms().into_iter() {
                             if !all_atoms.contains(&atom) {
-                                ps.push(PatAtom(atom));
+                                if par.has_repeat(&atom) {
+                                    ps.push(Pattern::repeat(PatAtom(atom)));
+                                } else {
+                                    ps.push(PatAtom(atom));
+                                }
                             }
                         }
                     }
@@ -709,6 +740,13 @@ impl Pattern {
         }
         let mut seen = HashSet::new();
         dotag(self, false, map, &mut seen);
+    }
+
+    fn repeat(p: Pattern) -> Pattern {
+        match p {
+            p @ Repeat(_) => p,
+            p => Repeat(Box::new(p)),
+        }
     }
 }
 

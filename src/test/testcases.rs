@@ -651,3 +651,133 @@ test_user_error!(test_182_testcases, "Usage: prog test [options] [--] [<args>...
 
 test_expect!(test_183_testcases, "Usage: prog test [options] [--] [<args>...]", &["test", "--", "-b", "--"], vec!(("<args>", List(vec!("-b".to_string(), "--".to_string())))));
 
+test_expect!(test_184_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &[], vec!(("-a", Counted(0))));
+
+test_expect!(test_185_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &["-a"], vec!(("-a", Counted(1))));
+
+test_expect!(test_186_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &["-a", "-a"], vec!(("-a", Counted(2))));
+
+test_expect!(test_187_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &["-aa"], vec!(("-a", Counted(2))));
+
+test_expect!(test_188_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &["-a", "-a", "-a"], vec!(("-a", Counted(3))));
+
+test_expect!(test_189_testcases, "Usage: prog [options]
+
+Options:
+  -a ...  Foo", &["-aaa"], vec!(("-a", Counted(3))));
+
+test_expect!(test_190_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &[], vec!(("-a", Counted(0))));
+
+test_expect!(test_191_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &["-a"], vec!(("-a", Counted(1))));
+
+test_expect!(test_192_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &["-a", "--all"], vec!(("-a", Counted(2))));
+
+test_expect!(test_193_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &["-aa", "--all"], vec!(("-a", Counted(3))));
+
+test_expect!(test_194_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &["--all"], vec!(("-a", Counted(1))));
+
+test_expect!(test_195_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ...  Foo", &["--all", "--all"], vec!(("-a", Counted(2))));
+
+test_expect!(test_196_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &[], vec!(("-a", List(vec!()))));
+
+test_expect!(test_197_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &["-a", "1"], vec!(("-a", List(vec!("1".to_string())))));
+
+test_expect!(test_198_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &["-a", "2", "--all", "3"], vec!(("-a", List(vec!("2".to_string(), "3".to_string())))));
+
+test_expect!(test_199_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &["-a4", "-a5", "--all", "6"], vec!(("-a", List(vec!("4".to_string(), "5".to_string(), "6".to_string())))));
+
+test_expect!(test_200_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &["--all", "7"], vec!(("-a", List(vec!("7".to_string())))));
+
+test_expect!(test_201_testcases, "Usage: prog [options]
+
+Options:
+  -a, --all ARG ...  Foo", &["--all", "8", "--all", "9"], vec!(("-a", List(vec!("8".to_string(), "9".to_string())))));
+
+test_expect!(test_202_testcases, "Usage: prog [options]
+
+Options:
+  --all ...  Foo", &[], vec!(("--all", Counted(0))));
+
+test_expect!(test_203_testcases, "Usage: prog [options]
+
+Options:
+  --all ...  Foo", &["--all"], vec!(("--all", Counted(1))));
+
+test_expect!(test_204_testcases, "Usage: prog [options]
+
+Options:
+  --all ...  Foo", &["--all", "--all"], vec!(("--all", Counted(2))));
+
+test_expect!(test_205_testcases, "Usage: prog [options]
+
+Options:
+  --all=ARG ...  Foo", &[], vec!(("--all", List(vec!()))));
+
+test_expect!(test_206_testcases, "Usage: prog [options]
+
+Options:
+  --all=ARG ...  Foo", &["--all", "1"], vec!(("--all", List(vec!("1".to_string())))));
+
+test_expect!(test_207_testcases, "Usage: prog [options]
+
+Options:
+  --all=ARG ...  Foo", &["--all", "2", "--all", "3"], vec!(("--all", List(vec!("2".to_string(), "3".to_string())))));
+
+test_user_error!(test_208_testcases, "Usage: prog [options]
+
+Options:
+  --all  ...  Foo", &["--all", "--all"]);
+
+test_user_error!(test_209_testcases, "Usage: prog [options]
+
+Options:
+  --all ARG  ...  Foo", &["--all", "foo", "--all", "bar"]);
+
