@@ -182,7 +182,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
         )).into_iter()
           .map(|(ident, ty)| {
-              let field_name = token::get_ident(ident).to_string();
+              let field_name = ident.to_string();
               let key = ArgvMap::struct_field_to_key(&*field_name);
               (Atom::new(&*key), ty)
            })
@@ -259,7 +259,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         };
         if try!(self.p.eat(&token::Comma)) { return Ok(info); }
         let deriving = try!(self.p.parse_ident());
-        if deriving.as_str() != "derive" {
+        if deriving.name != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
             self.cx.span_err(self.cx.call_site(), &*err);
@@ -267,7 +267,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         }
         while !try!(self.p.eat(&token::Comma)) {
             info.deriving.push(
-                try!(self.p.parse_ident()).as_str().to_string());
+                try!(self.p.parse_ident()).name.to_string());
         }
         Ok(info)
     }
