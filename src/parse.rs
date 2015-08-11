@@ -538,7 +538,7 @@ impl<'a> PatParser<'a> {
     }
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
-        try!(self.next_noeof(&*format!("argument for flag '{:?}'", atom)));
+        try!(self.next_noeof(&*format!("argument for flag '{}'", atom)));
         self.errif_invalid_flag_arg(atom, self.cur())
     }
 
@@ -922,7 +922,7 @@ impl<'a> Argv<'a> {
                     err!("Flag '{}' cannot have an argument, but found '{:?}'.",
                          &atom, &arg)
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
-                    try!(self.next_noeof(&*format!("argument for flag '{:?}'",
+                    try!(self.next_noeof(&*format!("argument for flag '{}'",
                                                    &atom)));
                     arg = Some(self.cur().to_string());
                 }
@@ -993,7 +993,7 @@ impl<'a> Argv<'a> {
         }
     }
     fn next_arg<'b>(&'b mut self, atom: &Atom) -> Result<&'b str, String> {
-        let expected = format!("argument for flag '{:?}'", atom);
+        let expected = format!("argument for flag '{}'", atom);
         try!(self.next_noeof(&*expected));
         Ok(self.cur())
     }
