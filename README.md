@@ -47,7 +47,7 @@ extern crate docopt;
 
 use docopt::Docopt;
 
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Naval Fate.
 
 Usage:
@@ -261,7 +261,7 @@ extern crate docopt;
 
 use docopt::Docopt;
 
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Naval Fate.
 
 Usage:
@@ -340,4 +340,3 @@ that I'd like to make:
    I'll venture outside of bash any time soon.)
 3. Make tab completion support more seamless. The way it works right now is
    pretty hacky by intermingling file/directory completion.
-

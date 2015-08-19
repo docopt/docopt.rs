@@ -4,7 +4,7 @@ extern crate docopt;
 use docopt::Docopt;
 
 // Write the Docopt usage string.
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Usage: cp [-a] <source> <dest>
        cp [-a] <source>... <dir>
 

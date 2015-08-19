@@ -27,7 +27,7 @@ mod parse;
 #[allow(dead_code)]
 mod synonym;
 
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Usage: docopt-wordlist [(<name> <possibles>)] ...
 
 docopt-wordlist prints a list of available flags and commands arguments for the
