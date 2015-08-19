@@ -10,7 +10,7 @@ use docopt::Docopt;
 // explicitly.
 //
 // This is unfortunate.
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Usage: cp [options] [-v | -vv | -vvv] <source> <dest>
        cp [options] [-v | -vv | -vvv] <source>... <dir>
 

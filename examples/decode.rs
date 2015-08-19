@@ -3,7 +3,7 @@ extern crate docopt;
 
 use docopt::Docopt;
 
-static USAGE: &'static str = "
+const USAGE: &'static str = "
 Naval Fate.
 
 Usage:

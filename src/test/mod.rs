@@ -71,7 +71,7 @@ Options:
 
 #[test]
 fn regression_issue_12() {
-    static USAGE: &'static str = "
+    const USAGE: &'static str = "
     Usage:
         whisper info <file>
         whisper update <file> <timestamp> <value>

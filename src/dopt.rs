@@ -28,7 +28,7 @@ use self::Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version}
 /// ```no_run
 /// use docopt::Docopt;
 ///
-/// static USAGE: &'static str = "
+/// const USAGE: &'static str = "
 /// Usage: ...
 /// ";
 ///
@@ -342,7 +342,7 @@ impl ArgvMap {
     /// # fn main() {
     /// use docopt::Docopt;
     ///
-    /// static USAGE: &'static str = "
+    /// const USAGE: &'static str = "
     /// Usage: cargo [options] (build | test)
     ///        cargo --help
     ///
