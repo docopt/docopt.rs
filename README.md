@@ -26,7 +26,7 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-docopt = "0.6.*"
+docopt = "0.6"
 rustc-serialize = "0.3"  # if you're using `derive(RustcDecodable)`
 ```
 
