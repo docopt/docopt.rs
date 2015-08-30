@@ -17,7 +17,7 @@ plugin = true
 
 [dependencies.docopt]
 path = ".."
-version = "*"
+version = "0.6"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
