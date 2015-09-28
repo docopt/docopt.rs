@@ -259,7 +259,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         };
         if try!(self.p.eat(&token::Comma)) { return Ok(info); }
         let deriving = try!(self.p.parse_ident());
-        if deriving.name != "derive" {
+        if deriving.name.as_str() != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
             self.cx.span_err(self.cx.call_site(), &*err);
@@ -282,7 +282,7 @@ struct StructInfo {
 // Convenience functions for building intermediate values.
 
 fn ident(s: &str) -> ast::Ident {
-    ast::Ident::new(token::intern(s))
+    ast::Ident::with_empty_ctxt(token::intern(s))
 }
 
 fn attribute<S, T>(cx: &ExtCtxt, name: S, items: Vec<T>) -> ast::Attribute
