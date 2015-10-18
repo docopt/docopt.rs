@@ -85,7 +85,7 @@ impl Parsed {
         let name = self.struct_info.name.clone();
         let vis = if self.struct_info.public { ast::Public }
                   else { ast::Inherited };
-        let def = ast::StructDef {
+        let def = ast::VariantData {
             fields: self.struct_fields(cx),
             ctor_id: None
         };
