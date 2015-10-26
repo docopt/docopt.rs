@@ -22,8 +22,9 @@ Options:
 ";
 
 fn main() {
+    let version = "1.2.3".to_owned();
     let args = Docopt::new(USAGE)
-                      .and_then(|dopt| dopt.parse())
+                      .and_then(|dopt| dopt.version(Some(version)).parse())
                       .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 
