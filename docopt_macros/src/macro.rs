@@ -220,7 +220,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 _ => panic!("BUG: expected string literal"),
             }
         }
-        let exp = self.cx.expander().fold_expr(self.p.parse_expr_panic());
+        let exp = self.cx.expander().fold_expr(self.p.parse_expr().unwrap());
         let s = match exp.node {
             ast::ExprLit(ref lit) if lit_is_str(&**lit) => {
                 lit_to_string(&**lit)
@@ -243,7 +243,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
                             -> PResult<(ast::Ident, P<ast::Ty>)> {
         let ident = try!(p.parse_ident());
         try!(p.expect(&token::Colon));
-        let ty = p.parse_ty_panic();
+        let ty = p.parse_ty().unwrap();
         Ok((ident, ty))
     }
 
