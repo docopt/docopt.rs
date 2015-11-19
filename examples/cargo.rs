@@ -45,7 +45,7 @@ enum Command {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.options_first(true).decode())
                             .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }
