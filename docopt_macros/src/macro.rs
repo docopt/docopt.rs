@@ -7,13 +7,13 @@
 //! documentation of the `docopt` crate.
 
 extern crate syntax;
-extern crate rustc;
+extern crate rustc_plugin;
 extern crate docopt;
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
 
-use rustc::plugin::Registry;
+use rustc_plugin::Registry;
 use syntax::{ast, codemap};
 use syntax::diagnostic::FatalError;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
