@@ -24,19 +24,19 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.syns.insert(from, to).is_none()
     }
 
-    pub fn keys<'a>(&'a self) -> Keys<'a, K, V> {
+    pub fn keys(&self) -> Keys<K, V> {
         self.vals.keys()
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, K, V> {
+    pub fn iter(&self) -> Iter<K, V> {
         self.vals.iter()
     }
 
-    pub fn synonyms<'a>(&'a self) -> Iter<'a, K, K> {
+    pub fn synonyms(&self) -> Iter<K, K> {
         self.syns.iter()
     }
 
-    pub fn find<'a>(&'a self, k: &K) -> Option<&'a V> {
+    pub fn find(&self, k: &K) -> Option<&V> {
         self.with_key(k, |k| self.vals.get(k))
     }
 
