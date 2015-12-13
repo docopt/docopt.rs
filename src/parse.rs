@@ -71,9 +71,9 @@ pub struct Parser {
 impl Parser {
     pub fn new(doc: &str) -> Result<Parser, String> {
         let mut d = Parser {
-            program: "".to_string(),
-            full_doc: doc.to_string(),
-            usage: "".to_string(),
+            program: String::new(),
+            full_doc: doc.into(),
+            usage: String::new(),
             usages: vec!(),
             descs: SynonymMap::new(),
             last_atom_added: None,
@@ -83,7 +83,7 @@ impl Parser {
     }
 
     pub fn matches(&self, argv: &Argv) -> Option<SynonymMap<String, Value>> {
-        for usage in self.usages.iter() {
+        for usage in &self.usages {
             match Matcher::matches(argv, usage) {
                 None => continue,
                 Some(vals) => return Some(vals),
@@ -92,8 +92,8 @@ impl Parser {
         None
     }
 
-    pub fn parse_argv<'a>(&'a self, argv: Vec<String>, options_first: bool)
-                         -> Result<Argv<'a>, String> {
+    pub fn parse_argv(&self, argv: Vec<String>, options_first: bool)
+                         -> Result<Argv, String> {
         Argv::new(self, argv, options_first)
     }
 }
@@ -130,8 +130,8 @@ impl Parser {
         if caps.name("prog").unwrap_or("").is_empty() {
             err!("Could not find program name in doc string.")
         }
-        self.program = caps.name("prog").unwrap_or("").to_string();
-        self.usage = caps.at(0).unwrap_or("").to_string();
+        self.program = caps.name("prog").unwrap_or("").into();
+        self.usage = caps.at(0).unwrap_or("").into();
 
         // Before we parse the usage patterns, we look for option descriptions.
         // We do this because the information in option descriptions can be
@@ -195,7 +195,7 @@ impl Parser {
             (?:(?:\x20|=)(?P<arg>[^.-]\S*))?
             (?P<repeated>\x20\.\.\.)?
         ");
-        let (mut short, mut long) = ("".to_string(), "".to_string());
+        let (mut short, mut long) = <(String, String)>::default();
         let mut has_arg = false;
         let mut last_end = 0;
         let mut repeated = false;
@@ -215,21 +215,22 @@ impl Parser {
                     err!("Only one short flag is allowed in an option \
                           description, but found '{}' and '{}'.", short, s)
                 }
-                short = s.to_string()
+                short = s.into()
             }
             if !l.is_empty() {
                 if !long.is_empty() {
                     err!("Only one long flag is allowed in an option \
                           description, but found '{}' and '{}'.", long, l)
                 }
-                long = l.to_string()
+                long = l.into()
             }
-            if !flags.name("arg").unwrap_or("").is_empty() {
-                let arg = flags.name("arg").unwrap_or("");
-                if !Atom::is_arg(arg) {
-                    err!("Argument '{}' is not of the form ARG or <arg>.", arg)
+            if let Some(arg) = flags.name("arg") {
+                if !arg.is_empty() {
+                    if !Atom::is_arg(arg) {
+                        err!("Argument '{}' is not of the form ARG or <arg>.", arg)
+                    }
+                    has_arg = true; // may be changed to default later
                 }
-                has_arg = true; // may be changed to default later
             }
         }
         // Make sure that we consumed everything. If there are leftovers,
@@ -274,7 +275,7 @@ impl Parser {
                       of '{}' (second default value: '{}').",
                      last_atom, curval, defval),
         }
-        opts.arg = One(Some(defval.to_string()));
+        opts.arg = One(Some(defval.into()));
         Ok(())
     }
 
@@ -324,19 +325,19 @@ impl fmt::Debug for Parser {
 
         try!(writeln!(f, "Option descriptions:"));
         let keys = sorted(self.descs.keys().collect());
-        for &k in keys.iter() {
+        for &k in &keys {
             try!(writeln!(f, "  '{}' => {:?}", k, self.descs.get(k)));
         }
 
         try!(writeln!(f, "Synonyms:"));
         let keys: Vec<(&Atom, &Atom)> =
             sorted(self.descs.synonyms().collect());
-        for &(from, to) in keys.iter() {
+        for &(from, to) in &keys {
             try!(writeln!(f, "  {:?} => {:?}", from, to));
         }
 
         try!(writeln!(f, "Usages:"));
-        for pat in self.usages.iter() {
+        for pat in &self.usages {
             try!(writeln!(f, "  {:?}", pat));
         }
         writeln!(f, "=====")
@@ -464,7 +465,7 @@ impl<'a> PatParser<'a> {
 
     fn flag_short(&mut self) -> Result<Vec<Pattern>, String> {
         let mut seq = vec!();
-        let stacked: String = self.cur()[1..].to_string();
+        let stacked: String = self.cur()[1..].into();
         for (i, c) in stacked.chars().enumerate() {
             let atom = self.dopt.descs.resolve(&Short(c));
             let mut pat = PatAtom(atom.clone());
@@ -501,7 +502,7 @@ impl<'a> PatParser<'a> {
         // here to group a short stack.
         if self.atis(0, "...") {
             self.next();
-            seq = seq.into_iter().map(|p| Pattern::repeat(p)).collect();
+            seq = seq.into_iter().map(Pattern::repeat).collect();
         }
         Ok(seq)
     }
@@ -604,7 +605,7 @@ impl<'a> PatParser<'a> {
         }
         Ok(())
     }
-    fn cur<'r>(&'r self) -> &'r str {
+    fn cur(&self) -> &str {
         &*self.tokens[self.curi]
     }
     fn atis(&self, offset: usize, is: &str) -> bool {
@@ -755,15 +756,15 @@ impl Atom {
         if Atom::is_short(s) {
             Short(s[1..].chars().next().unwrap())
         } else if Atom::is_long(s) {
-            Long(s[2..].to_string())
+            Long(s[2..].into())
         } else if Atom::is_arg(s) {
             if s.starts_with("<") && s.ends_with(">") {
-                Positional(s[1..s.len()-1].to_string())
+                Positional(s[1..s.len()-1].into())
             } else {
-                Positional(s.to_string())
+                Positional(s.into())
             }
         } else if Atom::is_cmd(s) {
-            Command(s.to_string())
+            Command(s.into())
         } else {
             panic!("Unknown atom string: '{}'", s)
         }
@@ -863,12 +864,12 @@ impl<'a> Argv<'a> {
             flags: vec!(),
             counts: HashMap::new(),
             dopt: dopt,
-            argv: argv.iter().map(|s| s.to_string()).collect(),
+            argv: argv.iter().cloned().collect(),
             curi: 0,
             options_first: options_first,
         };
         try!(a.parse());
-        for flag in a.flags.iter() {
+        for flag in &a.flags {
             match a.counts.entry(flag.atom.clone()) {
                 Vacant(v) => { v.insert(1); }
                 Occupied(mut v) => { *v.get_mut() += 1; }
@@ -885,7 +886,7 @@ impl<'a> Argv<'a> {
                 && (!self.options_first || self.positional.is_empty());
 
             if do_flags && Atom::is_short(self.cur()) {
-                let stacked: String = self.cur()[1..].to_string();
+                let stacked: String = self.cur()[1..].into();
                 for (i, c) in stacked.chars().enumerate() {
                     let mut tok = ArgvToken {
                         atom: self.dopt.descs.resolve(&Short(c)),
@@ -901,9 +902,9 @@ impl<'a> Argv<'a> {
                         tok.arg = Some(
                             if rest.is_empty() {
                                 let arg = try!(self.next_arg(&tok.atom));
-                                arg.to_string()
+                                arg.into()
                             } else {
-                                rest.to_string()
+                                rest.into()
                             }
                         );
                         self.flags.push(tok);
@@ -924,7 +925,7 @@ impl<'a> Argv<'a> {
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
                     try!(self.next_noeof(&*format!("argument for flag '{}'",
                                                    &atom)));
-                    arg = Some(self.cur().to_string());
+                    arg = Some(self.cur().into());
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
             } else {
@@ -936,7 +937,7 @@ impl<'a> Argv<'a> {
                     // This is because we can't tell whether something is a
                     // `command` or not until we start pattern matching.
                     let tok = ArgvToken {
-                        atom: Positional(self.cur().to_string()),
+                        atom: Positional(self.cur().into()),
                         arg: None,
                     };
                     self.positional.push(tok);
@@ -949,7 +950,7 @@ impl<'a> Argv<'a> {
 
     fn err_unknown_flag(&self, atom: &Atom) -> Result<(), String> {
         use std::usize::MAX;
-        let mut best: String = "".to_string();
+        let mut best = String::new();
         let flag = atom.to_string();
         let mut min = MAX;
 
@@ -963,9 +964,9 @@ impl<'a> Argv<'a> {
             possibles.push(key);
         }
 
-        for key in possibles.iter() {
-            match *key {
-                &Long(_) | &Command(_) => {
+        for key in &possibles {
+            match **key {
+                Long(_) | Command(_) => {
                     let name = key.to_string();
                     let dist = levenshtein(&flag, &name);
                     if dist < 3 && dist < min {
@@ -983,8 +984,8 @@ impl<'a> Argv<'a> {
         }
     }
 
-    fn cur<'b>(&'b self) -> &'b str { self.at(0) }
-    fn at<'b>(&'b self, i: usize) -> &'b str {
+    fn cur(&self) -> &str { self.at(0) }
+    fn at(&self, i: usize) -> &str {
         &*self.argv[self.curi + i]
     }
     fn next(&mut self) {
@@ -992,7 +993,7 @@ impl<'a> Argv<'a> {
             self.curi += 1
         }
     }
-    fn next_arg<'b>(&'b mut self, atom: &Atom) -> Result<&'b str, String> {
+    fn next_arg(&mut self, atom: &Atom) -> Result<&str, String> {
         let expected = format!("argument for flag '{}'", atom);
         try!(self.next_noeof(&*expected));
         Ok(self.cur())
@@ -1168,7 +1169,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
          })
     }
 
-    fn token_from(&'a self, state: &MState) -> Option<&'a ArgvToken> {
+    fn token_from(&self, state: &MState) -> Option<&ArgvToken> {
         self.argv.positional.get(state.argvi)
     }
 
@@ -1180,7 +1181,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn add_flag_values(&self, state: &mut MState) {
-        for tok in self.argv.flags.iter() {
+        for tok in &self.argv.flags {
             self.add_value(state, &tok.atom, &tok.atom, &tok.arg);
         }
     }
@@ -1194,14 +1195,14 @@ impl<'a, 'b> Matcher<'a, 'b> {
             let atom = a.clone();
             match (opts.repeats, &opts.arg) {
                 (false, &Zero) => {
-                    match a {
-                        &Positional(_) => vs.insert(atom, Plain(None)),
+                    match *a {
+                        Positional(_) => vs.insert(atom, Plain(None)),
                         _ => vs.insert(atom, Switch(false)),
                     };
                 }
                 (true, &Zero) => {
-                    match a {
-                        &Positional(_) => vs.insert(atom, List(vec!())),
+                    match *a {
+                        Positional(_) => vs.insert(atom, List(vec!())),
                         _ => vs.insert(atom, Counted(0)),
                     };
                 }
@@ -1268,9 +1269,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
                         &PatAtom(ref a @ Short(_))
                         | &PatAtom(ref a @ Long(_)) => {
                             let argv_count = self.argv.counts.get(a)
-                                                 .map(|&x|x).unwrap_or(0);
+                                                 .map_or(0, |&x| x);
                             let max_count = base.max_counts.get(a)
-                                                .map(|&x|x).unwrap_or(0);
+                                                .map_or(0, |&x| x);
                             if argv_count > max_count {
                                 base.use_optional_flag(a);
                             }
@@ -1358,8 +1359,8 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
     match long_equal.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
-            let arg = cap.name("arg").unwrap_or("").to_string();
-            if !Atom::is_arg(&*arg) {
+            let arg = cap.name("arg").unwrap_or("");
+            if !Atom::is_arg(arg) {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
@@ -1374,7 +1375,7 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
         None => (Atom::new(flag), None),
         Some(cap) => (
             Atom::new(cap.name("name").unwrap_or("")),
-            Some(cap.name("arg").unwrap_or("").to_string()),
+            Some(cap.name("arg").unwrap_or("").into()),
         ),
     }
 }
@@ -1392,7 +1393,7 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
     let pat = rpat.replace_all(pat.trim(), " $0 ");
     let mut words = vec!();
     for cap in rwords.captures_iter(&*pat) {
-        words.push(cap.at(0).unwrap_or("").to_string());
+        words.push(cap.at(0).unwrap_or("").into());
     }
     words
 }

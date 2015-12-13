@@ -211,7 +211,7 @@ impl Docopt {
     /// enabled by default), then `Help` or `Version` errors are returned
     /// if `--help` or `--version` is present.
     pub fn parse(&self) -> Result<ArgvMap, Error> {
-        let argv = self.argv.clone().unwrap_or_else(|| Docopt::get_argv());
+        let argv = self.argv.clone().unwrap_or_else(Docopt::get_argv);
         let vals = try!(
             self.p.parse_argv(argv, self.options_first)
                 .map_err(|s| self.err_with_usage(Argv(s)))
@@ -290,23 +290,23 @@ impl Docopt {
 
     #[doc(hidden)]
     // Exposed for use in `docopt_macros`.
-    pub fn parser<'a>(&'a self) -> &'a Parser {
+    pub fn parser(&self) -> &Parser {
         &self.p
     }
 
     fn err_with_usage(&self, e: Error) -> Error {
         WithProgramUsage(
-            Box::new(e), self.p.usage.trim().to_string())
+            Box::new(e), self.p.usage.trim().into())
     }
 
     fn err_with_full_doc(&self, e: Error) -> Error {
         WithProgramUsage(
-            Box::new(e), self.p.full_doc.trim().to_string())
+            Box::new(e), self.p.full_doc.trim().into())
     }
 
     fn get_argv() -> Vec<String> {
         // Hmm, we should probably handle a Unicode decode error here... ---AG
-        ::std::env::args().skip(1).map(|v| v.to_string()).collect()
+        ::std::env::args().skip(1).collect()
     }
 }
 
@@ -379,24 +379,24 @@ impl ArgvMap {
     /// Finds the value corresponding to `key` and calls `as_bool()` on it.
     /// If the key does not exist, `false` is returned.
     pub fn get_bool(&self, key: &str) -> bool {
-        self.find(key).map(|v| v.as_bool()).unwrap_or(false)
+        self.find(key).map_or(false, |v| v.as_bool())
     }
 
     /// Finds the value corresponding to `key` and calls `as_count()` on it.
     /// If the key does not exist, `0` is returned.
     pub fn get_count(&self, key: &str) -> u64 {
-        self.find(key).map(|v| v.as_count()).unwrap_or(0)
+        self.find(key).map_or(0, |v| v.as_count())
     }
 
     /// Finds the value corresponding to `key` and calls `as_str()` on it.
     /// If the key does not exist, `""` is returned.
-    pub fn get_str<'a>(&'a self, key: &str) -> &'a str {
-        self.find(key).map(|v| v.as_str()).unwrap_or("")
+    pub fn get_str(&self, key: &str) -> &str {
+        self.find(key).map_or("", |v| v.as_str())
     }
 
     /// Finds the value corresponding to `key` and calls `as_vec()` on it.
     /// If the key does not exist, `vec!()` is returned.
-    pub fn get_vec<'a>(&'a self, key: &str) -> Vec<&'a str> {
+    pub fn get_vec(&self, key: &str) -> Vec<&str> {
         self.find(key).map(|v| v.as_vec()).unwrap_or(vec!())
     }
 
@@ -404,8 +404,8 @@ impl ArgvMap {
     ///
     /// `key` should be a string in the traditional Docopt format. e.g.,
     /// `<arg>` or `--flag`.
-    pub fn find<'a>(&'a self, key: &str) -> Option<&'a Value> {
-        self.map.find(&key.to_string())
+    pub fn find(&self, key: &str) -> Option<&Value> {
+        self.map.find(&key.into())
     }
 
     /// Return the number of values, not including synonyms.
@@ -445,7 +445,7 @@ impl ArgvMap {
                 } else {
                     panic!("Unknown ArgvMap key: '{}'", name)
                 };
-            let mut prefix = prefix.to_string();
+            let mut prefix = prefix.to_owned();
             prefix.push_str(&sanitize(name));
             prefix
         })
@@ -461,7 +461,7 @@ impl ArgvMap {
             if field.starts_with("flag_") {
                 let name = regex!(r"^flag_").replace(field, "");
                 let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
-                                   .to_string();
+                                   .to_owned();
                 pre_name.push_str(&*name);
                 pre_name
             } else if field.starts_with("arg_") {
@@ -469,7 +469,7 @@ impl ArgvMap {
                 if regex!(r"^\p{Lu}+$").is_match(&name) {
                     name
                 } else {
-                    let mut pre_name = "<".to_string();
+                    let mut pre_name = "<".to_owned();
                     pre_name.push_str(&*name);
                     pre_name.push('>');
                     pre_name
@@ -496,7 +496,7 @@ impl fmt::Debug for ArgvMap {
         let mut keys: Vec<&String> = self.map.keys().collect();
         keys.sort();
         let mut first = true;
-        for &k in keys.iter() {
+        for &k in &keys {
             if !first { try!(write!(f, "\n")); } else { first = false; }
             match reverse.get(&k) {
                 None => {
@@ -576,7 +576,7 @@ impl Value {
     /// Returns the value as a string.
     ///
     /// All values return an empty string except for a non-empty plain string.
-    pub fn as_str<'a>(&'a self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         match *self {
             Switch(_) | Counted(_) | Plain(None) | List(_) => "",
             Plain(Some(ref s)) => &**s,
@@ -587,7 +587,7 @@ impl Value {
     ///
     /// Booleans, repetitions and empty strings correspond to an empty list.
     /// Plain strings correspond to a list of length `1`.
-    pub fn as_vec<'a>(&'a self) -> Vec<&'a str> {
+    pub fn as_vec(&self) -> Vec<&str> {
         match *self {
             Switch(_) | Counted(_) | Plain(None) => vec![],
             Plain(Some(ref s)) => vec![&**s],
@@ -637,15 +637,15 @@ impl Decoder {
         let key = ArgvMap::struct_field_to_key(struct_field);
         self.stack.push(DecoderItem {
             key: key.clone(),
-            struct_field: struct_field.to_string(),
-            val: self.vals.find(&*key).map(|v| v.clone()),
+            struct_field: struct_field.into(),
+            val: self.vals.find(&*key).cloned(),
         });
     }
 
     fn pop(&mut self) -> Result<DecoderItem, Error> {
         match self.stack.pop() {
             None => derr!("Could not decode value into unknown key."),
-            Some(it) => Ok(it),
+            Some(it) => Ok(it)
         }
     }
 
@@ -657,7 +657,7 @@ impl Decoder {
 Note that each struct field must have the right key prefix, which must
 be one of `cmd_`, `flag_` or `arg_`.",
                 it.key, it.struct_field),
-            Some(v) => Ok((it.key, v)),
+            Some(v) => Ok((it.key, v))
         }
     }
 
@@ -713,7 +713,7 @@ impl ::rustc_serialize::Decoder for Decoder {
     type Error = Error;
 
     fn error(&mut self, err: &str) -> Error {
-        Decode(err.to_string())
+        Decode(err.into())
     }
 
     fn read_nil(&mut self) -> Result<(), Error> {
@@ -754,7 +754,7 @@ impl ::rustc_serialize::Decoder for Decoder {
     }
 
     fn read_str(&mut self) -> Result<String, Error> {
-        self.pop_val().map(|v| v.as_str().to_string())
+        self.pop_val().map(|v| v.as_str().into())
     }
 
     fn read_enum<T, F>(&mut self, _: &str, f: F) -> Result<T, Error>
@@ -835,8 +835,7 @@ impl ::rustc_serialize::Decoder for Decoder {
             match self.stack.last() {
                 None => derr!("Could not decode value into unknown key."),
                 Some(it) => it.val.as_ref()
-                                  .map(|v| v.as_bool())
-                                  .unwrap_or(false),
+                                  .map_or(false, |v| v.as_bool())
             };
         f(self, option)
     }
@@ -850,7 +849,7 @@ impl ::rustc_serialize::Decoder for Decoder {
             self.stack.push(DecoderItem {
                 key: it.key.clone(),
                 struct_field: it.struct_field.clone(),
-                val: Some(Plain(Some(val.to_string()))),
+                val: Some(Plain(Some((*val).into()))),
             })
         }
         f(self, vals.len())
