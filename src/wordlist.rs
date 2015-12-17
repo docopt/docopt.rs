@@ -66,6 +66,7 @@ fn main() {
     }
 }
 
+#[allow(deprecated)]
 fn run(args: Args) -> Result<(), String> {
     let mut usage = String::new();
     try!(io::stdin().read_to_string(&mut usage).map_err(|e| e.to_string()));
