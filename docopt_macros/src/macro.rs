@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use rustc_plugin::Registry;
 use syntax::{ast, codemap};
-use syntax::diagnostic::FatalError;
+use syntax::errors::FatalError;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
