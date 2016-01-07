@@ -99,6 +99,6 @@ fn run(args: Args) -> Result<(), String> {
         // only be flags, which we always include in the wordlist.
         words.push(k.to_string());
     }
-    println!("{}", words.connect(" "));
+    println!("{}", words.join(" "));
     Ok(())
 }

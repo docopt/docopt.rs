@@ -15,11 +15,10 @@ use std::collections::HashMap;
 
 use rustc_plugin::Registry;
 use syntax::{ast, codemap};
-use syntax::errors::FatalError;
+use syntax::errors::DiagnosticBuilder;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::fold::Folder;
-use syntax::owned_slice::OwnedSlice;
 use syntax::parse::common::SeqSep;
 use syntax::parse::parser::Parser;
 use syntax::parse::token;
@@ -30,7 +29,7 @@ use syntax::util::small_vector::SmallVector;
 use docopt::{Docopt, ArgvMap};
 use docopt::parse::{Options, Atom, Positional, Zero, One};
 
-type PResult<T> = Result<T, FatalError>;
+type PResult<'a, T> = Result<T, DiagnosticBuilder<'a>>;
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
@@ -164,10 +163,10 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// First looks for an identifier for the struct name.
     /// Second, a string containing the docopt usage patterns.
     /// Third, an optional list of type annotations.
-    fn parse(&mut self) -> PResult<Parsed> {
+    fn parse(&mut self) -> PResult<'b, Parsed> {
         if self.p.token == token::Eof {
-            self.cx.span_err(self.cx.call_site(), "macro expects arguments");
-            return Err(FatalError);
+            let err = self.cx.struct_span_err(self.cx.call_site(), "macro expects arguments");
+            return Err(err);
         }
         let struct_info = try!(self.parse_struct_info());
         let docstr = try!(self.parse_str());
@@ -193,9 +192,9 @@ impl<'a, 'b> MacParser<'a, 'b> {
         let doc = match Docopt::new(docstr) {
             Ok(doc) => doc,
             Err(err) => {
-                self.cx.span_err(self.cx.call_site(),
-                                 &*format!("Invalid Docopt usage: {}", err));
-                return Err(FatalError);
+                let err = self.cx.struct_span_err(self.cx.call_site(),
+                                                  &format!("Invalid Docopt usage: {}", err));
+                return Err(err);
             }
         };
         Ok(Parsed {
@@ -207,7 +206,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
 
     /// Parses a single string literal. On failure, an error is logged and
     /// unit is returned.
-    fn parse_str(&mut self) -> PResult<String> {
+    fn parse_str(&mut self) -> PResult<'b, String> {
         fn lit_is_str(lit: &ast::Lit) -> bool {
             match lit.node {
                 ast::LitStr(_, _) => true,
@@ -228,8 +227,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
             _ => {
                 let err = format!("Expected string literal but got {}",
                                   pprust::expr_to_string(&*exp));
-                self.cx.span_err(exp.span, &*err);
-                return Err(FatalError);
+                let err = self.cx.struct_span_err(exp.span, &*err);
+                return Err(err);
             }
         };
         try!(self.p.bump());
@@ -239,8 +238,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Parses a type annotation in a `docopt` invocation of the form
     /// `ident: Ty`.
     /// Note that this is a static method as it is used as a HOF.
-    fn parse_type_annotation(p: &mut Parser)
-                            -> PResult<(ast::Ident, P<ast::Ty>)> {
+    fn parse_type_annotation(p: &mut Parser<'b>)
+                             -> PResult<'b, (ast::Ident, P<ast::Ty>)> {
         let ident = try!(p.parse_ident());
         try!(p.expect(&token::Colon));
         let ty = p.parse_ty().unwrap();
@@ -248,7 +247,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
     }
 
     /// Parses struct information, like visibility, name and deriving.
-    fn parse_struct_info(&mut self) -> PResult<StructInfo> {
+    fn parse_struct_info(&mut self) -> PResult<'b, StructInfo> {
         let public = try!(self.p.eat_keyword(token::keywords::Pub));
         let mut info = StructInfo {
             name: try!(self.p.parse_ident()),
@@ -260,8 +259,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
         if deriving.name.as_str() != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
-            self.cx.span_err(self.cx.call_site(), &*err);
-            return Err(FatalError);
+            let err = self.cx.struct_span_err(self.cx.call_site(), &*err);
+            return Err(err);
         }
         while !try!(self.p.eat(&token::Comma)) {
             info.deriving.push(
@@ -303,15 +302,15 @@ fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     let sp = codemap::DUMMY_SP;
     let tystr = ast::AngleBracketedParameterData {
         lifetimes: vec![],
-        types: OwnedSlice::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
-        bindings: OwnedSlice::empty(),
+        types: P::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
+        bindings: P::empty(),
     };
     cx.ty_path(ast::Path {
         span: sp,
         global: false,
         segments: vec![ast::PathSegment {
             identifier: ident("Vec"),
-            parameters: ast::PathParameters::AngleBracketedParameters(tystr),
+            parameters: ast::PathParameters::AngleBracketed(tystr),
         }]
     })
 }
