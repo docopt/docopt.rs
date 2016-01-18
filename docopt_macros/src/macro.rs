@@ -231,7 +231,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 return Err(err);
             }
         };
-        try!(self.p.bump());
+        self.p.bump();
         Ok(s)
     }
 
@@ -248,13 +248,13 @@ impl<'a, 'b> MacParser<'a, 'b> {
 
     /// Parses struct information, like visibility, name and deriving.
     fn parse_struct_info(&mut self) -> PResult<'b, StructInfo> {
-        let public = try!(self.p.eat_keyword(token::keywords::Pub));
+        let public = self.p.eat_keyword(token::keywords::Pub);
         let mut info = StructInfo {
             name: try!(self.p.parse_ident()),
             public: public,
             deriving: vec![],
         };
-        if try!(self.p.eat(&token::Comma)) { return Ok(info); }
+        if self.p.eat(&token::Comma) { return Ok(info); }
         let deriving = try!(self.p.parse_ident());
         if deriving.name.as_str() != "derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
@@ -262,7 +262,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
             let err = self.cx.struct_span_err(self.cx.call_site(), &*err);
             return Err(err);
         }
-        while !try!(self.p.eat(&token::Comma)) {
+        while !self.p.eat(&token::Comma) {
             info.deriving.push(
                 try!(self.p.parse_ident()).name.to_string());
         }
