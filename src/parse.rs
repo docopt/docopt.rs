@@ -920,8 +920,8 @@ impl<'a> Argv<'a> {
                     return self.err_unknown_flag(&atom)
                 }
                 if arg.is_some() && !self.dopt.has_arg(&atom) {
-                    err!("Flag '{}' cannot have an argument, but found '{:?}'.",
-                         &atom, &arg)
+                    err!("Flag '{}' cannot have an argument, but found '{}'.",
+                         &atom, arg.as_ref().unwrap())
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
                     try!(self.next_noeof(&*format!("argument for flag '{}'",
                                                    &atom)));
