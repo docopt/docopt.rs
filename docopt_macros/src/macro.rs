@@ -82,8 +82,8 @@ impl Parsed {
     /// Returns an item for the struct definition.
     fn struct_decl(&self, cx: &ExtCtxt) -> P<ast::Item> {
         let name = self.struct_info.name.clone();
-        let vis = if self.struct_info.public { ast::Public }
-                  else { ast::Inherited };
+        let vis = if self.struct_info.public { ast::Visibility::Public }
+                  else { ast::Visibility::Inherited };
         let def = ast::VariantData::Struct(
             self.struct_fields(cx), ast::DUMMY_NODE_ID);
 
@@ -139,7 +139,7 @@ impl Parsed {
     /// Creates a struct field from a member name and type.
     fn mk_struct_field(&self, name: &str, ty: P<ast::Ty>) -> ast::StructField {
         codemap::dummy_spanned(ast::StructField_ {
-            kind: ast::NamedField(ident(name), ast::Public),
+            kind: ast::NamedField(ident(name), ast::Visibility::Public),
             id: ast::DUMMY_NODE_ID,
             ty: ty,
             attrs: vec!(),
@@ -209,19 +209,19 @@ impl<'a, 'b> MacParser<'a, 'b> {
     fn parse_str(&mut self) -> PResult<'b, String> {
         fn lit_is_str(lit: &ast::Lit) -> bool {
             match lit.node {
-                ast::LitStr(_, _) => true,
+                ast::LitKind::Str(_, _) => true,
                 _ => false,
             }
         }
         fn lit_to_string(lit: &ast::Lit) -> String {
             match lit.node {
-                ast::LitStr(ref s, _) => s.to_string(),
+                ast::LitKind::Str(ref s, _) => s.to_string(),
                 _ => panic!("BUG: expected string literal"),
             }
         }
         let exp = self.cx.expander().fold_expr(self.p.parse_expr().unwrap());
         let s = match exp.node {
-            ast::ExprLit(ref lit) if lit_is_str(&**lit) => {
+            ast::ExprKind::Lit(ref lit) if lit_is_str(&**lit) => {
                 lit_to_string(&**lit)
             }
             _ => {
