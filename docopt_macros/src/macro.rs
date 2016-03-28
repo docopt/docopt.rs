@@ -175,15 +175,15 @@ impl<'a, 'b> MacParser<'a, 'b> {
             sep: Some(token::Comma),
             trailing_sep_allowed: true,
         };
-        let types = try!(self.p.parse_seq_to_end(
+        let types = self.p.parse_seq_to_before_end(
             &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
-        )).into_iter()
-          .map(|(ident, ty)| {
+        ).into_iter()
+         .map(|(ident, ty)| {
               let field_name = ident.to_string();
               let key = ArgvMap::struct_field_to_key(&*field_name);
               (Atom::new(&*key), ty)
-           })
-          .collect::<HashMap<Atom, P<ast::Ty>>>();
+          })
+         .collect::<HashMap<Atom, P<ast::Ty>>>();
         try!(self.p.expect(&token::Eof));
 
         // This config does not matter because we're only asking for the
