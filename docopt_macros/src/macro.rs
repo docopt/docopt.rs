@@ -165,26 +165,30 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Third, an optional list of type annotations.
     fn parse(&mut self) -> PResult<'b, Parsed> {
         if self.p.token == token::Eof {
-            let err = self.cx.struct_span_err(self.cx.call_site(), "macro expects arguments");
+            let err = self.cx.struct_span_err(
+                self.cx.call_site(), "macro expects arguments");
             return Err(err);
         }
         let struct_info = try!(self.parse_struct_info());
         let docstr = try!(self.parse_str());
 
-        let sep = SeqSep {
-            sep: Some(token::Comma),
-            trailing_sep_allowed: true,
-        };
-        let types = try!(self.p.parse_seq_to_end(
-            &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
-        )).into_iter()
-          .map(|(ident, ty)| {
-              let field_name = ident.to_string();
-              let key = ArgvMap::struct_field_to_key(&*field_name);
-              (Atom::new(&*key), ty)
-           })
-          .collect::<HashMap<Atom, P<ast::Ty>>>();
-        try!(self.p.expect(&token::Eof));
+        let mut types = HashMap::new();
+        if !self.p.check(&token::Eof) {
+            let sep = SeqSep {
+                sep: Some(token::Comma),
+                trailing_sep_allowed: true,
+            };
+            types = self.p.parse_seq_to_before_end(
+                &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
+            ).into_iter()
+             .map(|(ident, ty)| {
+                  let field_name = ident.to_string();
+                  let key = ArgvMap::struct_field_to_key(&*field_name);
+                  (Atom::new(&*key), ty)
+              })
+             .collect::<HashMap<Atom, P<ast::Ty>>>();
+            try!(self.p.expect(&token::Eof));
+        }
 
         // This config does not matter because we're only asking for the
         // usage patterns in the Docopt string. The configuration does not
@@ -192,8 +196,9 @@ impl<'a, 'b> MacParser<'a, 'b> {
         let doc = match Docopt::new(docstr) {
             Ok(doc) => doc,
             Err(err) => {
-                let err = self.cx.struct_span_err(self.cx.call_site(),
-                                                  &format!("Invalid Docopt usage: {}", err));
+                let err = self.cx.struct_span_err(
+                    self.cx.call_site(),
+                    &format!("Invalid Docopt usage: {}", err));
                 return Err(err);
             }
         };
