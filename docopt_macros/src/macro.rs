@@ -138,12 +138,14 @@ impl Parsed {
 
     /// Creates a struct field from a member name and type.
     fn mk_struct_field(&self, name: &str, ty: P<ast::Ty>) -> ast::StructField {
-        codemap::dummy_spanned(ast::StructField_ {
-            kind: ast::NamedField(ident(name), ast::Visibility::Public),
+        ast::StructField {
+            span: codemap::DUMMY_SP,
+            ident: Some(ident(name)),
+            vis: ast::Visibility::Public,
             id: ast::DUMMY_NODE_ID,
             ty: ty,
             attrs: vec!(),
-        })
+        }
     }
 }
 
