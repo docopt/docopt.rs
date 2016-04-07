@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
-use std::fmt;
+use std::fmt::{self, Debug};
+use std::str::FromStr;
 
 use rustc_serialize::Decodable;
 
@@ -666,13 +667,14 @@ be one of `cmd_`, `flag_` or `arg_`.",
         Ok(v)
     }
 
-    fn to_number(&mut self, expect: &str) -> Result<u64, Error> {
+    fn to_number<T>(&mut self, expect: &str) -> Result<T, Error>
+            where T: FromStr + ToString, <T as FromStr>::Err: Debug {
         let (k, v) = try!(self.pop_key_val());
         match v {
-            Counted(n) => Ok(n),
+            Counted(n) => Ok(n.to_string().parse().unwrap()), // lol
             _ => {
                 if v.as_str().trim().is_empty() {
-                    Ok(0)
+                    Ok("0".parse().unwrap()) // lol
                 } else {
                     match v.as_str().parse() {
                         Err(_) => {
@@ -704,7 +706,7 @@ be one of `cmd_`, `flag_` or `arg_`.",
 macro_rules! read_num {
     ($name:ident, $ty:ty) => (
         fn $name(&mut self) -> Result<$ty, Error> {
-            self.to_number(stringify!($ty)).map(|n| n as $ty)
+            self.to_number::<$ty>(stringify!($ty)).map(|n| n as $ty)
         }
     );
 }

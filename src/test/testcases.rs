@@ -781,3 +781,11 @@ test_user_error!(test_209_testcases, "Usage: prog [options]
 Options:
   --all ARG  ...  Foo", &["--all", "foo", "--all", "bar"]);
 
+test_expect!(test_210_testcases, "Usage: prog --speed=ARG", &["--speed", "20"], vec!(("--speed", Plain(Some("20".to_string())))));
+
+test_expect!(test_211_testcases, "Usage: prog --speed=ARG", &["--speed=20"], vec!(("--speed", Plain(Some("20".to_string())))));
+
+test_expect!(test_212_testcases, "Usage: prog --speed=ARG", &["--speed=-20"], vec!(("--speed", Plain(Some("-20".to_string())))));
+
+test_expect!(test_213_testcases, "Usage: prog --speed=ARG", &["--speed", "-20"], vec!(("--speed", Plain(Some("-20".to_string())))));
+
