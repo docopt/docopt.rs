@@ -289,6 +289,11 @@ impl Docopt {
         self
     }
 
+    pub fn version(mut self) -> Docopt {
+        self.version = Some(env!("CARGO_PKG_NAME").to_string() + ", version: " + env!("CARGO_PKG_VERSION"));
+        self
+    }
+    
     #[doc(hidden)]
     // Exposed for use in `docopt_macros`.
     pub fn parser(&self) -> &Parser {
