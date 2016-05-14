@@ -789,3 +789,19 @@ test_expect!(test_212_testcases, "Usage: prog --speed=ARG", &["--speed=-20"], ve
 
 test_expect!(test_213_testcases, "Usage: prog --speed=ARG", &["--speed", "-20"], vec!(("--speed", Plain(Some("-20".to_string())))));
 
+test_expect!(test_214_testcases, "Usage: prog [-a <arg> <arg2>]...", &["-a", "foo", "bar"], vec!(("<arg>", List(vec!("foo".to_string()))), ("-a", Counted(1)), ("<arg2>", List(vec!("bar".to_string())))));
+
+test_expect!(test_215_testcases, "Usage: prog [-a <arg> <arg2>]...", &["-a", "foo", "bar", "-a", "foo2", "bar2"], vec!(("<arg>", List(vec!("foo".to_string(), "foo2".to_string()))), ("-a", Counted(2)), ("<arg2>", List(vec!("bar".to_string(), "bar2".to_string())))));
+
+test_expect!(test_216_testcases, "Usage:
+  prog a b [-p <param>]...
+  prog a c [-p <type> <param>]...", &["a", "c", "-p", "bool", "1", "-p", "bool", "0"], vec!(("<param>", List(vec!("1".to_string(), "0".to_string()))), ("<type>", List(vec!("bool".to_string(), "bool".to_string()))), ("-p", Counted(2))));
+
+test_expect!(test_217_testcases, "Usage:
+  prog a b [<param>]...
+  prog a c [-p <type> <param>]...", &["a", "c", "-p", "bool", "1", "-p", "bool", "0", "-p", "bool", "1"], vec!(("<param>", List(vec!("1".to_string(), "0".to_string(), "1".to_string()))), ("<type>", List(vec!("bool".to_string(), "bool".to_string(), "bool".to_string()))), ("-p", Counted(3))));
+
+test_expect!(test_218_testcases, "Usage:
+  prog a b [-p <param>]...
+  prog a c [-p <type> <param>]...", &["a", "c", "-p", "bool", "1", "-p", "bool", "0", "-p", "bool", "1"], vec!(("<param>", List(vec!("1".to_string(), "0".to_string(), "1".to_string()))), ("<type>", List(vec!("bool".to_string(), "bool".to_string(), "bool".to_string()))), ("-p", Counted(3))));
+

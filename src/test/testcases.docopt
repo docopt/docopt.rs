@@ -1096,3 +1096,30 @@ $ program --speed=-20
 {"--speed": "-20"}
 $ program --speed -20
 {"--speed": "-20"}
+
+r"""Usage: prog [-a <arg> <arg2>]..."""
+$ program -a foo bar
+{"-a": 1, "<arg>": ["foo"], "<arg2>": ["bar"]}
+$ program -a foo bar -a foo2 bar2
+{"-a": 2, "<arg>": ["foo", "foo2"], "<arg2>": ["bar", "bar2"]}
+
+r"""Usage:
+  prog a b [-p <param>]...
+  prog a c [-p <type> <param>]...
+"""
+$ program a c -p bool 1 -p bool 0
+{"-p": 2, "<type>": ["bool", "bool"], "<param>": ["1", "0"]}
+
+r"""Usage:
+  prog a b [<param>]...
+  prog a c [-p <type> <param>]...
+"""
+$ program a c -p bool 1 -p bool 0 -p bool 1
+{"-p": 3, "<type>": ["bool", "bool", "bool"], "<param>": ["1", "0", "1"]}
+
+r"""Usage:
+  prog a b [-p <param>]...
+  prog a c [-p <type> <param>]...
+"""
+$ program a c -p bool 1 -p bool 0 -p bool 1
+{"-p": 3, "<type>": ["bool", "bool", "bool"], "<param>": ["1", "0", "1"]}
