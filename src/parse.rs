@@ -248,7 +248,7 @@ impl Parser {
     }
 
     fn parse_default(&mut self, desc: &str) -> Result<(), String> {
-        let rdefault = regex!(r"\[(?i:default):(?P<val>[^]]*)\]");
+        let rdefault = regex!(r"\[(?i:default):(?P<val>.*)\]");
         let defval =
             match rdefault.captures(desc) {
                 None => return Ok(()),
