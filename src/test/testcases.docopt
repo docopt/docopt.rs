@@ -1096,3 +1096,15 @@ $ program --speed=-20
 {"--speed": "-20"}
 $ program --speed -20
 {"--speed": "-20"}
+
+#
+# Issue 187: Fails to parse a default value containing ']'
+#
+
+r"""usage: prog [--datetime=<regex>]
+
+options: --datetime=<regex>    Regex for datetimes [default: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}]
+
+"""
+$ prog
+{"--datetime": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"}

@@ -789,3 +789,7 @@ test_expect!(test_212_testcases, "Usage: prog --speed=ARG", &["--speed=-20"], ve
 
 test_expect!(test_213_testcases, "Usage: prog --speed=ARG", &["--speed", "-20"], vec!(("--speed", Plain(Some("-20".to_string())))));
 
+test_expect!(test_214_testcases, "usage: prog [--datetime=<regex>]
+
+options: --datetime=<regex>    Regex for datetimes [default: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}]", &[], vec!(("--datetime", Plain(Some("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}".to_string())))));
+
