@@ -239,7 +239,7 @@ rustc -L path/containing/docopt/lib -Z unstable-options --pretty=expanded add.rs
 ```
 
 Will show all macros expanded. The `path/containing/docopt/lib` is usually
-`target/debug/deps` in a cargo project. In the generated code, you should be
+`target/debug/deps` or `target/release/deps` in a cargo project. In the generated code, you should be
 able to find the generated struct:
 
 ```rust
