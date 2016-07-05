@@ -14,7 +14,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 
 use rustc_plugin::Registry;
-use syntax::{ast, codemap};
+use syntax::{ast, codemap, tokenstream};
 use syntax::errors::DiagnosticBuilder;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
@@ -36,7 +36,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("docopt", expand);
 }
 
-fn expand(cx: &mut ExtCtxt, span: codemap::Span, tts: &[ast::TokenTree])
+fn expand(cx: &mut ExtCtxt, span: codemap::Span, tts: &[tokenstream::TokenTree])
          -> Box<MacResult+'static> {
     let parsed = match MacParser::new(cx, tts).parse() {
         Ok(parsed) => parsed,
@@ -156,7 +156,7 @@ struct MacParser<'a, 'b:'a> {
 }
 
 impl<'a, 'b> MacParser<'a, 'b> {
-    fn new(cx: &'a mut ExtCtxt<'b>, tts: &[ast::TokenTree]) -> MacParser<'a, 'b> {
+    fn new(cx: &'a mut ExtCtxt<'b>, tts: &[tokenstream::TokenTree]) -> MacParser<'a, 'b> {
         let p = cx.new_parser_from_tts(tts);
         MacParser { cx: cx, p: p }
     }
