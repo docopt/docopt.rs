@@ -238,8 +238,9 @@ into a file called `add.rs`. Then running:
 rustc -L path/containing/docopt/lib -Z unstable-options --pretty=expanded add.rs
 ```
 
-Will show all macros expanded. In the generated code, you should be able to
-find the generated struct:
+Will show all macros expanded. The `path/containing/docopt/lib` is usually
+`target/debug/deps` or `target/release/deps` in a cargo project. In the generated code, you should be
+able to find the generated struct:
 
 ```rust
 struct Args {
