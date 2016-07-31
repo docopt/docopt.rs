@@ -3,6 +3,7 @@ use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::str::FromStr;
 
+use regex::{Captures, Regex};
 use rustc_serialize::Decodable;
 
 use parse::Parser;
@@ -420,12 +421,16 @@ impl ArgvMap {
     /// guarantee that the result is a valid struct field name.
     #[doc(hidden)]
     pub fn key_to_struct_field(name: &str) -> String {
+        lazy_static! {
+            static ref RE: Regex = regex!(
+                r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$"
+            );
+        }
         fn sanitize(name: &str) -> String {
             name.replace("-", "_")
         }
 
-        let r = regex!(r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$");
-        r.replace(name, |cap: &::regex::Captures| {
+        RE.replace(name, |cap: &Captures| {
             let (flag, cmd) = (
                 cap.name("flag").unwrap_or(""),
                 cap.name("cmd").unwrap_or(""),
@@ -455,19 +460,25 @@ impl ArgvMap {
     /// Converts a struct field name to a Docopt key.
     #[doc(hidden)]
     pub fn struct_field_to_key(field: &str) -> String {
+        lazy_static! {
+            static ref FLAG: Regex = regex!(r"^flag_");
+            static ref ARG: Regex = regex!(r"^arg_");
+            static ref LETTERS: Regex = regex!(r"^\p{Lu}+$");
+            static ref CMD: Regex = regex!(r"^cmd_");
+        }
         fn desanitize(name: &str) -> String {
             name.replace("_", "-")
         }
         let name =
             if field.starts_with("flag_") {
-                let name = regex!(r"^flag_").replace(field, "");
+                let name = FLAG.replace(field, "");
                 let mut pre_name = (if name.len() == 1 { "-" } else { "--" })
                                    .to_owned();
                 pre_name.push_str(&*name);
                 pre_name
             } else if field.starts_with("arg_") {
-                let name = regex!(r"^arg_").replace(field, "");
-                if regex!(r"^\p{Lu}+$").is_match(&name) {
+                let name = ARG.replace(field, "");
+                if LETTERS.is_match(&name) {
                     name
                 } else {
                     let mut pre_name = "<".to_owned();
@@ -476,7 +487,7 @@ impl ArgvMap {
                     pre_name
                 }
             } else if field.starts_with("cmd_") {
-                { regex!(r"^cmd_") }.replace(field, "")
+                CMD.replace(field, "")
             } else {
                 panic!("Unrecognized struct field: '{}'", field)
             };

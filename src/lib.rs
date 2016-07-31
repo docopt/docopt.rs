@@ -215,6 +215,8 @@
 
 #![deny(missing_docs)]
 
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate strsim;
@@ -228,7 +230,6 @@ macro_rules! werr(
     })
 );
 
-// cheat until we get syntax extensions back :-(
 macro_rules! regex(
     ($s:expr) => (::regex::Regex::new($s).unwrap());
 );

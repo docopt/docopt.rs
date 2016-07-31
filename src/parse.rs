@@ -122,8 +122,12 @@ impl Parser {
     }
 
     fn parse(&mut self, doc: &str) -> Result<(), String> {
-        let musage = regex!(r"(?s)(?i:usage):\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)");
-        let caps = match musage.captures(doc) {
+        lazy_static! {
+            static ref MUSAGE: Regex = Regex::new(
+                r"(?s)(?i:usage):\s*(?P<prog>\S+)(?P<pats>.*?)(?:$|\n\s*\n)"
+            ).unwrap();
+        }
+        let caps = match MUSAGE.captures(doc) {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
         };
@@ -175,31 +179,36 @@ impl Parser {
     }
 
     fn parse_desc(&mut self, full_desc: &str) -> Result<(), String> {
-        let desc =
-            regex!(r"^\s*(?i:options:)\s*").replace(full_desc.trim(), "");
+        lazy_static! {
+            static ref OPTIONS: Regex = regex!(r"^\s*(?i:options:)\s*");
+            static ref ISFLAG: Regex = regex!(r"^(-\S|--\S)");
+            static ref REMOVE_DESC: Regex = regex!(r"  .*$");
+            static ref NORMALIZE_FLAGS: Regex = regex!(r"([^-\s]), -");
+            static ref FIND_FLAGS: Regex = regex!(r"(?x)
+                (?:(?P<long>--[^\x20\t=]+)|(?P<short>-[^\x20\t=]+))
+                (?:(?:\x20|=)(?P<arg>[^.-]\S*))?
+                (?P<repeated>\x20\.\.\.)?
+            ");
+        }
+        let desc = OPTIONS.replace(full_desc.trim(), "");
         let desc = &*desc;
-        if !regex!(r"^(-\S|--\S)").is_match(desc) {
+        if !ISFLAG.is_match(desc) {
             try!(self.parse_default(full_desc));
             return Ok(())
         }
 
         // Get rid of the description, which must be at least two spaces
         // after the flag or argument.
-        let desc = regex!("  .*$").replace(desc, "");
+        let desc = REMOVE_DESC.replace(desc, "");
         // Normalize `-x, --xyz` to `-x --xyz`.
-        let desc = regex!(r"([^-\s]), -").replace(&desc, "$1 -");
+        let desc = NORMALIZE_FLAGS.replace(&desc, "$1 -");
         let desc = desc.trim();
 
-        let rflags = regex!(r"(?x)
-            (?:(?P<long>--[^\x20\t=]+)|(?P<short>-[^\x20\t=]+))
-            (?:(?:\x20|=)(?P<arg>[^.-]\S*))?
-            (?P<repeated>\x20\.\.\.)?
-        ");
         let (mut short, mut long) = <(String, String)>::default();
         let mut has_arg = false;
         let mut last_end = 0;
         let mut repeated = false;
-        for flags in rflags.captures_iter(desc) {
+        for flags in FIND_FLAGS.captures_iter(desc) {
             last_end = flags.pos(0).unwrap().1;
             if !flags.name("repeated").unwrap_or("").is_empty() {
                 // If the "repeated" subcapture is not empty, then we have
@@ -227,7 +236,8 @@ impl Parser {
             if let Some(arg) = flags.name("arg") {
                 if !arg.is_empty() {
                     if !Atom::is_arg(arg) {
-                        err!("Argument '{}' is not of the form ARG or <arg>.", arg)
+                        err!("Argument '{}' is not of the form ARG or <arg>.",
+                             arg)
                     }
                     has_arg = true; // may be changed to default later
                 }
@@ -248,9 +258,13 @@ impl Parser {
     }
 
     fn parse_default(&mut self, desc: &str) -> Result<(), String> {
-        let rdefault = regex!(r"\[(?i:default):(?P<val>.*)\]");
+        lazy_static! {
+            static ref FIND_DEFAULT: Regex = regex!(
+                r"\[(?i:default):(?P<val>.*)\]"
+            );
+        }
         let defval =
-            match rdefault.captures(desc) {
+            match FIND_DEFAULT.captures(desc) {
                 None => return Ok(()),
                 Some(c) => c.name("val").unwrap_or("").trim(),
             };
@@ -770,11 +784,40 @@ impl Atom {
         }
     }
 
-    fn is_short(s: &str) -> bool { regex!(r"^-[^-]+$").is_match(s) }
-    fn is_long(s: &str) -> bool { regex!(r"^--\S+(?:<[^>]+>)?$").is_match(s) }
-    fn is_long_argv(s: &str) -> bool { regex!(r"^--\S+(=.+)?$").is_match(s) }
-    fn is_arg(s: &str) -> bool { regex!(r"^(\p{Lu}+|<[^>]+>)$").is_match(s) }
-    fn is_cmd(s: &str) -> bool { regex!(r"^(-|--|[^-]\S*)$").is_match(s) }
+    fn is_short(s: &str) -> bool {
+        lazy_static! {
+            static ref RE: Regex = regex!(r"^-[^-]+$");
+        }
+        RE.is_match(s)
+    }
+
+    fn is_long(s: &str) -> bool {
+        lazy_static! {
+            static ref RE: Regex = regex!(r"^--\S+(?:<[^>]+>)?$");
+        }
+        RE.is_match(s)
+    }
+
+    fn is_long_argv(s: &str) -> bool {
+        lazy_static! {
+            static ref RE: Regex = regex!(r"^--\S+(=.+)?$");
+        }
+        RE.is_match(s)
+    }
+
+    fn is_arg(s: &str) -> bool {
+        lazy_static! {
+            static ref RE: Regex = regex!(r"^(\p{Lu}+|<[^>]+>)$");
+        }
+        RE.is_match(s)
+    }
+
+    fn is_cmd(s: &str) -> bool {
+        lazy_static! {
+            static ref RE: Regex = regex!(r"^(-|--|[^-]\S*)$");
+        }
+        RE.is_match(s)
+    }
 
     // Assigns an integer to each variant of Atom. (For easier sorting.)
     fn type_as_usize(&self) -> usize {
@@ -1187,6 +1230,9 @@ impl<'a, 'b> Matcher<'a, 'b> {
     }
 
     fn add_default_values(&self, state: &mut MState) {
+        lazy_static! {
+            static ref SPLIT_SPACE: Regex = regex!(r"\s+");
+        }
         let vs = &mut state.vals;
         for (a, opts) in self.argv.dopt.descs.iter() {
             if vs.contains_key(a) {
@@ -1212,7 +1258,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
                     vs.insert(atom, Plain(Some(v.clone())));
                 }
                 (true, &One(Some(ref v))) => {
-                    let words = regex!(r"\s+")
+                    let words = SPLIT_SPACE
                                 .split(v)
                                 .map(|s| s.to_owned())
                                 .collect();
@@ -1355,8 +1401,10 @@ impl<'a, 'b> Matcher<'a, 'b> {
 // with the flag atom and whether there is an argument or not.
 // If '=arg' exists and 'arg' isn't a valid argument, an error is returned.
 fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
-    let long_equal = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
-    match long_equal.captures(flag) {
+    lazy_static! {
+        static ref LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.+)$");
+    }
+    match LONG_EQUAL.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
             let arg = cap.name("arg").unwrap_or("");
@@ -1370,8 +1418,10 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
 }
 
 fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
-    let long_equal = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
-    match long_equal.captures(flag) {
+    lazy_static! {
+        static ref LONG_EQUAL: Regex = regex!("^(?P<name>[^=]+)=(?P<arg>.*)$");
+    }
+    match LONG_EQUAL.captures(flag) {
         None => (Atom::new(flag), None),
         Some(cap) => (
             Atom::new(cap.name("name").unwrap_or("")),
@@ -1387,12 +1437,14 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
 // One hitch: `--flag=<arg spaces>` is allowed, so we use a regex to pick out
 // words.
 fn pattern_tokens(pat: &str) -> Vec<String> {
-    let rpat = regex!(r"\.\.\.|\[|\]|\(|\)|\|");
-    let rwords = regex!(r"--\S+?=<[^>]+>|<[^>]+>|\S+"); // alt order matters
+    lazy_static! {
+        static ref NORMALIZE: Regex = regex!(r"\.\.\.|\[|\]|\(|\)|\|");
+        static ref WORDS: Regex = regex!(r"--\S+?=<[^>]+>|<[^>]+>|\S+");
+    }
 
-    let pat = rpat.replace_all(pat.trim(), " $0 ");
+    let pat = NORMALIZE.replace_all(pat.trim(), " $0 ");
     let mut words = vec!();
-    for cap in rwords.captures_iter(&*pat) {
+    for cap in WORDS.captures_iter(&*pat) {
         words.push(cap.at(0).unwrap_or("").into());
     }
     words
