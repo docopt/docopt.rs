@@ -23,4 +23,4 @@ test = false
 lazy_static = "0.2"
 regex = "0.1"
 rustc-serialize = "0.3"
-strsim = "0.3"
+strsim = "0.5"
