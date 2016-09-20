@@ -297,8 +297,11 @@ fn attribute<S, T>(cx: &ExtCtxt, name: S, items: Vec<T>) -> ast::Attribute
     cx.attribute(sp, mi)
 }
 
-fn meta_item(cx: &ExtCtxt, s: &str) -> P<ast::MetaItem> {
-    cx.meta_word(codemap::DUMMY_SP, intern(s))
+fn meta_item(cx: &ExtCtxt, s: &str) -> codemap::Spanned<ast::NestedMetaItemKind> {
+    codemap::Spanned {
+        node: ast::NestedMetaItemKind::MetaItem(cx.meta_word(codemap::DUMMY_SP, intern(s))),
+        span: cx.call_site(),
+    }
 }
 
 fn intern(s: &str) -> token::InternedString {
