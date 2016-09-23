@@ -793,3 +793,9 @@ test_expect!(test_214_testcases, "usage: prog [--datetime=<regex>]
 
 options: --datetime=<regex>    Regex for datetimes [default: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}]", &[], vec!(("--datetime", Plain(Some("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}".to_string())))));
 
+test_expect!(test_215_testcases, "Usage: prog [options]
+
+Options:
+  -x ARG
+  -y", &["-x-y"], vec!(("-x", Plain(Some("-y".to_string())))));
+

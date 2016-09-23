@@ -786,7 +786,7 @@ impl Atom {
 
     fn is_short(s: &str) -> bool {
         lazy_static! {
-            static ref RE: Regex = regex!(r"^-[^-]+$");
+            static ref RE: Regex = regex!(r"^-[^-]\S*$");
         }
         RE.is_match(s)
     }
