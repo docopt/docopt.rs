@@ -1108,3 +1108,15 @@ options: --datetime=<regex>    Regex for datetimes [default: ^[0-9]{4}-[0-9]{2}-
 """
 $ prog
 {"--datetime": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"}
+
+#
+# Issue 137: -x-y being seen as a positional argument
+#
+
+r"""Usage: prog [options]
+
+Options:
+  -x ARG
+  -y"""
+$ prog -x-y
+{"-x": "-y"}
