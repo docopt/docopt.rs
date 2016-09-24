@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 use std::fmt::{self, Debug};
+use std::io::{self, Write};
 use std::str::FromStr;
 
 use regex::{Captures, Regex};
@@ -107,7 +108,7 @@ impl Error {
             werr!("{}\n", self);
             ::std::process::exit(1)
         } else {
-            println!("{}", self);
+            let _ = writeln!(&mut io::stdout(), "{}", self);
             ::std::process::exit(0)
         }
     }
