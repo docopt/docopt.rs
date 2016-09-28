@@ -759,6 +759,8 @@ impl Pattern {
 
     fn repeat(p: Pattern) -> Pattern {
         match p {
+            // Normalize [p1 p2]... into the equivalent [p1... p2...].
+            Optional(ps) => Optional(ps.into_iter().map(Pattern::repeat).collect()),
             p @ Repeat(_) => p,
             p => Repeat(Box::new(p)),
         }
@@ -1312,6 +1314,25 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 let mut noflags = vec!();
                 for p in ps.iter() {
                     match p {
+                        // Prevent exponential growth in cases like [--flag...]
+                        // See https://github.com/docopt/docopt.rs/issues/195
+                        &Repeat(ref b) => match &**b {
+                            &PatAtom(ref a @ Short(_))
+                            | &PatAtom(ref a @ Long(_)) => {
+                                let argv_count = self.argv.counts.get(a)
+                                                     .map_or(0, |&x| x);
+                                let max_count = base.max_counts.get(a)
+                                                    .map_or(0, |&x| x);
+                                if argv_count > max_count {
+                                    for _ in max_count..argv_count {
+                                        base.use_optional_flag(a);
+                                    }
+                                }
+                            }
+                            _ => {
+                                noflags.push(p);
+                            }
+                        },
                         &PatAtom(ref a @ Short(_))
                         | &PatAtom(ref a @ Long(_)) => {
                             let argv_count = self.argv.counts.get(a)
