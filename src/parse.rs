@@ -1352,26 +1352,44 @@ impl<'a, 'b> Matcher<'a, 'b> {
                 self.all_option_states(&base, &mut states, &*noflags);
                 states
             }
-            Repeat(ref p) => {
-                let mut grouped_states = vec!(self.states(&**p, init));
-                loop {
-                    let mut nextss = vec!();
-                    for s in grouped_states.last().unwrap().iter() {
-                        nextss.extend(
-                            self.states(&**p, s)
-                                .into_iter()
-                                .filter(|snext| snext != s));
+            Repeat(ref p) => { match &**p {
+                &PatAtom(ref a @ Short(_))
+                | &PatAtom(ref a @ Long(_)) => {
+                    let mut bases = self.states(&**p, init);
+                    for base in &mut bases {
+                        let argv_count = self.argv.counts.get(a)
+                                             .map_or(0, |&x| x);
+                        let max_count = base.max_counts.get(a)
+                                            .map_or(0, |&x| x);
+                        if argv_count > max_count {
+                            for _ in max_count..argv_count {
+                                base.use_optional_flag(a);
+                            }
+                        }
                     }
-                    if nextss.is_empty() {
-                        break
-                    }
-                    grouped_states.push(nextss);
+                    bases
                 }
-                grouped_states
-                    .into_iter()
-                    .flat_map(|ss| ss.into_iter())
-                    .collect::<Vec<MState>>()
-            }
+                _ => {
+                    let mut grouped_states = vec!(self.states(&**p, init));
+                    loop {
+                        let mut nextss = vec!();
+                        for s in grouped_states.last().unwrap().iter() {
+                            nextss.extend(
+                                self.states(&**p, s)
+                                    .into_iter()
+                                    .filter(|snext| snext != s));
+                        }
+                        if nextss.is_empty() {
+                            break
+                        }
+                        grouped_states.push(nextss);
+                    }
+                    grouped_states
+                        .into_iter()
+                        .flat_map(|ss| ss.into_iter())
+                        .collect::<Vec<MState>>()
+                }
+            }}
             PatAtom(ref atom) => {
                 let mut state = init.clone();
                 match *atom {
