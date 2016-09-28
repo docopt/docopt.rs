@@ -93,5 +93,19 @@ fn regression_issue_12() {
     assert_eq!(dopt.arg_timestamp, 0);
 }
 
+#[test]
+fn regression_issue_195() {
+    const USAGE: &'static str = "
+    Usage:
+        slow [-abcdefghijklmnopqrs...]
+    ";
+
+    let argv = &["slow", "-abcdefghijklmnopqrs"];
+    let dopt : Docopt = Docopt::new(USAGE).unwrap().argv(argv);
+
+    dopt.parse().unwrap();
+}
+
+
 mod testcases;
 mod suggestions;
