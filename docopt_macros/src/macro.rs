@@ -24,6 +24,7 @@ use syntax::parse::parser::Parser;
 use syntax::parse::token;
 use syntax::print::pprust;
 use syntax::ptr::P;
+use syntax::symbol;
 use syntax::util::small_vector::SmallVector;
 
 use docopt::{Docopt, ArgvMap};
@@ -255,7 +256,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
 
     /// Parses struct information, like visibility, name and deriving.
     fn parse_struct_info(&mut self) -> PResult<'b, StructInfo> {
-        let public = self.p.eat_keyword(token::keywords::Pub);
+        let public = self.p.eat_keyword(symbol::keywords::Pub);
         let mut info = StructInfo {
             name: try!(self.p.parse_ident()),
             public: public,
@@ -263,7 +264,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         };
         if self.p.eat(&token::Comma) { return Ok(info); }
         let deriving = try!(self.p.parse_ident());
-        if deriving.name.as_str() != "derive" {
+        if *deriving.name.as_str() != *"derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
             let err = self.cx.struct_span_err(self.cx.call_site(), &*err);
@@ -286,7 +287,7 @@ struct StructInfo {
 // Convenience functions for building intermediate values.
 
 fn ident(s: &str) -> ast::Ident {
-    ast::Ident::with_empty_ctxt(token::intern(s))
+    ast::Ident::with_empty_ctxt(symbol::Symbol::intern(s))
 }
 
 fn attribute<S, T>(cx: &ExtCtxt, name: S, items: Vec<T>) -> ast::Attribute
@@ -304,8 +305,8 @@ fn meta_item(cx: &ExtCtxt, s: &str) -> codemap::Spanned<ast::NestedMetaItemKind>
     }
 }
 
-fn intern(s: &str) -> token::InternedString {
-    token::intern_and_get_ident(s)
+fn intern(s: &str) -> symbol::Symbol {
+    symbol::Symbol::intern(s)
 }
 
 fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
