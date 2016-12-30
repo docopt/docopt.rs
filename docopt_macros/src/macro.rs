@@ -318,10 +318,9 @@ fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     };
     cx.ty_path(ast::Path {
         span: sp,
-        global: false,
         segments: vec![ast::PathSegment {
             identifier: ident("Vec"),
-            parameters: ast::PathParameters::AngleBracketed(tystr),
+            parameters: Some(P(ast::PathParameters::AngleBracketed(tystr))),
         }]
     })
 }
