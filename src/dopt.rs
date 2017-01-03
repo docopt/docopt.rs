@@ -13,6 +13,8 @@ use synonym::SynonymMap;
 use self::Value::{Switch, Counted, Plain, List};
 use self::Error::{Usage, Argv, NoMatch, Decode, WithProgramUsage, Help, Version};
 
+use cap_or_empty;
+
 /// Represents the different types of Docopt errors.
 ///
 /// This error type has a lot of variants. In the common case, you probably
@@ -433,12 +435,12 @@ impl ArgvMap {
 
         RE.replace(name, |cap: &Captures| {
             let (flag, cmd) = (
-                cap.name("flag").unwrap_or(""),
-                cap.name("cmd").unwrap_or(""),
+                cap_or_empty(cap, "flag"),
+                cap_or_empty(cap, "cmd"),
             );
             let (argu, argb) = (
-                cap.name("argu").unwrap_or(""),
-                cap.name("argb").unwrap_or(""),
+                cap_or_empty(cap, "argu"),
+                cap_or_empty(cap, "argb"),
             );
             let (prefix, name) =
                 if !flag.is_empty() {
@@ -455,7 +457,7 @@ impl ArgvMap {
             let mut prefix = prefix.to_owned();
             prefix.push_str(&sanitize(name));
             prefix
-        })
+        }).into_owned()
     }
 
     /// Converts a struct field name to a Docopt key.
@@ -478,7 +480,7 @@ impl ArgvMap {
                 pre_name.push_str(&*name);
                 pre_name
             } else if field.starts_with("arg_") {
-                let name = ARG.replace(field, "");
+                let name = ARG.replace(field, "").into_owned();
                 if LETTERS.is_match(&name) {
                     name
                 } else {
@@ -488,7 +490,7 @@ impl ArgvMap {
                     pre_name
                 }
             } else if field.starts_with("cmd_") {
-                CMD.replace(field, "")
+                CMD.replace(field, "").into_owned()
             } else {
                 panic!("Unrecognized struct field: '{}'", field)
             };

@@ -53,6 +53,7 @@ use strsim::levenshtein;
 
 use dopt::Value::{self, Switch, Counted, Plain, List};
 use synonym::SynonymMap;
+use cap_or_empty;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
@@ -131,11 +132,11 @@ impl Parser {
             None => err!("Could not find usage patterns in doc string."),
             Some(caps) => caps,
         };
-        if caps.name("prog").unwrap_or("").is_empty() {
+        if cap_or_empty(&caps, "prog").is_empty() {
             err!("Could not find program name in doc string.")
         }
-        self.program = caps.name("prog").unwrap_or("").into();
-        self.usage = caps.at(0).unwrap_or("").into();
+        self.program = cap_or_empty(&caps, "prog").to_string();
+        self.usage = caps[0].to_string();
 
         // Before we parse the usage patterns, we look for option descriptions.
         // We do this because the information in option descriptions can be
@@ -149,7 +150,7 @@ impl Parser {
         // *sigh* Apparently the above is not true. The official test suite
         // includes `Options: -a ...`, which means some lines not beginning
         // with `-` can actually have options.
-        let (pstart, pend) = caps.pos(0).unwrap();
+        let (pstart, pend) = caps.get(0).map(|m|(m.start(), m.end())).unwrap();
         let (before, after) = (&doc[..pstart], &doc[pend..]);
         // We process every line here (instead of restricting to lines starting
         // with "-") because we need to check every line for a default value.
@@ -160,17 +161,16 @@ impl Parser {
 
         let mprog = format!(
             "^(?:{})?\\s*(.*?)\\s*$",
-            regex::quote(caps.name("prog").unwrap_or("")));
+            regex::escape(cap_or_empty(&caps, "prog")));
         let pats = Regex::new(&*mprog).unwrap();
 
-        if caps.name("pats").unwrap_or("") == "" {
+        if cap_or_empty(&caps, "pats").is_empty() {
             let pattern = try!(PatParser::new(self, "").parse());
             self.usages.push(pattern);
         } else {
-            for line in caps.name("pats").unwrap_or("").lines() {
+            for line in cap_or_empty(&caps, "pats").lines() {
                 for pat in pats.captures_iter(line.trim()) {
-                    let pattern = try!(
-                        PatParser::new(self, pat.at(1).unwrap_or("")).parse());
+                    let pattern = try!(PatParser::new(self, &pat[1]).parse());
                     self.usages.push(pattern);
                 }
             }
@@ -209,15 +209,15 @@ impl Parser {
         let mut last_end = 0;
         let mut repeated = false;
         for flags in FIND_FLAGS.captures_iter(desc) {
-            last_end = flags.pos(0).unwrap().1;
-            if !flags.name("repeated").unwrap_or("").is_empty() {
+            last_end = flags.get(0).unwrap().end();
+            if !cap_or_empty(&flags, "repeated").is_empty() {
                 // If the "repeated" subcapture is not empty, then we have
                 // a valid repeated option.
                 repeated = true;
             }
             let (s, l) = (
-                flags.name("short").unwrap_or(""),
-                flags.name("long").unwrap_or(""),
+                cap_or_empty(&flags, "short"),
+                cap_or_empty(&flags, "long"),
             );
             if !s.is_empty() {
                 if !short.is_empty() {
@@ -233,7 +233,7 @@ impl Parser {
                 }
                 long = l.into()
             }
-            if let Some(arg) = flags.name("arg") {
+            if let Some(arg) = flags.name("arg").map(|m| m.as_str()) {
                 if !arg.is_empty() {
                     if !Atom::is_arg(arg) {
                         err!("Argument '{}' is not of the form ARG or <arg>.",
@@ -266,7 +266,7 @@ impl Parser {
         let defval =
             match FIND_DEFAULT.captures(desc) {
                 None => return Ok(()),
-                Some(c) => c.name("val").unwrap_or("").trim(),
+                Some(c) => cap_or_empty(&c, "val").trim(),
             };
         let last_atom =
             match self.last_atom_added {
@@ -1446,12 +1446,12 @@ fn parse_long_equal(flag: &str) -> Result<(Atom, Argument), String> {
     match LONG_EQUAL.captures(flag) {
         None => Ok((Atom::new(flag), Zero)),
         Some(cap) => {
-            let arg = cap.name("arg").unwrap_or("");
+            let arg = cap_or_empty(&cap, "arg");
             if !Atom::is_arg(arg) {
                 err!("Argument '{}' for flag '{}' is not in the \
                       form ARG or <arg>.", flag, arg)
             }
-            Ok((Atom::new(cap.name("name").unwrap_or("")), One(None)))
+            Ok((Atom::new(cap_or_empty(&cap, "name")), One(None)))
         }
     }
 }
@@ -1463,8 +1463,8 @@ fn parse_long_equal_argv(flag: &str) -> (Atom, Option<String>) {
     match LONG_EQUAL.captures(flag) {
         None => (Atom::new(flag), None),
         Some(cap) => (
-            Atom::new(cap.name("name").unwrap_or("")),
-            Some(cap.name("arg").unwrap_or("").into()),
+            Atom::new(cap_or_empty(&cap, "name")),
+            Some(cap_or_empty(&cap, "arg").to_string()),
         ),
     }
 }
@@ -1484,7 +1484,7 @@ fn pattern_tokens(pat: &str) -> Vec<String> {
     let pat = NORMALIZE.replace_all(pat.trim(), " $0 ");
     let mut words = vec!();
     for cap in WORDS.captures_iter(&*pat) {
-        words.push(cap.at(0).unwrap_or("").into());
+        words.push(cap[0].to_string());
     }
     words
 }

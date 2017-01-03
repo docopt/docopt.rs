@@ -22,6 +22,10 @@ macro_rules! werr(
     })
 );
 
+fn cap_or_empty<'t>(caps: &regex::Captures<'t>, name: &str) -> &'t str {
+    caps.name(name).map_or("", |m| m.as_str())
+}
+
 #[allow(dead_code)]
 mod dopt;
 #[allow(dead_code)]

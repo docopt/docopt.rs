@@ -234,6 +234,10 @@ macro_rules! regex(
     ($s:expr) => (::regex::Regex::new($s).unwrap());
 );
 
+fn cap_or_empty<'t>(caps: &regex::Captures<'t>, name: &str) -> &'t str {
+    caps.name(name).map_or("", |m| m.as_str())
+}
+
 mod dopt;
 #[doc(hidden)]
 pub mod parse;
