@@ -313,8 +313,8 @@ fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     let sp = codemap::DUMMY_SP;
     let tystr = ast::AngleBracketedParameterData {
         lifetimes: vec![],
-        types: P::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
-        bindings: P::new(),
+        types: vec![cx.ty_ident(sp, ident("String"))],
+        bindings: vec![],
     };
     cx.ty_path(ast::Path {
         span: sp,
