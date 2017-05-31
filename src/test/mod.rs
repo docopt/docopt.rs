@@ -78,18 +78,20 @@ fn regression_issue_12() {
         whisper mark <file> <value>
     ";
 
-    #[derive(RustcDecodable, Debug)]
+    #[derive(Deserialize, Debug)]
     struct Args {
         arg_file: String,
         cmd_info: bool,
         cmd_update: bool,
         arg_timestamp: u64,
-        arg_value: f64
+        arg_value: f64,
     }
 
-    let dopt: Args = Docopt::new(USAGE).unwrap()
-                            .argv(&["whisper", "mark", "./p/blah", "100"])
-                            .decode().unwrap();
+    let dopt: Args = Docopt::new(USAGE)
+        .unwrap()
+        .argv(&["whisper", "mark", "./p/blah", "100"])
+        .deserialize()
+        .unwrap();
     assert_eq!(dopt.arg_timestamp, 0);
 }
 

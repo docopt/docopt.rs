@@ -23,5 +23,6 @@ test = false
 [dependencies]
 lazy_static = "0.2"
 regex = "0.2"
-rustc-serialize = "0.3"
+serde = "1.0"
+serde_derive = "1.0"
 strsim = "0.6"

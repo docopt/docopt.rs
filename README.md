@@ -27,7 +27,7 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 ```toml
 [dependencies]
 docopt = "0.7"
-rustc-serialize = "0.3"  # if you're using `derive(RustcDecodable)`
+serde_derive = "1.0" # if you're using `derive(Deserialize)`
 ```
 
 If you want to use the macro, then add `docopt_macros = "0.7"` instead.
@@ -42,7 +42,8 @@ of the named values in the Docopt usage string. Values will be automatically
 converted to those types (or an error will be reported).
 
 ```rust
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -66,7 +67,7 @@ Options:
   --drifting    Drifting mine.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     flag_speed: isize,
     flag_drifting: bool,
@@ -79,7 +80,7 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+                            .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }
@@ -93,7 +94,8 @@ works on a **nightly Rust compiler**:
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -118,7 +120,7 @@ Options:
 ");
 
 fn main() {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().deserialize().unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }
 ```
@@ -150,14 +152,15 @@ Here's another example that shows how to specify the types of your arguments:
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 
 extern crate docopt;
 
 docopt!(Args, "Usage: add <x> <y>", arg_x: i32, arg_y: i32);
 
 fn main() {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().deserialize().unwrap_or_else(|e| e.exit());
     println!("x: {}, y: {}", args.arg_x, args.arg_y);
 }
 ```
@@ -185,9 +188,14 @@ Docopt features.
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
 
 extern crate docopt;
+
+use serde::de;
+use std::fmt;
 
 docopt!(Args derive Debug, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
@@ -203,27 +211,48 @@ Options:
     --opt-level LEVEL  Optimize with possible levels 0-3.
 ", flag_opt_level: Option<OptLevel>, flag_emit: Option<Emit>);
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 enum Emit { Asm, Ir, Bc, Obj, Link }
 
 #[derive(Debug)]
 enum OptLevel { Zero, One, Two, Three }
 
-impl rustc_serialize::Decodable for OptLevel {
-    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<OptLevel, D::Error> {
-        Ok(match try!(d.read_usize()) {
-            0 => OptLevel::Zero, 1 => OptLevel::One,
-            2 => OptLevel::Two, 3 => OptLevel::Three,
+struct OptLevelVisitor;
+
+impl<'de> de::Visitor<'de> for OptLevelVisitor {
+    type Value = OptLevel;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("an integer between 0 and 3")
+    }
+
+    fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E>
+        where E: de::Error
+    {
+        let level = match value {
+            0 => OptLevel::Zero,
+            1 => OptLevel::One,
+            2 => OptLevel::Two,
+            3 => OptLevel::Three,
             n => {
-                let err = format!("Could not decode '{}' as opt-level.", n);
-                return Err(d.error(&*err));
+                let err = format!("Could not deserialize '{}' as opt-level.", n);
+                return Err(E::custom(err));
             }
-        })
+        };
+        Ok(level)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for OptLevel {
+    fn deserialize<D>(deserializer: D) -> Result<OptLevel, D::Error>
+        where D: de::Deserializer<'de>
+    {
+        deserializer.deserialize_u8(OptLevelVisitor)
     }
 }
 
 fn main() {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().deserialize().unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }
 ```

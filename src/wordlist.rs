@@ -1,7 +1,11 @@
 #[macro_use]
 extern crate lazy_static;
+
+#[macro_use]
+extern crate serde_derive;
+
 extern crate regex;
-extern crate rustc_serialize;
+extern crate serde;
 extern crate strsim;
 
 use std::collections::HashMap;
@@ -53,7 +57,7 @@ Which will only include 'a', 'b' and 'c' in the wordlist if
 'your-command --help' contains a positional argument named 'arg'.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     arg_name: Vec<String>,
     arg_possibles: Vec<String>,
@@ -61,8 +65,8 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
     match run(args) {
         Ok(_) => {},
         Err(err) => {
@@ -74,8 +78,8 @@ fn main() {
 
 fn run(args: Args) -> Result<(), String> {
     let mut usage = String::new();
-    try!(io::stdin().read_to_string(&mut usage).map_err(|e| e.to_string()));
-    let parsed = try!(Parser::new(&usage).map_err(|e| e.to_string()));
+    io::stdin().read_to_string(&mut usage).map_err(|e| e.to_string())?;
+    let parsed = Parser::new(&usage).map_err(|e| e.to_string())?;
     let arg_possibles: HashMap<String, Vec<String>> =
         args.arg_name.iter()
                      .zip(args.arg_possibles.iter())

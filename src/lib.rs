@@ -47,7 +47,8 @@
 //!
 //! ```rust
 //! # extern crate docopt;
-//! # extern crate rustc_serialize;
+//! #[macro_use]
+//! extern crate serde_derive;
 //! # fn main() {
 //! use docopt::Docopt;
 //!
@@ -60,7 +61,7 @@
 //!     -a, --archive  Copy everything.
 //! ";
 //!
-//! #[derive(RustcDecodable)]
+//! #[derive(Deserialize)]
 //! struct Args {
 //!     arg_source: Vec<String>,
 //!     arg_dest: String,
@@ -70,7 +71,7 @@
 //!
 //! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //! let args: Args = Docopt::new(USAGE)
-//!                         .and_then(|d| d.argv(argv().into_iter()).decode())
+//!                         .and_then(|d| d.argv(argv().into_iter()).deserialize())
 //!                         .unwrap_or_else(|e| e.exit());
 //!
 //! // Now access your argv values.
@@ -89,10 +90,13 @@
 //!
 //! ```rust
 //! # extern crate docopt;
-//! # extern crate rustc_serialize;
+//! #[macro_use]
+//! extern crate serde_derive;
+//! extern crate serde;
 //! # fn main() {
 //! # #![allow(non_snake_case)]
 //! use docopt::Docopt;
+//! use std::fmt;
 //!
 //! // Write the Docopt usage string.
 //! const USAGE: &'static str = "
@@ -109,7 +113,7 @@
 //!     --opt-level LEVEL  Optimize with possible levels 0-3.
 //! ";
 //!
-//! #[derive(RustcDecodable)]
+//! #[derive(Deserialize)]
 //! struct Args {
 //!     arg_INPUT: String,
 //!     flag_emit: Option<Emit>,
@@ -122,35 +126,51 @@
 //!
 //! // This is easy. The decoder will automatically restrict values to
 //! // strings that match one of the enum variants.
-//! #[derive(RustcDecodable)]
+//! #[derive(Deserialize)]
 //! # #[derive(Debug, PartialEq)]
 //! enum Emit { Asm, Ir, Bc, Obj, Link }
 //!
 //! // This one is harder because we want the user to specify an integer,
-//! // but restrict it to a specific range. So we implement `Decodable`
+//! // but restrict it to a specific range. So we implement `Deserialize`
 //! // ourselves.
 //! # #[derive(Debug, PartialEq)]
 //! enum OptLevel { Zero, One, Two, Three }
+//! struct OptLevelVisitor;
 //!
-//! impl rustc_serialize::Decodable for OptLevel {
-//!     fn decode<D: rustc_serialize::Decoder>(d: &mut D)
-//!                                            -> Result<OptLevel, D::Error> {
-//!         Ok(match try!(d.read_usize()) {
+//! impl<'de> serde::de::Visitor<'de> for OptLevelVisitor {
+//!     type Value = OptLevel;
+//!
+//!     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//!         formatter.write_str("a number from range 0..3")
+//!     }
+//!
+//!     fn visit_u8<E>(self, n: u8) -> Result<Self::Value, E>
+//!         where E: serde::de::Error
+//!     {
+//!         Ok(match n {
 //!             0 => OptLevel::Zero, 1 => OptLevel::One,
 //!             2 => OptLevel::Two, 3 => OptLevel::Three,
 //!             n => {
 //!                 let err = format!(
-//!                     "Could not decode '{}' as opt-level.", n);
-//!                 return Err(d.error(&*err));
+//!                     "Could not deserialize '{}' as opt-level.", n);
+//!                 return Err(E::custom(err));
 //!             }
 //!         })
+//!     }
+//! }
+//!
+//! impl<'de> serde::de::Deserialize<'de> for OptLevel {
+//!     fn deserialize<D>(d: D) -> Result<OptLevel, D::Error>
+//!         where D: serde::de::Deserializer<'de>
+//!     {
+//!         d.deserialize_u8(OptLevelVisitor)
 //!     }
 //! }
 //!
 //! let argv = || vec!["rustc", "-L", ".", "-L", "..", "--cfg", "a",
 //!                             "--opt-level", "2", "--emit=ir", "docopt.rs"];
 //! let args: Args = Docopt::new(USAGE)
-//!                         .and_then(|d| d.argv(argv().into_iter()).decode())
+//!                         .and_then(|d| d.argv(argv().into_iter()).deserialize())
 //!                         .unwrap_or_else(|e| e.exit());
 //!
 //! // Now access your argv values.
@@ -181,7 +201,7 @@
 //! #![feature(plugin)]
 //! #![plugin(docopt_macros)]
 //!
-//! extern crate rustc_serialize;
+//! extern crate serde;
 //!
 //! extern crate docopt;
 //!
@@ -199,7 +219,7 @@
 //!
 //!     // Your `Args` struct has a single static method defined on it,
 //!     // `docopt`, which will return a normal `Docopt` value.
-//!     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+//!     let args: Args = Args::docopt().deserialize().unwrap_or_else(|e| e.exit());
 //!
 //!     // Now access your argv values.
 //!     fn s(x: &str) -> String { x.to_string() }
@@ -218,10 +238,13 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
-extern crate rustc_serialize;
 extern crate strsim;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
 
-pub use dopt::{ArgvMap, Decoder, Docopt, Error, Value};
+pub use dopt::{ArgvMap, Deserializer, Docopt, Error, Value};
 
 macro_rules! werr(
     ($($arg:tt)*) => ({
