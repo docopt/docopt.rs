@@ -1,4 +1,5 @@
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -30,7 +31,7 @@ Some common cargo commands are:
 See 'cargo help <command>' for more information on a specific command.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     arg_command: Option<Command>,
     arg_args: Vec<String>,
@@ -38,14 +39,21 @@ struct Args {
     flag_verbose: bool,
 }
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 enum Command {
-    Build, Clean, Doc, New, Run, Test, Bench, Update,
+    Build,
+    Clean,
+    Doc,
+    New,
+    Run,
+    Test,
+    Bench,
+    Update,
 }
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.options_first(true).decode())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.options_first(true).deserialize())
+        .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }

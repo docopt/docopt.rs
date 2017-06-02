@@ -79,7 +79,7 @@ impl Parser {
             descs: SynonymMap::new(),
             last_atom_added: None,
         };
-        try!(d.parse(doc));
+        d.parse(doc)?;
         Ok(d)
     }
 
@@ -156,7 +156,7 @@ impl Parser {
         // with "-") because we need to check every line for a default value.
         // The default value always belongs to the most recently defined desc.
         for line in before.lines().chain(after.lines()) {
-            try!(self.parse_desc(line));
+            self.parse_desc(line)?;
         }
 
         let mprog = format!(
@@ -165,12 +165,12 @@ impl Parser {
         let pats = Regex::new(&*mprog).unwrap();
 
         if cap_or_empty(&caps, "pats").is_empty() {
-            let pattern = try!(PatParser::new(self, "").parse());
+            let pattern = PatParser::new(self, "").parse()?;
             self.usages.push(pattern);
         } else {
             for line in cap_or_empty(&caps, "pats").lines() {
                 for pat in pats.captures_iter(line.trim()) {
-                    let pattern = try!(PatParser::new(self, &pat[1]).parse());
+                    let pattern = PatParser::new(self, &pat[1]).parse()?;
                     self.usages.push(pattern);
                 }
             }
@@ -193,7 +193,7 @@ impl Parser {
         let desc = OPTIONS.replace(full_desc.trim(), "");
         let desc = &*desc;
         if !ISFLAG.is_match(desc) {
-            try!(self.parse_default(full_desc));
+            self.parse_default(full_desc)?;
             return Ok(())
         }
 
@@ -250,7 +250,7 @@ impl Parser {
             err!("Extraneous text '{}' in option description '{}'.",
                  &desc[last_end..], desc)
         }
-        try!(self.add_desc(&short, &long, has_arg, repeated));
+        self.add_desc(&short, &long, has_arg, repeated)?;
         // Looking for default in this line must come after adding the
         // description, otherwise `parse_default` won't know which option
         // to assign it to.
@@ -334,25 +334,25 @@ impl fmt::Debug for Parser {
             xs.sort(); xs
         }
 
-        try!(writeln!(f, "====="));
-        try!(writeln!(f, "Program: {}", self.program));
+        writeln!(f, "=====")?;
+        writeln!(f, "Program: {}", self.program)?;
 
-        try!(writeln!(f, "Option descriptions:"));
+        writeln!(f, "Option descriptions:")?;
         let keys = sorted(self.descs.keys().collect());
         for &k in &keys {
-            try!(writeln!(f, "  '{}' => {:?}", k, self.descs.get(k)));
+            writeln!(f, "  '{}' => {:?}", k, self.descs.get(k))?;
         }
 
-        try!(writeln!(f, "Synonyms:"));
+        writeln!(f, "Synonyms:")?;
         let keys: Vec<(&Atom, &Atom)> =
             sorted(self.descs.synonyms().collect());
         for &(from, to) in &keys {
-            try!(writeln!(f, "  {:?} => {:?}", from, to));
+            writeln!(f, "  {:?} => {:?}", from, to)?;
         }
 
-        try!(writeln!(f, "Usages:"));
+        writeln!(f, "Usages:")?;
         for pat in &self.usages {
-            try!(writeln!(f, "  {:?}", pat));
+            writeln!(f, "  {:?}", pat)?;
         }
         writeln!(f, "=====")
     }
@@ -377,7 +377,7 @@ impl<'a> PatParser<'a> {
 
     fn parse(&mut self) -> Result<Pattern, String> {
         // let mut seen = HashSet::new();
-        let mut p = try!(self.pattern());
+        let mut p = self.pattern()?;
         match self.expecting.pop() {
             None => {},
             Some(c) => err!("Unclosed group. Expected '{}'.", c),
@@ -399,13 +399,13 @@ impl<'a> PatParser<'a> {
                 "-" | "--" => {
                     // As per specification, `-` and `--` by themselves are
                     // just commands that should be interpreted conventionally.
-                    seq.push(try!(self.command()));
+                    seq.push(self.command()?);
                 }
                 "|" => {
                     if seq.is_empty() {
                         err!("Unexpected '|'. Not in form 'a | b | c'.")
                     }
-                    try!(self.next_noeof("pattern"));
+                    self.next_noeof("pattern")?;
                     alts.push(Sequence(seq));
                     seq = vec!();
                 }
@@ -445,24 +445,24 @@ impl<'a> PatParser<'a> {
                         continue
                     }
                     self.expecting.push(']');
-                    seq.push(try!(self.group()));
+                    seq.push(self.group()?);
                 }
                 "(" => {
                     self.expecting.push(')');
-                    seq.push(try!(self.group()));
+                    seq.push(self.group()?);
                 }
                 _ => {
                     if Atom::is_short(self.cur()) {
-                        seq.extend(try!(self.flag_short()).into_iter());
+                        seq.extend(self.flag_short()?.into_iter());
                     } else if Atom::is_long(self.cur()) {
-                        seq.push(try!(self.flag_long()));
+                        seq.push(self.flag_long()?);
                     } else if Atom::is_arg(self.cur()) {
                         // These are always positional.
                         // Arguments for -s and --short are picked up
                         // when parsing flags.
-                        seq.push(try!(self.positional()));
+                        seq.push(self.positional()?);
                     } else if Atom::is_cmd(self.cur()) {
-                        seq.push(try!(self.command()));
+                        seq.push(self.command()?);
                     } else {
                         err!("Unknown token type '{}'.", self.cur())
                     }
@@ -499,9 +499,9 @@ impl<'a> PatParser<'a> {
                 // there is an argument.
                 let rest = &stacked[i+1..];
                 if rest.is_empty() {
-                    try!(self.next_flag_arg(&atom));
+                    self.next_flag_arg(&atom)?;
                 } else {
-                    try!(self.errif_invalid_flag_arg(&atom, rest));
+                    self.errif_invalid_flag_arg(&atom, rest)?;
                 }
                 // We either error'd or consumed the rest of the short stack as
                 // an argument.
@@ -522,7 +522,7 @@ impl<'a> PatParser<'a> {
     }
 
     fn flag_long(&mut self) -> Result<Pattern, String> {
-        let (atom, arg) = try!(parse_long_equal(self.cur()));
+        let (atom, arg) = parse_long_equal(self.cur())?;
         let atom = self.dopt.descs.resolve(&atom);
         if self.dopt.descs.contains_key(&atom) {
             // Options already exist for this atom, so we must check to make
@@ -536,7 +536,7 @@ impl<'a> PatParser<'a> {
                 // Didn't find any `=` in usage for this flag, but previous
                 // usage of this flag specifies an argument.
                 // So look for `--flag ARG`
-                try!(self.next_flag_arg(&atom));
+                self.next_flag_arg(&atom)?;
                 // We don't care about the value of `arg` since options
                 // already exist. (In which case, the argument value can never
                 // change.)
@@ -553,7 +553,7 @@ impl<'a> PatParser<'a> {
     }
 
     fn next_flag_arg(&mut self, atom: &Atom) -> Result<(), String> {
-        try!(self.next_noeof(&*format!("argument for flag '{}'", atom)));
+        self.next_noeof(&*format!("argument for flag '{}'", atom))?;
         self.errif_invalid_flag_arg(atom, self.cur())
     }
 
@@ -589,8 +589,8 @@ impl<'a> PatParser<'a> {
 
     fn group(&mut self)
             -> Result<Pattern, String> {
-        try!(self.next_noeof("pattern"));
-        let pat = try!(self.pattern());
+        self.next_noeof("pattern")?;
+        let pat = self.pattern()?;
         Ok(self.maybe_repeat(pat))
     }
 
@@ -913,7 +913,7 @@ impl<'a> Argv<'a> {
             curi: 0,
             options_first: options_first,
         };
-        try!(a.parse());
+        a.parse()?;
         for flag in &a.flags {
             match a.counts.entry(flag.atom.clone()) {
                 Vacant(v) => { v.insert(1); }
@@ -946,7 +946,7 @@ impl<'a> Argv<'a> {
                         let rest = &stacked[i+1..];
                         tok.arg = Some(
                             if rest.is_empty() {
-                                let arg = try!(self.next_arg(&tok.atom));
+                                let arg = self.next_arg(&tok.atom)?;
                                 arg.into()
                             } else {
                                 rest.into()
@@ -968,8 +968,8 @@ impl<'a> Argv<'a> {
                     err!("Flag '{}' cannot have an argument, but found '{}'.",
                          &atom, arg.as_ref().unwrap())
                 } else if arg.is_none() && self.dopt.has_arg(&atom) {
-                    try!(self.next_noeof(&*format!("argument for flag '{}'",
-                                                   &atom)));
+                    self.next_noeof(&*format!("argument for flag '{}'",
+                                                   &atom))?;
                     arg = Some(self.cur().into());
                 }
                 self.flags.push(ArgvToken { atom: atom, arg: arg });
@@ -1040,7 +1040,7 @@ impl<'a> Argv<'a> {
     }
     fn next_arg(&mut self, atom: &Atom) -> Result<&str, String> {
         let expected = format!("argument for flag '{}'", atom);
-        try!(self.next_noeof(&*expected));
+        self.next_noeof(&*expected)?;
         Ok(self.cur())
     }
     fn next_noeof(&mut self, expected: &str) -> Result<(), String> {
@@ -1054,9 +1054,9 @@ impl<'a> Argv<'a> {
 
 impl<'a> fmt::Debug for Argv<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        try!(writeln!(f, "Positional: {:?}", self.positional));
-        try!(writeln!(f, "Flags: {:?}", self.flags));
-        try!(writeln!(f, "Counts: {:?}", self.counts));
+        writeln!(f, "Positional: {:?}", self.positional)?;
+        writeln!(f, "Flags: {:?}", self.flags)?;
+        writeln!(f, "Counts: {:?}", self.counts)?;
         Ok(())
     }
 }

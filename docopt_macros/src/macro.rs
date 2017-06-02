@@ -88,7 +88,7 @@ impl Parsed {
         let def = ast::VariantData::Struct(
             self.struct_fields(cx), ast::DUMMY_NODE_ID);
 
-        let mut traits = vec!["RustcDecodable".to_string()];
+        let mut traits = vec!["Deserialize".to_string()];
         traits.extend(self.struct_info.deriving.iter().cloned());
         let attrs = vec![attribute(cx, "allow", vec!["non_snake_case"]),
                          attribute(cx, "derive", traits)];
@@ -172,8 +172,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
                 self.cx.call_site(), "macro expects arguments");
             return Err(err);
         }
-        let struct_info = try!(self.parse_struct_info());
-        let docstr = try!(self.parse_str());
+        let struct_info = self.parse_struct_info()?;
+        let docstr = self.parse_str()?;
 
         let mut types = HashMap::new();
         if !self.p.check(&token::Eof) {
@@ -190,7 +190,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
                   (Atom::new(&*key), ty)
               })
              .collect::<HashMap<Atom, P<ast::Ty>>>();
-            try!(self.p.expect(&token::Eof));
+            self.p.expect(&token::Eof)?;
         }
 
         // This config does not matter because we're only asking for the
@@ -248,8 +248,8 @@ impl<'a, 'b> MacParser<'a, 'b> {
     /// Note that this is a static method as it is used as a HOF.
     fn parse_type_annotation(p: &mut Parser<'b>)
                              -> PResult<'b, (ast::Ident, P<ast::Ty>)> {
-        let ident = try!(p.parse_ident());
-        try!(p.expect(&token::Colon));
+        let ident = p.parse_ident()?;
+        p.expect(&token::Colon)?;
         let ty = p.parse_ty().unwrap();
         Ok((ident, ty))
     }
@@ -258,12 +258,12 @@ impl<'a, 'b> MacParser<'a, 'b> {
     fn parse_struct_info(&mut self) -> PResult<'b, StructInfo> {
         let public = self.p.eat_keyword(symbol::keywords::Pub);
         let mut info = StructInfo {
-            name: try!(self.p.parse_ident()),
+            name: self.p.parse_ident()?,
             public: public,
             deriving: vec![],
         };
         if self.p.eat(&token::Comma) { return Ok(info); }
-        let deriving = try!(self.p.parse_ident());
+        let deriving = self.p.parse_ident()?;
         if *deriving.name.as_str() != *"derive" {
             let err = format!("Expected 'derive' keyword but got '{}'",
                               deriving);
@@ -272,7 +272,7 @@ impl<'a, 'b> MacParser<'a, 'b> {
         }
         while !self.p.eat(&token::Comma) {
             info.deriving.push(
-                try!(self.p.parse_ident()).name.to_string());
+                self.p.parse_ident()?.name.to_string());
         }
         Ok(info)
     }
@@ -313,12 +313,13 @@ fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     let sp = codemap::DUMMY_SP;
     let tystr = ast::AngleBracketedParameterData {
         lifetimes: vec![],
-        types: P::from_vec(vec![cx.ty_ident(sp, ident("String"))]),
-        bindings: P::new(),
+        types: vec![cx.ty_ident(sp, ident("String"))],
+        bindings: vec![],
     };
     cx.ty_path(ast::Path {
         span: sp,
         segments: vec![ast::PathSegment {
+            span: sp,
             identifier: ident("Vec"),
             parameters: Some(P(ast::PathParameters::AngleBracketed(tystr))),
         }]

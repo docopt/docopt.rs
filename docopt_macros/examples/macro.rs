@@ -1,7 +1,8 @@
 #![feature(plugin)]
 #![plugin(docopt_macros)]
 
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 
 extern crate docopt;
 
@@ -25,7 +26,7 @@ Options:
 ", arg_x: Option<usize>, arg_y: Option<usize>, flag_speed: usize);
 
 fn main() {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().deserialize().unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 
     println!("\nSome values:");

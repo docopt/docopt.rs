@@ -1,4 +1,5 @@
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -22,7 +23,7 @@ Options:
   --drifting    Drifting mine.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     flag_speed: isize,
     flag_drifting: bool,
@@ -35,8 +36,8 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 
     println!("\nSome values:");
