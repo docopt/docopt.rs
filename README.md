@@ -195,7 +195,6 @@ extern crate serde;
 extern crate docopt;
 
 use serde::de;
-use std::fmt;
 
 docopt!(Args derive Debug, "
 Usage: rustc [options] [--cfg SPEC... -L PATH...] INPUT
@@ -217,37 +216,22 @@ enum Emit { Asm, Ir, Bc, Obj, Link }
 #[derive(Debug)]
 enum OptLevel { Zero, One, Two, Three }
 
-struct OptLevelVisitor;
-
-impl<'de> de::Visitor<'de> for OptLevelVisitor {
-    type Value = OptLevel;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("an integer between 0 and 3")
-    }
-
-    fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E>
-        where E: de::Error
+impl<'de> de::Deserialize<'de> for OptLevel {
+    fn deserialize<D>(deserializer: D) -> Result<OptLevel, D::Error>
+        where D: de::Deserializer<'de>
     {
-        let level = match value {
+        let level = match u8::deserialize(deserializer)? {
             0 => OptLevel::Zero,
             1 => OptLevel::One,
             2 => OptLevel::Two,
             3 => OptLevel::Three,
             n => {
-                let err = format!("Could not deserialize '{}' as opt-level.", n);
-                return Err(E::custom(err));
+                let value = de::Unexpected::Unsigned(n as u64);
+                let msg = "expected an integer between 0 and 3";
+                return Err(de::Error::invalid_value(value, &msg));
             }
         };
         Ok(level)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for OptLevel {
-    fn deserialize<D>(deserializer: D) -> Result<OptLevel, D::Error>
-        where D: de::Deserializer<'de>
-    {
-        deserializer.deserialize_u8(OptLevelVisitor)
     }
 }
 
