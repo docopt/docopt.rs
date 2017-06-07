@@ -26,11 +26,11 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-docopt = "0.7"
+docopt = "0.8"
 serde_derive = "1.0" # if you're using `derive(Deserialize)`
 ```
 
-If you want to use the macro, then add `docopt_macros = "0.7"` instead.
+If you want to use the macro, then add `docopt_macros = "0.8"` instead.
 Note that the **`docopt!` macro only works on a nightly Rust compiler** because
 it is a compiler plugin.
 
