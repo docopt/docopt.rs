@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use {Docopt, ArgvMap};
+use {Docopt, ArgvMap, Error};
 use Value::{self, Switch, Plain};
 
 fn get_args(doc: &str, argv: &[&'static str]) -> ArgvMap {
@@ -108,6 +108,26 @@ fn regression_issue_195() {
     dopt.parse().unwrap();
 }
 
+#[test]
+fn test_unit_struct() {
+    const USAGE: &'static str = "
+    Usage:
+        cargo version [options]
+
+    Options:
+        -h, --help               Print this message
+    ";
+
+    #[derive(Deserialize)]
+    struct Options;
+
+    let argv = &["cargo", "version"];
+    let dopt: Result<Options, Error>= Docopt::new(USAGE)
+        .unwrap()
+        .argv(argv)
+        .deserialize();
+    assert!(dopt.is_ok());
+}
 
 mod testcases;
 mod suggestions;
