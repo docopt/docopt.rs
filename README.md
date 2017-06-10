@@ -17,7 +17,7 @@ feedback**.
 
 ### Documentation
 
-<http://burntsushi.net/rustdoc/docopt>
+<https://docs.rs/docopt>
 
 
 ### Installation
