@@ -109,6 +109,25 @@ fn regression_issue_195() {
 }
 
 #[test]
+fn regression_issue_219() {
+    #[derive(Deserialize)]
+    struct Args {
+        arg_type: Vec<String>,
+        arg_param: Vec<String>,
+    }
+
+    const USAGE: &'static str = "
+    Usage:
+        encode [-v <type> <param>]...
+    ";
+
+    let argv = &["encode", "-v", "bool", "true", "string", "foo"];
+    let args: Args = Docopt::new(USAGE).unwrap().argv(argv).deserialize().unwrap();
+    assert_eq!(args.arg_type, vec!["bool".to_owned(), "string".to_owned()]);
+    assert_eq!(args.arg_param, vec!["true".to_owned(), "foo".to_owned()]);
+}
+
+#[test]
 fn test_unit_struct() {
     const USAGE: &'static str = "
     Usage:
