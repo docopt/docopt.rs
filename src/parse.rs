@@ -759,8 +759,6 @@ impl Pattern {
 
     fn repeat(p: Pattern) -> Pattern {
         match p {
-            // Normalize [p1 p2]... into the equivalent [p1... p2...].
-            Optional(ps) => Optional(ps.into_iter().map(Pattern::repeat).collect()),
             p @ Repeat(_) => p,
             p => Repeat(Box::new(p)),
         }
