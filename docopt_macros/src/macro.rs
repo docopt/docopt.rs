@@ -312,6 +312,7 @@ fn intern(s: &str) -> symbol::Symbol {
 fn ty_vec_string(cx: &ExtCtxt) -> P<ast::Ty> {
     let sp = codemap::DUMMY_SP;
     let tystr = ast::AngleBracketedParameterData {
+        span: sp,
         lifetimes: vec![],
         types: vec![cx.ty_ident(sp, ident("String"))],
         bindings: vec![],
