@@ -69,6 +69,21 @@ pub struct Parser {
     last_atom_added: Option<Atom>, // context for [default: ...]
 }
 
+pub enum Matches {
+    Some(SynonymMap<String, Value>),
+    Suggestion(String),
+    None,
+}
+
+impl From<Option<String>> for Matches {
+    fn from(o: Option<String>) -> Self {
+        match o {
+            Some(s) => Matches::Suggestion(s),
+            None => Matches::None,
+        }
+    }
+}
+
 impl Parser {
     pub fn new(doc: &str) -> Result<Parser, String> {
         let mut d = Parser {
@@ -83,14 +98,16 @@ impl Parser {
         Ok(d)
     }
 
-    pub fn matches(&self, argv: &Argv) -> Option<SynonymMap<String, Value>> {
+    pub fn matches(&self, argv: &Argv) -> Matches {
+        let mut suggestion = None;
         for usage in &self.usages {
             match Matcher::matches(argv, usage) {
-                None => continue,
-                Some(vals) => return Some(vals),
+                Matches::None => continue,
+                Matches::Some(vals) => return Matches::Some(vals),
+                Matches::Suggestion(s) => suggestion = Some(s),
             }
         }
-        None
+        suggestion.into()
     }
 
     pub fn parse_argv(&self, argv: Vec<String>, options_first: bool)
@@ -1176,8 +1193,7 @@ impl MState {
 }
 
 impl<'a, 'b> Matcher<'a, 'b> {
-    fn matches(argv: &'a Argv, pat: &Pattern)
-              -> Option<SynonymMap<String, Value>> {
+    fn matches(argv: &'a Argv, pat: &Pattern) -> Matches {
         let m = Matcher { argv: argv };
         let init = MState {
             argvi: 0,
@@ -1185,7 +1201,7 @@ impl<'a, 'b> Matcher<'a, 'b> {
             max_counts: HashMap::new(),
             vals: HashMap::new(),
         };
-        m.states(pat, &init)
+        let matches = m.states(pat, &init)
          .into_iter()
          .filter(|s| m.state_consumed_all_argv(s))
          .filter(|s| m.state_has_valid_flags(s))
@@ -1209,7 +1225,12 @@ impl<'a, 'b> Matcher<'a, 'b> {
                  }
              }
              synmap
-         })
+         });
+        
+        match matches {
+            Some(matches) => Matches::Some(matches),
+            None => m.pattern_suggestion(pat).into(),
+        }
     }
 
     fn token_from(&self, state: &MState) -> Option<&ArgvToken> {
@@ -1268,6 +1289,42 @@ impl<'a, 'b> Matcher<'a, 'b> {
         }
     }
 
+    fn pattern_suggestion(&self, pattern: &Pattern) -> Option<String> {
+        fn pattern_suggestion_for_arg(arg: &str, pattern: &Pattern) -> Option<String> {
+            match *pattern {
+                Pattern::PatAtom(ref atom) => match *atom {
+                    Atom::Short(short) if &short.to_string() == arg => Some(format!("-{}", short)),
+                    Atom::Long(ref long) if long == arg => Some(format!("--{}", long)),
+                    _ => None,
+                },
+                Pattern::Optional(ref optional) => {
+                    for pat in optional {
+                        let suggestion = pattern_suggestion_for_arg(arg, pat);
+                        if suggestion.is_some() {
+                            return suggestion;
+                        }
+                    }
+                    None
+                },
+                _ => None,
+            }
+        }
+
+        if let Pattern::Sequence(ref seq) = *pattern {
+            for (arg, pat) in self.argv.positional.iter().zip(seq.iter()) {
+                let arg_str = match arg.atom {
+                    Atom::Positional(ref s) => s,
+                    _ => unreachable!(),
+                };
+
+                if let Some(suggestion) = pattern_suggestion_for_arg(arg_str, pat) {
+                    return Some(format!("Unknown command: '{}'. Did you mean '{}'?", arg_str, suggestion));
+                }
+            }
+        }
+        None
+    }
+    
     fn state_consumed_all_argv(&self, state: &MState) -> bool {
         self.argv.positional.len() == state.argvi
     }
