@@ -71,6 +71,7 @@ Options:
 #[derive(Debug, Deserialize)]
 struct Args {
     flag_speed: isize,
+    flag_moored: bool,
     flag_drifting: bool,
     arg_name: Vec<String>,
     arg_x: Option<i32>,
