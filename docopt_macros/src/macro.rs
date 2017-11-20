@@ -183,13 +183,13 @@ impl<'a, 'b> MacParser<'a, 'b> {
             };
             types = self.p.parse_seq_to_before_end(
                 &token::Eof, sep, |p| MacParser::parse_type_annotation(p)
-            ).into_iter()
-             .map(|(ident, ty)| {
-                  let field_name = ident.to_string();
-                  let key = ArgvMap::struct_field_to_key(&*field_name);
-                  (Atom::new(&*key), ty)
-              })
-             .collect::<HashMap<Atom, P<ast::Ty>>>();
+            )?.into_iter()
+                .map(|(ident, ty)| {
+                    let field_name = ident.to_string();
+                    let key = ArgvMap::struct_field_to_key(&*field_name);
+                    (Atom::new(&*key), ty)
+                })
+                .collect::<HashMap<Atom, P<ast::Ty>>>();
             self.p.expect(&token::Eof)?;
         }
 
