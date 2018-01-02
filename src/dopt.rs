@@ -208,8 +208,8 @@ impl Docopt {
     ///
     /// For details on how decoding works, please see the documentation for
     /// `ArgvMap`.
-    pub fn deserialize<D>(&self) -> Result<D>
-        where D: de::DeserializeOwned
+    pub fn deserialize<'a, 'de: 'a, D>(&'a self) -> Result<D>
+        where D: de::Deserialize<'de>
     {
         self.parse().and_then(|vals| vals.deserialize())
     }
@@ -392,7 +392,7 @@ impl ArgvMap {
     ///
     /// In this example, only the `bool` type was used, but any type satisfying
     /// the `Deserialize` trait is valid.
-    pub fn deserialize<T: de::DeserializeOwned>(self) -> Result<T> {
+    pub fn deserialize<'de, T: de::Deserialize<'de>>(self) -> Result<T> {
         de::Deserialize::deserialize(&mut Deserializer {
                                               vals: self,
                                               stack: vec![],
@@ -641,9 +641,9 @@ impl Value {
 /// extern crate serde;
 /// # fn main() {
 /// use docopt::Docopt;
-/// use serde::de::DeserializeOwned;
+/// use serde::de::Deserialize;
 ///
-/// fn deserialize<D: DeserializeOwned>(usage: &str, argv: &[&str])
+/// fn deserialize<'de, D: Deserialize<'de>>(usage: &str, argv: &[&str])
 ///                         -> Result<D, docopt::Error> {
 ///     Docopt::new(usage)
 ///            .and_then(|d| d.argv(argv.iter()).deserialize())
