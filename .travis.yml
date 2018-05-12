@@ -8,8 +8,3 @@ script:
   - cargo build --verbose
   - cargo test --verbose
   - cargo doc
-  - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
-      cd docopt_macros;
-      cargo build --verbose;
-      cargo test --verbose;
-    fi
