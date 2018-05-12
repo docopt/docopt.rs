@@ -26,7 +26,7 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-docopt = "0.8"
+docopt = "0.9"
 serde = "1.0" # if you're using `derive(Deserialize)`
 serde_derive = "1.0" # if you're using `derive(Deserialize)`
 ```
