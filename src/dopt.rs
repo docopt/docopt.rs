@@ -306,6 +306,17 @@ impl Docopt {
         self
     }
 
+    /// Provides default version string.
+    /// 
+    /// When this is enabled and `--version` appears anywhere in the arguments,
+    /// then a `Version(s)` error will be returned, where `s` is your crate name 
+    /// followed by ", version: " and then the version string in your Cargo.toml
+    /// file.
+    pub fn version_default(mut self) -> Docopt {
+        self.version = Some(env!("CARGO_PKG_NAME").to_string() + ", version: " + env!("CARGO_PKG_VERSION"));
+        self
+    }
+    
     #[doc(hidden)]
     pub fn parser(&self) -> &Parser {
         &self.p
