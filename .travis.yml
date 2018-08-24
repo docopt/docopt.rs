@@ -4,7 +4,12 @@ rust:
   - stable
   - beta
   - nightly
+before_script:
+  - rustup toolchain install nightly
 script:
   - cargo build --verbose
   - cargo test --verbose
   - cargo doc
+  - cargo +nightly generate-lockfile -Z minimal-versions
+  - cargo build --verbose
+  - cargo test --verbose
