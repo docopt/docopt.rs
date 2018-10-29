@@ -1,6 +1,6 @@
 [package]
 name = "docopt"
-version = "1.0.1"  #:version
+version = "1.0.2"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = "Command line argument parsing."
 documentation = "http://burntsushi.net/rustdoc/docopt/"
