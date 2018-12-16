@@ -9,7 +9,7 @@ use regex::{Captures, Regex};
 use serde::de;
 use serde::de::IntoDeserializer;
 
-use parse::Parser;
+use parse::{Parser, Matches};
 use synonym::SynonymMap;
 
 use self::Value::{Switch, Counted, Plain, List};
@@ -235,8 +235,9 @@ impl Docopt {
                 .map_err(|s| self.err_with_usage(Argv(s)))
                 .and_then(|argv|
                     match self.p.matches(&argv) {
-                        Some(m) => Ok(ArgvMap { map: m }),
-                        None => Err(self.err_with_usage(NoMatch)),
+                        Matches::Some(m) => Ok(ArgvMap { map: m }),
+                        Matches::None => Err(self.err_with_usage(NoMatch)),
+                        Matches::Suggestion(s) => Err(self.err_with_usage(Argv(s))),
                     })?;
         if self.help && vals.get_bool("--help") {
             return Err(self.err_with_full_doc(Help));

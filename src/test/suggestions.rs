@@ -70,3 +70,24 @@ test_suggest!(test_suggest_5,
 ", 
 &["--import", "--complte"], "Unknown flag: '--complte'. Did you mean '--complete'?"); 
 
+test_suggest!(test_suggest_6,
+"Usage: cargo owner [options]
+
+ Options:
+    -h, --help               Print this message
+    -a, --add LOGIN          Name of a user or team to add as an owner
+    -r, --remove LOGIN       Name of a user or team to remove as an owner
+    -l, --list               List owners of a crate
+",
+&["owner", "add"], "Unknown command: 'add'. Did you mean '--add'?");
+
+test_suggest!(test_suggest_7,
+"Usage: cargo owner [options]
+
+ Options:
+    -h, --help               Print this message
+    -a, --add LOGIN          Name of a user or team to add as an owner
+    -r, --remove LOGIN       Name of a user or team to remove as an owner
+    -l, --list               List owners of a crate
+",
+&["owner", "list"], "Unknown command: 'list'. Did you mean '--list'?");
