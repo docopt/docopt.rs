@@ -301,8 +301,35 @@ impl Docopt {
     ///
     /// When disabled (a `None` value), there is no special handling of
     /// `--version`.
-    pub fn version(mut self, version: Option<String>) -> Docopt {
-        self.version = version;
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate docopt;
+    /// # fn main() {
+    /// use docopt::{Docopt, Error::*};
+    ///
+    /// const USAGE: &'static str = "
+    /// Usage: cargo [--version] [--help]
+    ///
+    /// Options: -V, --version
+    ///          -h, --help
+    /// ";
+    ///
+    /// let argv = || vec!["cargo", "--version"].into_iter();
+    /// let err = Docopt::new(USAGE)
+    ///                   .and_then(|d| d
+    ///                      .argv(argv())
+    ///                      .version(String::from("v2.1"))
+    ///                      .parse())
+    ///                   .unwrap_err();
+    ///
+    /// // The returned error contains our version number
+    /// assert_eq!("v2.1", format!("{}", err));
+    /// # }
+    /// ```
+    pub fn version<V: Into<Option<String>>>(mut self, version: V) -> Docopt {
+        self.version = version.into();
         self
     }
 
