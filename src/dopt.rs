@@ -307,7 +307,7 @@ impl Docopt {
     /// ```
     /// # extern crate docopt;
     /// # fn main() {
-    /// use docopt::{Docopt, Error::*};
+    /// use docopt::Docopt;
     ///
     /// const USAGE: &'static str = "
     /// Usage: cargo [--version] [--help]
