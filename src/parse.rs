@@ -51,9 +51,9 @@ use regex;
 use regex::Regex;
 use strsim::levenshtein;
 
-use dopt::Value::{self, Switch, Counted, Plain, List};
-use synonym::SynonymMap;
-use cap_or_empty;
+use crate::dopt::Value::{self, Switch, Counted, Plain, List};
+use crate::synonym::SynonymMap;
+use crate::cap_or_empty;
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))

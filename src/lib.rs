@@ -197,7 +197,7 @@ extern crate strsim;
 extern crate serde_derive;
 extern crate serde;
 
-pub use dopt::{ArgvMap, Deserializer, Docopt, Error, Value};
+pub use crate::dopt::{ArgvMap, Deserializer, Docopt, Error, Value};
 
 macro_rules! werr(
     ($($arg:tt)*) => ({

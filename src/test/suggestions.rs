@@ -1,4 +1,4 @@
-use {Docopt, Error};
+use crate::{Docopt, Error};
 
 fn get_suggestion(doc: &str, argv: &[&'static str]) -> Error {
     let dopt =

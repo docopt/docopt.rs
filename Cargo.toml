@@ -11,6 +11,7 @@ keywords = ["docopt", "argument", "command", "argv"]
 categories = ["command-line-interface"]
 license = "Unlicense/MIT"
 exclude = ["/.travis.yml", "/Makefile", "/ctags.rust", "/scripts/*", "/session.vim"]
+edition = "2018"
 
 [lib]
 name = "docopt"
