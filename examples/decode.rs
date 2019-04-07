@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate serde_derive;
-extern crate docopt;
-
 use docopt::Docopt;
+use serde::Deserialize;
 
 const USAGE: &'static str = "
 Naval Fate.

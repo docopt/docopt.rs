@@ -4,14 +4,10 @@
 // decoder uses `Option<T>` to mean "T may not be present" rather than
 // "T may be present but incorrect."
 
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate docopt;
+use std::fmt;
 
 use docopt::Docopt;
-use serde::de::{Deserialize, Deserializer, Error, Visitor};
-use std::fmt;
+use serde::{Deserialize, de::{Deserializer, Error, Visitor}};
 
 // Write the Docopt usage string.
 const USAGE: &'static str = "
@@ -34,7 +30,7 @@ struct CommandVisitor;
 impl<'de> Visitor<'de> for CommandVisitor {
     type Value = Command;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a string A, B or C")
     }
 

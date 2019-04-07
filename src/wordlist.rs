@@ -1,22 +1,14 @@
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate regex;
-extern crate serde;
-extern crate strsim;
-
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
+
+use regex::Regex;
+use serde::Deserialize;
 
 use crate::dopt::Docopt;
 use crate::parse::{Atom, Parser};
 
-// cheat until we get syntax extensions back :-(
 macro_rules! regex(
-    ($s:expr) => (::regex::Regex::new($s).unwrap());
+    ($s:expr) => (regex::Regex::new($s).unwrap());
 );
 
 macro_rules! werr(
@@ -84,10 +76,11 @@ fn run(args: Args) -> Result<(), String> {
         args.arg_name.iter()
                      .zip(args.arg_possibles.iter())
                      .map(|(name, possibles)| {
-                         let choices =
-                             regex!(r"[ \t]+").split(&**possibles)
-                                              .map(|s| s.to_string())
-                                              .collect::<Vec<String>>();
+                         let choices = Regex::new(r"[ \t]+")
+                             .unwrap()
+                             .split(&**possibles)
+                             .map(|s| s.to_string())
+                             .collect::<Vec<String>>();
                          (name.clone(), choices)
                      })
                      .collect();

@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use std::str::FromStr;
 use std::result;
 
+use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use serde::de;
 use serde::de::IntoDeserializer;
@@ -121,7 +122,7 @@ impl Error {
 type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             WithProgramUsage(ref other, ref usage) => {
                 let other = other.to_string();
@@ -342,11 +343,9 @@ impl ArgvMap {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate docopt;
-    /// #[macro_use]
-    /// extern crate serde_derive;
-    /// # extern crate serde;
     /// # fn main() {
+    /// use serde::Deserialize;
+    ///
     /// use docopt::Docopt;
     ///
     /// const USAGE: &'static str = "
@@ -367,8 +366,8 @@ impl ArgvMap {
     ///
     /// let argv = || vec!["cargo", "build", "-v"].into_iter();
     /// let args: Args = Docopt::new(USAGE)
-    ///                         .and_then(|d| d.argv(argv()).deserialize())
-    ///                         .unwrap_or_else(|e| e.exit());
+    ///     .and_then(|d| d.argv(argv()).deserialize())
+    ///     .unwrap_or_else(|e| e.exit());
     /// assert!(args.cmd_build && !args.cmd_test
     ///         && args.flag_verbose && !args.flag_h);
     /// # }
@@ -438,7 +437,7 @@ impl ArgvMap {
             name.replace("-", "_")
         }
 
-        RE.replace(name, |cap: &Captures| {
+        RE.replace(name, |cap: &Captures<'_>| {
             let (flag, cmd) = (
                 cap_or_empty(cap, "flag"),
                 cap_or_empty(cap, "cmd"),
@@ -504,7 +503,7 @@ impl ArgvMap {
 }
 
 impl fmt::Debug for ArgvMap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.len() == 0 {
             return write!(f, "{{EMPTY}}");
         }
@@ -663,7 +662,7 @@ impl<'de> Deserializer<'de> {
                   });
     }
 
-    fn pop(&mut self) -> Result<DeserializerItem> {
+    fn pop(&mut self) -> Result<DeserializerItem<'_>> {
         match self.stack.pop() {
             None => derr!("Could not deserialize value into unknown key."),
             Some(it) => Ok(it),

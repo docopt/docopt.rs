@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+
+use serde::Deserialize;
+
 use crate::{Docopt, ArgvMap, Error};
 use crate::Value::{self, Switch, Plain};
 

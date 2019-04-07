@@ -24,15 +24,15 @@ impl<K: Eq + Hash, V> SynonymMap<K, V> {
         self.syns.insert(from, to).is_none()
     }
 
-    pub fn keys(&self) -> Keys<K, V> {
+    pub fn keys(&self) -> Keys<'_, K, V> {
         self.vals.keys()
     }
 
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         self.vals.iter()
     }
 
-    pub fn synonyms(&self) -> Iter<K, K> {
+    pub fn synonyms(&self) -> Iter<'_, K, K> {
         self.syns.iter()
     }
 
@@ -100,7 +100,7 @@ impl<K: Eq + Hash + Clone, V> FromIterator<(K, V)> for SynonymMap<K, V> {
 }
 
 impl<K: Eq + Hash + Debug, V: Debug> Debug for SynonymMap<K, V> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         self.vals.fmt(f)?;
         write!(f, " (synomyns: {:?})", self.syns)
     }

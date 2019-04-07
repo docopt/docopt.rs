@@ -1,5 +1,3 @@
-extern crate docopt;
-
 use docopt::Docopt;
 
 const USAGE: &'static str = "

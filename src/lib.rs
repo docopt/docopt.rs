@@ -46,11 +46,9 @@
 //! Here is the same example as above using type based decoding:
 //!
 //! ```rust
-//! # extern crate docopt;
-//! #[macro_use]
-//! extern crate serde_derive;
 //! # fn main() {
 //! use docopt::Docopt;
+//! use serde::Deserialize;
 //!
 //! // Write the Docopt usage string.
 //! const USAGE: &'static str = "
@@ -71,8 +69,8 @@
 //!
 //! let argv = || vec!["cp", "-a", "file1", "file2", "dest/"];
 //! let args: Args = Docopt::new(USAGE)
-//!                         .and_then(|d| d.argv(argv().into_iter()).deserialize())
-//!                         .unwrap_or_else(|e| e.exit());
+//!     .and_then(|d| d.argv(argv().into_iter()).deserialize())
+//!     .unwrap_or_else(|e| e.exit());
 //!
 //! // Now access your argv values.
 //! fn s(x: &str) -> String { x.to_string() }
@@ -89,14 +87,13 @@
 //! shows more of Docopt and some of the benefits of type based decoding.
 //!
 //! ```rust
-//! # extern crate docopt;
-//! #[macro_use]
-//! extern crate serde_derive;
-//! extern crate serde;
 //! # fn main() {
 //! # #![allow(non_snake_case)]
-//! use docopt::Docopt;
 //! use std::fmt;
+//!
+//! use serde::Deserialize;
+//!
+//! use docopt::Docopt;
 //!
 //! // Write the Docopt usage string.
 //! const USAGE: &'static str = "
@@ -185,17 +182,7 @@
 
 #![crate_name = "docopt"]
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
-
 #![deny(missing_docs)]
-
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
-extern crate strsim;
-#[allow(unused_imports)]
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
 
 pub use crate::dopt::{ArgvMap, Deserializer, Docopt, Error, Value};
 
@@ -207,7 +194,7 @@ macro_rules! werr(
 );
 
 macro_rules! regex(
-    ($s:expr) => (::regex::Regex::new($s).unwrap());
+    ($s:expr) => (regex::Regex::new($s).unwrap());
 );
 
 fn cap_or_empty<'t>(caps: &regex::Captures<'t>, name: &str) -> &'t str {
