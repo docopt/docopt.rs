@@ -9,13 +9,13 @@ use regex::{Captures, Regex};
 use serde::de;
 use serde::de::IntoDeserializer;
 
-use parse::Parser;
-use synonym::SynonymMap;
+use crate::parse::Parser;
+use crate::synonym::SynonymMap;
 
 use self::Value::{Switch, Counted, Plain, List};
 use self::Error::{Usage, Argv, NoMatch, Deserialize, WithProgramUsage, Help, Version};
 
-use cap_or_empty;
+use crate::cap_or_empty;
 
 /// Represents the different types of Docopt errors.
 ///
@@ -142,19 +142,7 @@ impl fmt::Display for Error {
 }
 
 impl StdError for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Usage(..) => "invalid usage string",
-            Argv(..) => "failed to parse specified argv",
-            NoMatch => "could not match specified argv",
-            Deserialize(..) => "failed to deserialize",
-            WithProgramUsage(..) => "failed to parse specified argv",
-            Help => "help message requested",
-            Version(..) => "version message requested",
-        }
-    }
-
-    fn cause(&self) -> Option<&StdError> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self {
             WithProgramUsage(ref cause, _) => Some(&**cause),
             _ => None,

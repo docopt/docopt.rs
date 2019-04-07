@@ -11,8 +11,8 @@ extern crate strsim;
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
 
-use dopt::Docopt;
-use parse::{Atom, Parser};
+use crate::dopt::Docopt;
+use crate::parse::{Atom, Parser};
 
 // cheat until we get syntax extensions back :-(
 macro_rules! regex(
