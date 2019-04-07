@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate serde_derive;
-extern crate docopt;
-
 use docopt::Docopt;
+use serde::Deserialize;
 
 // Write the Docopt usage string.
 const USAGE: &'static str = "

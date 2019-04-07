@@ -11,13 +11,18 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 ### Current status
 
-Fully functional but the design of the API is up for debate. **I am seeking
-feedback**.
+This crate is unlikely to see significant future evolution. The primary reason
+to choose this crate for a new project is if you're specifically interested in
+using [docopt](http://docopt.org/) syntax for your project. However, the wider
+docopt project is mostly unmaintained at this point.
+
+Consider using [clap](http://docs.rs/clap/) or possibly
+[structopt](http://docs.rs/structopt/) instead.
 
 
 ### Documentation
 
-<https://docs.rs/docopt>
+https://docs.rs/docopt
 
 
 ### Installation
@@ -27,8 +32,7 @@ This crate is fully compatible with Cargo. Just add it to your `Cargo.toml`:
 ```toml
 [dependencies]
 docopt = "1"
-serde = "1.0" # if you're using `derive(Deserialize)`
-serde_derive = "1.0" # if you're using `derive(Deserialize)`
+serde = { version = "1", features = ["derive"] }
 ```
 
 
@@ -39,11 +43,8 @@ of the named values in the Docopt usage string. Values will be automatically
 converted to those types (or an error will be reported).
 
 ```rust
-#[macro_use]
-extern crate serde_derive;
-extern crate docopt;
-
 use docopt::Docopt;
+use serde::Deserialize;
 
 const USAGE: &'static str = "
 Naval Fate.
@@ -77,8 +78,8 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.deserialize())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
     println!("{:?}", args);
 }
 ```
@@ -106,8 +107,6 @@ like `<arg>` or `--flag`. If you prefer this access pattern, then you can use
 conversion manually. Here's the canonical Docopt example with a hash table:
 
 ```rust
-extern crate docopt;
-
 use docopt::Docopt;
 
 const USAGE: &'static str = "

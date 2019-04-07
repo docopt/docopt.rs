@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate serde_derive;
-extern crate docopt;
-
 use docopt::Docopt;
+use serde::Deserialize;
 
 // This shows how to implement multiple levels of verbosity.
 //

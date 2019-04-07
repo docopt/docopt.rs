@@ -38,15 +38,13 @@
 //
 //   - Write a specification for Docopt.
 
-pub use self::Argument::{Zero, One};
-pub use self::Atom::{Short, Long, Command, Positional};
-use self::Pattern::{Alternates, Sequence, Optional, Repeat, PatAtom};
-
 use std::borrow::ToOwned;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::cmp::Ordering;
 use std::fmt;
+
+use lazy_static::lazy_static;
 use regex;
 use regex::Regex;
 use strsim::levenshtein;
@@ -54,6 +52,10 @@ use strsim::levenshtein;
 use crate::dopt::Value::{self, Switch, Counted, Plain, List};
 use crate::synonym::SynonymMap;
 use crate::cap_or_empty;
+
+use self::Argument::{Zero, One};
+use self::Atom::{Short, Long, Command, Positional};
+use self::Pattern::{Alternates, Sequence, Optional, Repeat, PatAtom};
 
 macro_rules! err(
     ($($arg:tt)*) => (return Err(format!($($arg)*)))
@@ -83,7 +85,7 @@ impl Parser {
         Ok(d)
     }
 
-    pub fn matches(&self, argv: &Argv) -> Option<SynonymMap<String, Value>> {
+    pub fn matches(&self, argv: &Argv<'_>) -> Option<SynonymMap<String, Value>> {
         for usage in &self.usages {
             match Matcher::matches(argv, usage) {
                 None => continue,
@@ -94,7 +96,7 @@ impl Parser {
     }
 
     pub fn parse_argv(&self, argv: Vec<String>, options_first: bool)
-                         -> Result<Argv, String> {
+                         -> Result<Argv<'_>, String> {
         Argv::new(self, argv, options_first)
     }
 }
@@ -329,7 +331,7 @@ impl Parser {
 }
 
 impl fmt::Debug for Parser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         fn sorted<T: Ord>(mut xs: Vec<T>) -> Vec<T> {
             xs.sort(); xs
         }
@@ -843,7 +845,7 @@ impl PartialOrd for Atom {
 }
 
 impl fmt::Display for Atom {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Short(c) => write!(f, "-{}", c),
             Long(ref s) => write!(f, "--{}", s),
@@ -1051,7 +1053,7 @@ impl<'a> Argv<'a> {
 }
 
 impl<'a> fmt::Debug for Argv<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         writeln!(f, "Positional: {:?}", self.positional)?;
         writeln!(f, "Flags: {:?}", self.flags)?;
         writeln!(f, "Counts: {:?}", self.counts)?;
@@ -1176,7 +1178,7 @@ impl MState {
 }
 
 impl<'a, 'b> Matcher<'a, 'b> {
-    fn matches(argv: &'a Argv, pat: &Pattern)
+    fn matches(argv: &'a Argv<'_>, pat: &Pattern)
               -> Option<SynonymMap<String, Value>> {
         let m = Matcher { argv: argv };
         let init = MState {
