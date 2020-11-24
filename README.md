@@ -1,3 +1,20 @@
+# THIS CRATE IS UNMAINTAINED
+
+This crate is unlikely to see significant future evolution. The primary reason
+to choose this crate for a new project is if you're specifically interested in
+using [docopt](http://docopt.org/) syntax for your project. However, the wider
+docopt project is mostly unmaintained at this point.
+
+Consider using [clap](http://docs.rs/clap/) or possibly
+[structopt](http://docs.rs/structopt/) instead.
+
+Note that this crate has some significant bugs. The two biggest ones are the
+lack of `OsStr` support and some severe performance problems in not-uncommon
+edge cases.
+
+docopt
+======
+
 Docopt for Rust with automatic type based decoding (i.e., data validation).
 This implementation conforms to the
 [official description of Docopt](http://docopt.org/) and
@@ -7,17 +24,6 @@ This implementation conforms to the
 [![](http://meritbadge.herokuapp.com/docopt)](https://crates.io/crates/docopt)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
-
-
-### Current status
-
-This crate is unlikely to see significant future evolution. The primary reason
-to choose this crate for a new project is if you're specifically interested in
-using [docopt](http://docopt.org/) syntax for your project. However, the wider
-docopt project is mostly unmaintained at this point.
-
-Consider using [clap](http://docs.rs/clap/) or possibly
-[structopt](http://docs.rs/structopt/) instead.
 
 
 ### Documentation
