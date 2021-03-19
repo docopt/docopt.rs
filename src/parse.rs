@@ -484,10 +484,7 @@ impl<'a> PatParser<'a> {
         let stacked: String = self.cur()[1..].into();
         for (i, c) in stacked.chars().enumerate() {
             let atom = self.dopt.descs.resolve(&Short(c));
-            let mut pat = PatAtom(atom.clone());
-            if self.dopt.has_repeat(&atom) {
-                pat = Pattern::repeat(pat);
-            }
+            let pat = PatAtom(atom.clone());
             seq.push(pat);
 
             // The only way for a short option to have an argument is if
@@ -546,11 +543,7 @@ impl<'a> PatParser<'a> {
         }
         self.add_atom_ifnotexists(arg, &atom);
         self.next();
-        let pat = if self.dopt.has_repeat(&atom) {
-            Pattern::repeat(PatAtom(atom))
-        } else {
-            PatAtom(atom)
-        };
+        let pat = PatAtom(atom);
         Ok(self.maybe_repeat(pat))
     }
 
