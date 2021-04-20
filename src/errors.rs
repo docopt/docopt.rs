@@ -1,8 +1,11 @@
+//! The one and only error type for docopt.
 use std::error::Error as StdError;
 use serde::de;
 use std::fmt;
 use std::result;
 use std::io::{self, Write};
+
+use crate::utils;
 
 /// Represents the different types of Docopt errors.
 ///

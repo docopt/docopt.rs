@@ -5,18 +5,16 @@ use std::io::{self, Write};
 use std::str::FromStr;
 use std::result;
 
-use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use serde::de;
 use serde::de::IntoDeserializer;
 
+use crate::errors::{Result, Error};
 use crate::parse::Parser;
 use crate::synonym::SynonymMap;
-use crate::errors::{Result, Error};
 use self::Value::{Switch, Counted, Plain, List};
 
 use crate::cap_or_empty;
-
 
 
 /// The main Docopt type, which is constructed with a Docopt usage string.
@@ -44,7 +42,7 @@ impl Docopt {
         Parser::new(usage.deref())
                .map_err(Error::Usage)
                .map(|p| Docopt {
-                   p: p,
+                   p,
                    argv: None,
                    options_first: false,
                    help: true,
@@ -88,7 +86,6 @@ impl Docopt {
                     match self.p.matches(&argv) {
                         Some(map) => Ok(ArgvMap {
                             map,
-                            remaining: vec![],
                         }),
                         None => Err(self.err_with_usage(Error::NoMatch)),
                     })?;
@@ -191,8 +188,6 @@ impl Docopt {
 pub struct ArgvMap {
     #[doc(hidden)]
     pub(crate) map: SynonymMap<String, Value>,
-    #[doc(hidden)]
-    pub(crate) remaining: Vec<String>,
 }
 
 impl ArgvMap {
@@ -295,11 +290,7 @@ impl ArgvMap {
     /// guarantee that the result is a valid struct field name.
     #[doc(hidden)]
     pub fn key_to_struct_field(name: &str) -> String {
-        lazy_static! {
-            static ref RE: Regex = regex!(
-                r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$"
-            );
-        }
+        decl_regex! { RE : r"^(?:--?(?P<flag>\S+)|(?:(?P<argu>\p{Lu}+)|<(?P<argb>[^>]+)>)|(?P<cmd>\S+))$"; }
         fn sanitize(name: &str) -> String {
             name.replace("-", "_")
         }
@@ -334,12 +325,12 @@ impl ArgvMap {
     /// Converts a struct field name to a Docopt key.
     #[doc(hidden)]
     pub fn struct_field_to_key(field: &str) -> String {
-        lazy_static! {
-            static ref FLAG: Regex = regex!(r"^flag_");
-            static ref ARG: Regex = regex!(r"^arg_");
-            static ref LETTERS: Regex = regex!(r"^\p{Lu}+$");
-            static ref CMD: Regex = regex!(r"^cmd_");
-        }
+        decl_regex! {
+            FLAG : "^flag_";
+            ARG : "^arg_";
+            LETTERS : r"^\p{Lu}+$";
+            CMD : "^cmd_";
+        };
         fn desanitize(name: &str) -> String {
             name.replace("_", "-")
         }

@@ -154,30 +154,28 @@ fn test_unit_struct() {
 
 
 #[test]
-fn remaining() {
-    const USAGE: &'static str = "
+fn post_double_dash_is_always_arg() {
+    const USAGE: &str = "
     Usage:
-        whisper info <file>
-        whisper update <file> <timestamp> <value>
-        whisper mark <file> <value>
+        whisper info [--foo] [-- <arbitrary>...]
     ";
 
     #[derive(Deserialize, Debug)]
     struct Args {
-        arg_file: String,
         cmd_info: bool,
-        cmd_update: bool,
-        arg_timestamp: u64,
-        arg_value: f64,
-        remaining: Vec<String>,
+        flag_foo: bool,
+        arg_arbitrary: Vec<String>,
     }
 
+    const ARGS: &[&str] = &["whisper", "info", "--foo", "--", "./p/blah", "foo", "-fff", "--yy"];
     let dopt: Args = Docopt::new(USAGE)
-        .unwrap()
-        .argv(&["whisper", "mark", "./p/blah", "100"])
+        .expect("Parsing usage works. qed")
+        .argv(ARGS)
         .deserialize()
-        .unwrap();
-    assert_eq!(dopt.arg_timestamp, 0);
+        .expect("Deserializing of test works");
+    assert_eq!(dopt.cmd_info, true);
+    assert_eq!(dopt.flag_foo, true);
+    assert_eq!(dopt.arg_arbitrary, &ARGS[4..]);
 }
 
 mod testcases;
