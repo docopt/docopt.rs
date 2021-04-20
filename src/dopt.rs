@@ -1,5 +1,5 @@
+
 use std::collections::HashMap;
-use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::io::{self, Write};
 use std::str::FromStr;
@@ -12,150 +12,12 @@ use serde::de::IntoDeserializer;
 
 use crate::parse::Parser;
 use crate::synonym::SynonymMap;
-
+use crate::errors::{Result, Error};
 use self::Value::{Switch, Counted, Plain, List};
-use self::Error::{Usage, Argv, NoMatch, Deserialize, WithProgramUsage, Help, Version};
 
 use crate::cap_or_empty;
 
-/// Represents the different types of Docopt errors.
-///
-/// This error type has a lot of variants. In the common case, you probably
-/// don't care why Docopt has failed, and would rather just quit the program
-/// and show an error message instead. The `exit` method defined on the `Error`
-/// type will do just that. It will also set the exit code appropriately
-/// (no error for `--help` or `--version`, but an error code for bad usage,
-/// bad argv, no match or bad decode).
-///
-/// ### Example
-///
-/// Generally, you want to parse the usage string, try to match the argv
-/// and then quit the program if there was an error reported at any point
-/// in that process. This can be achieved like so:
-///
-/// ```no_run
-/// use docopt::Docopt;
-///
-/// const USAGE: &'static str = "
-/// Usage: ...
-/// ";
-///
-/// let args = Docopt::new(USAGE)
-///                   .and_then(|d| d.parse())
-///                   .unwrap_or_else(|e| e.exit());
-/// ```
-#[derive(Debug)]
-pub enum Error {
-    /// Parsing the usage string failed.
-    ///
-    /// This error can only be triggered by the programmer, i.e., the writer
-    /// of the Docopt usage string. This error is usually indicative of a bug
-    /// in your program.
-    Usage(String),
 
-    /// Parsing the argv specified failed.
-    ///
-    /// The payload is a string describing why the arguments provided could not
-    /// be parsed.
-    ///
-    /// This is distinct from `NoMatch` because it will catch errors like
-    /// using flags that aren't defined in the usage string.
-    Argv(String),
-
-    /// The given argv parsed successfully, but it did not match any example
-    /// usage of the program.
-    ///
-    /// Regrettably, there is no descriptive message describing *why* the
-    /// given argv didn't match any of the usage strings.
-    NoMatch,
-
-    /// This indicates a problem deserializing a successful argv match into a
-    /// deserializable value.
-    Deserialize(String),
-
-    /// Parsing failed, and the program usage should be printed next to the
-    /// failure message. Typically this wraps `Argv` and `NoMatch` errors.
-    WithProgramUsage(Box<Error>, String),
-
-    /// Decoding or parsing failed because the command line specified that the
-    /// help message should be printed.
-    Help,
-
-    /// Decoding or parsing failed because the command line specified that the
-    /// version should be printed
-    ///
-    /// The version is included as a payload to this variant.
-    Version(String),
-}
-
-impl Error {
-    /// Return whether this was a fatal error or not.
-    ///
-    /// Non-fatal errors include requests to print the help or version
-    /// information of a program, while fatal errors include those such as
-    /// failing to decode or parse.
-    pub fn fatal(&self) -> bool {
-        match *self {
-            Help | Version(..) => false,
-            Usage(..) | Argv(..) | NoMatch | Deserialize(..) => true,
-            WithProgramUsage(ref b, _) => b.fatal(),
-        }
-    }
-
-    /// Print this error and immediately exit the program.
-    ///
-    /// If the error is non-fatal (e.g., `Help` or `Version`), then the
-    /// error is printed to stdout and the exit status will be `0`. Otherwise,
-    /// when the error is fatal, the error is printed to stderr and the
-    /// exit status will be `1`.
-    pub fn exit(&self) -> ! {
-        if self.fatal() {
-            werr!("{}\n", self);
-            ::std::process::exit(1)
-        } else {
-            let _ = writeln!(&mut io::stdout(), "{}", self);
-            ::std::process::exit(0)
-        }
-    }
-}
-
-type Result<T> = result::Result<T, Error>;
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            WithProgramUsage(ref other, ref usage) => {
-                let other = other.to_string();
-                if other.is_empty() {
-                    write!(f, "{}", usage)
-                } else {
-                    write!(f, "{}\n\n{}", other, usage)
-                }
-            }
-            Help => write!(f, ""),
-            NoMatch => write!(f, "Invalid arguments."),
-            Usage(ref s) |
-            Argv(ref s) |
-            Deserialize(ref s) |
-            Version(ref s) => write!(f, "{}", s),
-        }
-    }
-}
-
-impl StdError for Error {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match *self {
-            WithProgramUsage(ref cause, _) => Some(&**cause),
-            _ => None,
-        }
-    }
-}
-
-impl de::Error for Error {
-    fn custom<T: fmt::Display>(msg: T) -> Self {
-        Error::Deserialize(msg.to_string())
-    }
-}
 
 /// The main Docopt type, which is constructed with a Docopt usage string.
 ///
@@ -180,7 +42,7 @@ impl Docopt {
     pub fn new<S>(usage: S) -> Result<Docopt>
             where S: ::std::ops::Deref<Target=str> {
         Parser::new(usage.deref())
-               .map_err(Usage)
+               .map_err(Error::Usage)
                .map(|p| Docopt {
                    p: p,
                    argv: None,
@@ -212,7 +74,7 @@ impl Docopt {
     /// If parsing the command line arguments fails, then an `Argv` error is
     /// returned. If parsing succeeds but there is no match, then a `NoMatch`
     /// error is returned. Both of these errors are always returned inside a
-    /// `WithProgramUsage` error.
+    /// `Error::WithProgramUsage` error.
     ///
     /// If special handling of `help` or `version` is enabled (the former is
     /// enabled by default), then `Help` or `Version` errors are returned
@@ -221,18 +83,21 @@ impl Docopt {
         let argv = self.argv.clone().unwrap_or_else(Docopt::get_argv);
         let vals =
             self.p.parse_argv(argv, self.options_first)
-                .map_err(|s| self.err_with_usage(Argv(s)))
+                .map_err(|s| self.err_with_usage(Error::Argv(s)))
                 .and_then(|argv|
                     match self.p.matches(&argv) {
-                        Some(m) => Ok(ArgvMap { map: m }),
-                        None => Err(self.err_with_usage(NoMatch)),
+                        Some(map) => Ok(ArgvMap {
+                            map,
+                            remaining: vec![],
+                        }),
+                        None => Err(self.err_with_usage(Error::NoMatch)),
                     })?;
         if self.help && vals.get_bool("--help") {
-            return Err(self.err_with_full_doc(Help));
+            return Err(self.err_with_full_doc(Error::Help));
         }
         match self.version {
             Some(ref v) if vals.get_bool("--version") => {
-                return Err(Version(v.clone()))
+                return Err(Error::Version(v.clone()))
             }
             _ => {},
         }
@@ -301,12 +166,12 @@ impl Docopt {
     }
 
     fn err_with_usage(&self, e: Error) -> Error {
-        WithProgramUsage(
+        Error::WithProgramUsage(
             Box::new(e), self.p.usage.trim().into())
     }
 
     fn err_with_full_doc(&self, e: Error) -> Error {
-        WithProgramUsage(
+        Error::WithProgramUsage(
             Box::new(e), self.p.full_doc.trim().into())
     }
 
@@ -325,7 +190,9 @@ impl Docopt {
 #[derive(Clone)]
 pub struct ArgvMap {
     #[doc(hidden)]
-    pub map: SynonymMap<String, Value>,
+    pub(crate) map: SynonymMap<String, Value>,
+    #[doc(hidden)]
+    pub(crate) remaining: Vec<String>,
 }
 
 impl ArgvMap {
@@ -648,17 +515,18 @@ struct DeserializerItem<'de> {
 }
 
 macro_rules! derr(
-    ($($arg:tt)*) => (return Err(Deserialize(format!($($arg)*))))
+    ($($arg:tt)*) => (return Err(Error::Deserialize(format!($($arg)*))))
 );
 
 impl<'de> Deserializer<'de> {
     fn push(&mut self, struct_field: &'de str) {
         let key = ArgvMap::struct_field_to_key(struct_field);
+        let val = self.vals.find(&key).cloned();
         self.stack
             .push(DeserializerItem {
-                      key: key.clone(),
-                      struct_field: struct_field,
-                      val: self.vals.find(&*key).cloned(),
+                      key,
+                      struct_field,
+                      val,
                   });
     }
 
@@ -883,7 +751,7 @@ impl<'a, 'de> ::serde::Deserializer<'de> for &'a mut Deserializer<'de> {
             self.stack
                 .push(DeserializerItem {
                           key: key.clone(),
-                          struct_field: struct_field,
+                          struct_field,
                           val: Some(Plain(Some((*val).into()))),
                       });
         }
@@ -966,8 +834,8 @@ struct StructDeserializer<'a, 'de: 'a> {
 impl<'a, 'de> StructDeserializer<'a, 'de> {
     fn new(de: &'a mut Deserializer<'de>, fields: &'static [&'static str]) -> Self {
         StructDeserializer {
-            de: de,
-            fields: fields,
+            de,
+            fields,
         }
     }
 }
@@ -978,7 +846,7 @@ impl<'a, 'de> de::SeqAccess<'de> for StructDeserializer<'a, 'de> {
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
         where T: de::DeserializeSeed<'de>
     {
-        if self.fields.len() == 0 {
+        if self.fields.is_empty() {
             return Ok(None);
         }
         self.de.push(self.fields[0]);

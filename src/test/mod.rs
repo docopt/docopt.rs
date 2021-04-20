@@ -151,5 +151,34 @@ fn test_unit_struct() {
     assert!(dopt.is_ok());
 }
 
+
+
+#[test]
+fn remaining() {
+    const USAGE: &'static str = "
+    Usage:
+        whisper info <file>
+        whisper update <file> <timestamp> <value>
+        whisper mark <file> <value>
+    ";
+
+    #[derive(Deserialize, Debug)]
+    struct Args {
+        arg_file: String,
+        cmd_info: bool,
+        cmd_update: bool,
+        arg_timestamp: u64,
+        arg_value: f64,
+        remaining: Vec<String>,
+    }
+
+    let dopt: Args = Docopt::new(USAGE)
+        .unwrap()
+        .argv(&["whisper", "mark", "./p/blah", "100"])
+        .deserialize()
+        .unwrap();
+    assert_eq!(dopt.arg_timestamp, 0);
+}
+
 mod testcases;
 mod suggestions;

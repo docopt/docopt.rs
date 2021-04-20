@@ -184,8 +184,6 @@
 #![doc(html_root_url = "http://burntsushi.net/rustdoc/docopt")]
 #![deny(missing_docs)]
 
-pub use crate::dopt::{ArgvMap, Deserializer, Docopt, Error, Value};
-
 macro_rules! werr(
     ($($arg:tt)*) => ({
         use std::io::{Write, stderr};
@@ -201,9 +199,17 @@ fn cap_or_empty<'t>(caps: &regex::Captures<'t>, name: &str) -> &'t str {
     caps.name(name).map_or("", |m| m.as_str())
 }
 
+pub(crate) mod errors;
+// pub use crate::errors::{Result,Error};
+pub use crate::errors::*;
+
 mod dopt;
+pub use crate::dopt::{ArgvMap, Deserializer, Docopt, Value};
+
 #[doc(hidden)]
 pub mod parse;
 mod synonym;
+
+
 #[cfg(test)]
 mod test;

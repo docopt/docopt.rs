@@ -38,7 +38,7 @@
 //
 //   - Write a specification for Docopt.
 
-use std::borrow::ToOwned;
+use std::{borrow::ToOwned, mem::Discriminant};
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::cmp::Ordering;
@@ -823,6 +823,7 @@ impl Atom {
 
     // Assigns an integer to each variant of Atom. (For easier sorting.)
     fn type_as_usize(&self) -> usize {
+        // std::mem::discriminant(&self) might be an option as well
         match *self {
             Short(_) => 0,
             Long(_) => 1,
@@ -908,10 +909,10 @@ impl<'a> Argv<'a> {
             positional: vec!(),
             flags: vec!(),
             counts: HashMap::new(),
-            dopt: dopt,
+            dopt,
             argv: argv.iter().cloned().collect(),
             curi: 0,
-            options_first: options_first,
+            options_first,
         };
         a.parse()?;
         for flag in &a.flags {
@@ -1192,8 +1193,6 @@ impl<'a, 'b> Matcher<'a, 'b> {
          .filter(|s| m.state_consumed_all_argv(s))
          .filter(|s| m.state_has_valid_flags(s))
          .filter(|s| m.state_valid_num_flags(s))
-         .collect::<Vec<MState>>()
-         .into_iter()
          .next()
          .map(|mut s| {
              m.add_flag_values(&mut s);
